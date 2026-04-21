@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet.markercluster";
+import type {} from "leaflet.markercluster";
 import {
   useListPins,
   useCreatePin,
@@ -76,20 +77,48 @@ async function reverseGeocode(lat: number, lng: number): Promise<string> {
   }
 }
 
-function parseBounds(b: string | null | undefined): L.LatLngTuple[] | null {
+type ParsedBounds =
+  | { kind: "polygon"; latlngs: L.LatLngTuple[] }
+  | { kind: "rect"; sw: L.LatLngTuple; ne: L.LatLngTuple }
+  | null;
+
+// Parse a four-number rectangle from legacy free-text bounds.
+// Accepts "south,west,north,east" or "lat1,lng1,lat2,lng2".
+function parseLegacyRect(text: string): ParsedBounds {
+  const nums = text
+    .split(/[,;\s]+/)
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isFinite(n));
+  if (nums.length !== 4) return null;
+  const [a, b, c, d] = nums as [number, number, number, number];
+  const south = Math.min(a, c);
+  const north = Math.max(a, c);
+  const west = Math.min(b, d);
+  const east = Math.max(b, d);
+  if (Math.abs(south) > 90 || Math.abs(north) > 90) return null;
+  if (Math.abs(west) > 180 || Math.abs(east) > 180) return null;
+  return { kind: "rect", sw: [south, west], ne: [north, east] };
+}
+
+function parseBounds(b: string | null | undefined): ParsedBounds {
   if (!b) return null;
   try {
-    const parsed = JSON.parse(b);
-    // GeoJSON Polygon: { type: "Polygon", coordinates: [[[lng,lat],...]] }
+    const parsed = JSON.parse(b) as {
+      type?: string;
+      coordinates?: [number, number][][];
+    };
     if (parsed?.type === "Polygon" && Array.isArray(parsed.coordinates?.[0])) {
-      return (parsed.coordinates[0] as [number, number][]).map(
-        ([lng, lat]) => [lat, lng] as L.LatLngTuple,
-      );
+      return {
+        kind: "polygon",
+        latlngs: parsed.coordinates[0].map(
+          ([lng, lat]) => [lat, lng] as L.LatLngTuple,
+        ),
+      };
     }
   } catch {
-    // not JSON — legacy free-text bounds, ignore
+    // not JSON — try legacy rectangle format below
   }
-  return null;
+  return parseLegacyRect(b);
 }
 
 export default function MapPage() {
@@ -134,10 +163,10 @@ export default function MapPage() {
       maxZoom: 19,
     }).addTo(map);
 
-    const cluster = (L as any).markerClusterGroup({
+    const cluster = L.markerClusterGroup({
       showCoverageOnHover: false,
       maxClusterRadius: 50,
-    }) as L.MarkerClusterGroup;
+    });
     map.addLayer(cluster);
     clusterRef.current = cluster;
 
@@ -151,7 +180,8 @@ export default function MapPage() {
         ...f,
         latitude: Number(lat.toFixed(6)),
         longitude: Number(lng.toFixed(6)),
-        address: address || f.address,
+        // Use the new geocode result, or clear stale address from a previous tap
+        address: address || `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
       }));
       setOpen(true);
     });
@@ -173,15 +203,24 @@ export default function MapPage() {
     if (!layer) return;
     layer.clearLayers();
     (territories ?? []).forEach((t) => {
-      const coords = parseBounds(t.bounds);
-      if (!coords || coords.length < 3) return;
-      const poly = L.polygon(coords, {
+      const parsed = parseBounds(t.bounds);
+      if (!parsed) return;
+      const style = {
         color: t.color,
         weight: 2,
         fillColor: t.color,
         fillOpacity: 0.15,
-      }).bindTooltip(t.name, { sticky: true });
-      poly.addTo(layer);
+      };
+      if (parsed.kind === "polygon") {
+        if (parsed.latlngs.length < 3) return;
+        L.polygon(parsed.latlngs, style)
+          .bindTooltip(t.name, { sticky: true })
+          .addTo(layer);
+      } else {
+        L.rectangle([parsed.sw, parsed.ne], style)
+          .bindTooltip(`${t.name} (legacy)`, { sticky: true })
+          .addTo(layer);
+      }
     });
   }, [territories]);
 

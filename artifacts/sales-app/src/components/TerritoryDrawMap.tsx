@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet-draw";
+import type {} from "leaflet-draw";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
@@ -26,19 +27,46 @@ interface Props {
   onPolygonDrawn: (geojson: string | null) => void;
 }
 
-function parseBounds(b: string | null | undefined): L.LatLngTuple[] | null {
+type ParsedBounds =
+  | { kind: "polygon"; latlngs: L.LatLngTuple[] }
+  | { kind: "rect"; sw: L.LatLngTuple; ne: L.LatLngTuple }
+  | null;
+
+function parseLegacyRect(text: string): ParsedBounds {
+  const nums = text
+    .split(/[,;\s]+/)
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isFinite(n));
+  if (nums.length !== 4) return null;
+  const [a, b, c, d] = nums as [number, number, number, number];
+  const south = Math.min(a, c);
+  const north = Math.max(a, c);
+  const west = Math.min(b, d);
+  const east = Math.max(b, d);
+  if (Math.abs(south) > 90 || Math.abs(north) > 90) return null;
+  if (Math.abs(west) > 180 || Math.abs(east) > 180) return null;
+  return { kind: "rect", sw: [south, west], ne: [north, east] };
+}
+
+function parseBounds(b: string | null | undefined): ParsedBounds {
   if (!b) return null;
   try {
-    const parsed = JSON.parse(b);
+    const parsed = JSON.parse(b) as {
+      type?: string;
+      coordinates?: [number, number][][];
+    };
     if (parsed?.type === "Polygon" && Array.isArray(parsed.coordinates?.[0])) {
-      return (parsed.coordinates[0] as [number, number][]).map(
-        ([lng, lat]) => [lat, lng] as L.LatLngTuple,
-      );
+      return {
+        kind: "polygon",
+        latlngs: parsed.coordinates[0].map(
+          ([lng, lat]) => [lat, lng] as L.LatLngTuple,
+        ),
+      };
     }
   } catch {
-    /* legacy free-text */
+    /* fall through to legacy */
   }
-  return null;
+  return parseLegacyRect(b);
 }
 
 function layerToGeoJson(layer: L.Polygon): string {
@@ -92,15 +120,16 @@ export function TerritoryDrawMap({ territories, drawColor, onPolygonDrawn }: Pro
       }
     };
 
-    map.on((L as any).Draw.Event.CREATED, (e: any) => {
+    map.on(L.Draw.Event.CREATED, (e) => {
       drawnItems.clearLayers();
-      drawnItems.addLayer(e.layer as L.Polygon);
+      const event = e as L.LeafletEvent & { layer: L.Layer };
+      drawnItems.addLayer(event.layer);
       reportFromDrawn();
     });
-    map.on((L as any).Draw.Event.EDITED, () => {
+    map.on(L.Draw.Event.EDITED, () => {
       reportFromDrawn();
     });
-    map.on((L as any).Draw.Event.DELETED, () => {
+    map.on(L.Draw.Event.DELETED, () => {
       reportFromDrawn();
     });
 
@@ -122,7 +151,7 @@ export function TerritoryDrawMap({ territories, drawColor, onPolygonDrawn }: Pro
     const drawnItems = drawnItemsRef.current;
     if (!map || !drawnItems) return;
     if (drawControlRef.current) map.removeControl(drawControlRef.current);
-    const control = new (L as any).Control.Draw({
+    const control = new L.Control.Draw({
       position: "topright",
       draw: {
         polygon: {
@@ -137,7 +166,7 @@ export function TerritoryDrawMap({ territories, drawColor, onPolygonDrawn }: Pro
         circlemarker: false,
       },
       edit: { featureGroup: drawnItems, remove: true },
-    }) as L.Control;
+    });
     map.addControl(control);
     drawControlRef.current = control;
   }, [drawColor]);
@@ -148,16 +177,24 @@ export function TerritoryDrawMap({ territories, drawColor, onPolygonDrawn }: Pro
     if (!layer) return;
     layer.clearLayers();
     territories.forEach((t) => {
-      const coords = parseBounds(t.bounds);
-      if (!coords || coords.length < 3) return;
-      L.polygon(coords, {
+      const parsed = parseBounds(t.bounds);
+      if (!parsed) return;
+      const style = {
         color: t.color,
         weight: 2,
         fillColor: t.color,
         fillOpacity: 0.15,
-      })
-        .bindTooltip(t.name, { sticky: true })
-        .addTo(layer);
+      };
+      if (parsed.kind === "polygon") {
+        if (parsed.latlngs.length < 3) return;
+        L.polygon(parsed.latlngs, style)
+          .bindTooltip(t.name, { sticky: true })
+          .addTo(layer);
+      } else {
+        L.rectangle([parsed.sw, parsed.ne], style)
+          .bindTooltip(`${t.name} (legacy)`, { sticky: true })
+          .addTo(layer);
+      }
     });
   }, [territories]);
 
