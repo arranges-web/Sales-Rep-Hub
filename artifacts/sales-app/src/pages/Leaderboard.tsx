@@ -1,6 +1,7 @@
 import { useGetLeaderboard, useListIncentiveTiers } from "@workspace/api-client-react";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { photoServingUrl } from "@/components/PhotoUpload";
 import { Badge } from "@/components/ui/badge";
 import { Trophy, Award } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -69,7 +70,7 @@ export default function LeaderboardPage() {
                     style={{ background: r.accentColor || "#2C8214" }}
                   >
                     <Avatar className="h-11 w-11 ring-2 ring-white">
-                      <AvatarImage src={r.avatarUrl ?? undefined} />
+                      <AvatarImage src={r.avatarUrl ? photoServingUrl(r.avatarUrl) ?? r.avatarUrl : undefined} />
                       <AvatarFallback
                         className="text-white"
                         style={{ background: r.accentColor || "#2C8214" }}

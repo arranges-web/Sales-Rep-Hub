@@ -82,7 +82,7 @@ export default function HypeFeedPage() {
                 }}
               >
                 <Avatar className="h-10 w-10 ring-2 ring-white">
-                  <AvatarImage src={p.authorAvatarUrl ?? undefined} />
+                  <AvatarImage src={p.authorAvatarUrl ? photoServingUrl(p.authorAvatarUrl) ?? p.authorAvatarUrl : undefined} />
                   <AvatarFallback
                     className={p.isBot ? "bg-[#FFBF00] text-slate-900" : "text-white"}
                     style={
@@ -195,7 +195,7 @@ function CommentsList({ postId }: { postId: number }) {
             style={{ background: c.authorAccentColor || "#2EA3F2" }}
           >
             <Avatar className="h-7 w-7 ring-2 ring-white">
-              <AvatarImage src={c.authorAvatarUrl ?? undefined} />
+              <AvatarImage src={c.authorAvatarUrl ? photoServingUrl(c.authorAvatarUrl) ?? c.authorAvatarUrl : undefined} />
               <AvatarFallback
                 className="text-white text-xs"
                 style={{ background: c.authorAccentColor || "#2EA3F2" }}

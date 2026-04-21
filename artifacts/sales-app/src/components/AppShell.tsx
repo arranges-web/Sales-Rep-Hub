@@ -18,6 +18,7 @@ import {
 import { useGetMe } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { photoServingUrl } from "@/components/PhotoUpload";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
 
@@ -95,7 +96,13 @@ export function AppShell({ children }: { children: ReactNode }) {
             style={{ background: me?.accentColor || "#2C8214" }}
           >
             <Avatar className="h-9 w-9 ring-2 ring-white">
-              <AvatarImage src={me?.avatarUrl ?? user?.imageUrl} />
+              <AvatarImage
+                src={
+                  me?.avatarUrl
+                    ? photoServingUrl(me.avatarUrl) ?? me.avatarUrl
+                    : user?.imageUrl
+                }
+              />
               <AvatarFallback
                 className="text-white font-bold"
                 style={{ background: me?.accentColor || "#2C8214" }}

@@ -1,4 +1,5 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { photoServingUrl } from "@/components/PhotoUpload";
 import { cn } from "@/lib/utils";
 
 interface AvatarRingProps {
@@ -19,6 +20,7 @@ export function AvatarRing({
   className,
 }: AvatarRingProps) {
   const ring = accentColor || "transparent";
+  const resolvedSrc = src ? photoServingUrl(src) ?? src : undefined;
   return (
     <div
       className={cn("rounded-full p-[2px]", className)}
@@ -28,7 +30,7 @@ export function AvatarRing({
         style={{ width: size, height: size }}
         className="ring-2 ring-white"
       >
-        <AvatarImage src={src ?? undefined} />
+        <AvatarImage src={resolvedSrc} />
         <AvatarFallback
           className={cn("text-white font-bold", fallbackClassName)}
           style={{ background: accentColor || "#2C8214" }}
