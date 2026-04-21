@@ -101,6 +101,11 @@ export default function HypeFeedPage() {
                   {p.isBot && (
                     <Badge className="bg-[#FFBF00] text-slate-900">BOT</Badge>
                   )}
+                  {p.authorHometown && (
+                    <span className="text-xs text-muted-foreground">
+                      · {p.authorHometown}
+                    </span>
+                  )}
                   <span className="text-xs text-muted-foreground">
                     {formatDistanceToNow(new Date(p.createdAt), { addSuffix: true })}
                   </span>

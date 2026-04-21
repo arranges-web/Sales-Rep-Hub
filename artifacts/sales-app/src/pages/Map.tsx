@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Plus, Trash2, CheckCircle2 } from "lucide-react";
+import { AvatarRing } from "@/components/AvatarRing";
 import { formatDistanceToNow } from "date-fns";
 import { PhotoUpload, photoServingUrl } from "@/components/PhotoUpload";
 
@@ -460,14 +461,14 @@ export default function MapPage() {
                   <div className="mt-1 truncate font-semibold text-sm">
                     {p.address}
                   </div>
-                  <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                    {p.repAccentColor && (
-                      <span
-                        className="inline-block h-2 w-2 rounded-full"
-                        style={{ background: p.repAccentColor }}
-                      />
-                    )}
-                    by {p.repName}
+                  <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                    <AvatarRing
+                      src={p.repAvatarUrl}
+                      name={p.repName}
+                      accentColor={p.repAccentColor}
+                      size={22}
+                    />
+                    <span>by {p.repName}</span>
                   </div>
                   {p.notes && <p className="mt-1 text-sm">{p.notes}</p>}
                   {photo && (

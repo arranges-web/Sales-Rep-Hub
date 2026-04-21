@@ -98,6 +98,16 @@ export interface UpdateUserBody {
   avatarUrl?: string | null;
   /** @nullable */
   territoryId?: number | null;
+  /** @nullable */
+  accentColor?: string | null;
+  /** @nullable */
+  hometown?: string | null;
+  /** @nullable */
+  bio?: string | null;
+  /** @nullable */
+  hawaiiGoal?: string | null;
+  /** @nullable */
+  favoriteService?: string | null;
 }
 
 export type DealServiceType =
@@ -221,6 +231,12 @@ export interface LeaderboardEntry {
   /** @nullable */
   avatarUrl?: string | null;
   accentColor?: string;
+  /** @nullable */
+  hometown?: string | null;
+  /** @nullable */
+  bio?: string | null;
+  /** @nullable */
+  hawaiiGoal?: string | null;
   totalPoints: number;
   dealsCount: number;
   totalRevenue: number;
@@ -249,6 +265,8 @@ export interface FeedPost {
   authorAvatarUrl?: string | null;
   /** @nullable */
   authorAccentColor?: string | null;
+  /** @nullable */
+  authorHometown?: string | null;
   content: string;
   /** @nullable */
   imageUrl?: string | null;

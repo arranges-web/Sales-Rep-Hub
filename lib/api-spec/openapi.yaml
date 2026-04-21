@@ -1187,6 +1187,16 @@ components:
           type: ["string", "null"]
         territoryId:
           type: ["integer", "null"]
+        accentColor:
+          type: ["string", "null"]
+        hometown:
+          type: ["string", "null"]
+        bio:
+          type: ["string", "null"]
+        hawaiiGoal:
+          type: ["string", "null"]
+        favoriteService:
+          type: ["string", "null"]
 
     Deal:
       type: object
@@ -1286,6 +1296,12 @@ components:
           type: ["string", "null"]
         accentColor:
           type: string
+        hometown:
+          type: ["string", "null"]
+        bio:
+          type: ["string", "null"]
+        hawaiiGoal:
+          type: ["string", "null"]
         totalPoints:
           type: integer
         dealsCount:
@@ -1348,6 +1364,8 @@ components:
         authorAvatarUrl:
           type: ["string", "null"]
         authorAccentColor:
+          type: ["string", "null"]
+        authorHometown:
           type: ["string", "null"]
         content:
           type: string

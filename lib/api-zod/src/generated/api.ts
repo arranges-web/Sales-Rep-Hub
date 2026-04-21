@@ -79,6 +79,11 @@ export const UpdateMeBody = zod.object({
   role: zod.enum(["admin", "rep"]).optional(),
   avatarUrl: zod.string().nullish(),
   territoryId: zod.number().nullish(),
+  accentColor: zod.string().nullish(),
+  hometown: zod.string().nullish(),
+  bio: zod.string().nullish(),
+  hawaiiGoal: zod.string().nullish(),
+  favoriteService: zod.string().nullish(),
 });
 
 export const UpdateMeResponse = zod.object({
@@ -217,6 +222,11 @@ export const UpdateUserBody = zod.object({
   role: zod.enum(["admin", "rep"]).optional(),
   avatarUrl: zod.string().nullish(),
   territoryId: zod.number().nullish(),
+  accentColor: zod.string().nullish(),
+  hometown: zod.string().nullish(),
+  bio: zod.string().nullish(),
+  hawaiiGoal: zod.string().nullish(),
+  favoriteService: zod.string().nullish(),
 });
 
 export const UpdateUserResponse = zod.object({
@@ -375,6 +385,9 @@ export const GetLeaderboardResponseItem = zod.object({
   name: zod.string(),
   avatarUrl: zod.string().nullish(),
   accentColor: zod.string().optional(),
+  hometown: zod.string().nullish(),
+  bio: zod.string().nullish(),
+  hawaiiGoal: zod.string().nullish(),
   totalPoints: zod.number(),
   dealsCount: zod.number(),
   totalRevenue: zod.number(),
@@ -422,6 +435,7 @@ export const ListFeedPostsResponseItem = zod.object({
   authorName: zod.string(),
   authorAvatarUrl: zod.string().nullish(),
   authorAccentColor: zod.string().nullish(),
+  authorHometown: zod.string().nullish(),
   content: zod.string(),
   imageUrl: zod.string().nullish(),
   isBot: zod.boolean(),

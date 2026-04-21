@@ -205,14 +205,47 @@ router.get("/users/:userId", requireAuth, async (req, res, next) => {
 router.patch("/users/:userId", requireAuth, requireAdmin, async (req, res, next) => {
   try {
     const id = Number(req.params.userId);
-    const { name, role, avatarUrl, territoryId } = req.body ?? {};
+    const {
+      name,
+      role,
+      avatarUrl,
+      territoryId,
+      accentColor,
+      hometown,
+      bio,
+      hawaiiGoal,
+      favoriteService,
+    } = req.body ?? {};
+    const HEX = /^#[0-9a-fA-F]{6}$/;
+    const trim = (v: unknown, max: number): string | null | undefined => {
+      if (v === undefined) return undefined;
+      if (v === null) return null;
+      if (typeof v !== "string") return undefined;
+      const t = v.trim();
+      return t ? t.slice(0, max) : null;
+    };
+    const accent =
+      accentColor === undefined
+        ? undefined
+        : accentColor === null
+          ? null
+          : typeof accentColor === "string" && HEX.test(accentColor)
+            ? accentColor
+            : undefined;
     const [updated] = await db
       .update(usersTable)
       .set({
-        ...(name !== undefined ? { name } : {}),
+        ...(name !== undefined ? { name: String(name).slice(0, 120) } : {}),
         ...(role !== undefined ? { role } : {}),
         ...(avatarUrl !== undefined ? { avatarUrl } : {}),
         ...(territoryId !== undefined ? { territoryId } : {}),
+        ...(accent !== undefined ? { accentColor: accent ?? "#2EA3F2" } : {}),
+        ...(hometown !== undefined ? { hometown: trim(hometown, 120) } : {}),
+        ...(bio !== undefined ? { bio: trim(bio, 500) } : {}),
+        ...(hawaiiGoal !== undefined ? { hawaiiGoal: trim(hawaiiGoal, 200) } : {}),
+        ...(favoriteService !== undefined
+          ? { favoriteService: trim(favoriteService, 120) }
+          : {}),
       })
       .where(eq(usersTable.id, id))
       .returning();

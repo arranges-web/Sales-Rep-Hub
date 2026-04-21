@@ -46,7 +46,12 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Trash2, Plus, Check, X, Pencil } from "lucide-react";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter,
+  DialogHeader, DialogTitle, DialogTrigger,
+} from "@/components/ui/dialog";
+import { Trash2, Plus, Check, X, Pencil, Palette } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { TerritoryDrawMap } from "@/components/TerritoryDrawMap";
 
@@ -87,6 +92,147 @@ export default function AdminPage() {
   );
 }
 
+const ADMIN_PALETTE = [
+  "#2EA3F2", "#2C8214", "#FFBF00", "#E11D48", "#7C3AED",
+  "#0EA5E9", "#059669", "#F97316", "#0F172A",
+];
+
+function EditRepDialog({ user }: { user: { id: number; name: string; accentColor?: string | null; hometown?: string | null; bio?: string | null; hawaiiGoal?: string | null; favoriteService?: string | null } }) {
+  const qc = useQueryClient();
+  const update = useUpdateUser();
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({
+    name: user.name,
+    accentColor: user.accentColor ?? "#2EA3F2",
+    hometown: user.hometown ?? "",
+    bio: user.bio ?? "",
+    hawaiiGoal: user.hawaiiGoal ?? "",
+    favoriteService: user.favoriteService ?? "",
+  });
+  return (
+    <Dialog open={open} onOpenChange={(o) => {
+      setOpen(o);
+      if (o) setForm({
+        name: user.name,
+        accentColor: user.accentColor ?? "#2EA3F2",
+        hometown: user.hometown ?? "",
+        bio: user.bio ?? "",
+        hawaiiGoal: user.hawaiiGoal ?? "",
+        favoriteService: user.favoriteService ?? "",
+      });
+    }}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="rounded-xl">
+          <Pencil className="mr-1 h-3.5 w-3.5" />
+          Edit profile
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Edit {user.name}'s profile</DialogTitle>
+          <DialogDescription>
+            Update display name and personal touches. Role is managed separately.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <Label>Display name</Label>
+            <Input
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              className="mt-1 rounded-xl"
+            />
+          </div>
+          <div>
+            <Label className="flex items-center gap-2">
+              <Palette className="h-4 w-4" /> Accent color
+            </Label>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {ADMIN_PALETTE.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  aria-label={`Pick color ${c}`}
+                  onClick={() => setForm({ ...form, accentColor: c })}
+                  className={cn(
+                    "h-8 w-8 rounded-full border-2 transition-transform",
+                    form.accentColor === c
+                      ? "scale-110 border-slate-900"
+                      : "border-white hover:scale-105",
+                  )}
+                  style={{ background: c }}
+                />
+              ))}
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <Label>Hometown</Label>
+              <Input
+                value={form.hometown}
+                onChange={(e) => setForm({ ...form, hometown: e.target.value })}
+                className="mt-1 rounded-xl"
+              />
+            </div>
+            <div>
+              <Label>Favorite service</Label>
+              <Input
+                value={form.favoriteService}
+                onChange={(e) => setForm({ ...form, favoriteService: e.target.value })}
+                className="mt-1 rounded-xl"
+              />
+            </div>
+          </div>
+          <div>
+            <Label>Hawaii goal</Label>
+            <Input
+              value={form.hawaiiGoal}
+              onChange={(e) => setForm({ ...form, hawaiiGoal: e.target.value })}
+              maxLength={140}
+              className="mt-1 rounded-xl"
+            />
+          </div>
+          <div>
+            <Label>Bio</Label>
+            <Textarea
+              value={form.bio}
+              onChange={(e) => setForm({ ...form, bio: e.target.value })}
+              maxLength={280}
+              className="mt-1 min-h-[72px] rounded-xl"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button
+            disabled={update.isPending}
+            className="rounded-xl bg-[#2EA3F2] hover:bg-[#1d8fd8]"
+            onClick={async () => {
+              await update.mutateAsync({
+                userId: user.id,
+                data: {
+                  name: form.name.trim() || user.name,
+                  accentColor: form.accentColor,
+                  hometown: form.hometown || null,
+                  bio: form.bio || null,
+                  hawaiiGoal: form.hawaiiGoal || null,
+                  favoriteService: form.favoriteService || null,
+                },
+              });
+              qc.invalidateQueries({ queryKey: getListUsersQueryKey() });
+              toast({ title: "Profile updated", description: `${form.name}'s profile is live.` });
+              setOpen(false);
+            }}
+          >
+            {update.isPending ? "Saving…" : "Save"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function UsersTab() {
   const qc = useQueryClient();
   const { data: users } = useListUsers();
@@ -94,10 +240,22 @@ function UsersTab() {
   return (
     <Card className="divide-y divide-border">
       {(users ?? []).map((u) => (
-        <div key={u.id} className="flex items-center justify-between gap-3 p-4">
+        <div key={u.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
           <div className="min-w-0 flex-1">
-            <div className="font-semibold">{u.name}</div>
+            <div className="flex items-center gap-2">
+              <span
+                className="inline-block h-3 w-3 rounded-full"
+                style={{ background: u.accentColor ?? "#2EA3F2" }}
+              />
+              <span className="font-semibold">{u.name}</span>
+              {u.hometown && (
+                <span className="text-xs text-muted-foreground">· {u.hometown}</span>
+              )}
+            </div>
             <div className="text-xs text-muted-foreground">{u.email}</div>
+            {u.hawaiiGoal && (
+              <div className="mt-0.5 text-xs text-muted-foreground">🌺 {u.hawaiiGoal}</div>
+            )}
           </div>
           <Badge className={u.role === "admin" ? "bg-[#FFBF00] text-slate-900" : "bg-[#2EA3F2] text-white"}>
             {u.role}
@@ -117,6 +275,7 @@ function UsersTab() {
               <SelectItem value="admin">Admin</SelectItem>
             </SelectContent>
           </Select>
+          <EditRepDialog user={u} />
         </div>
       ))}
     </Card>

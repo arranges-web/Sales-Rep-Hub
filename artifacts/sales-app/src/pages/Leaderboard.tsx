@@ -80,9 +80,17 @@ export default function LeaderboardPage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="truncate font-bold">{r.name}</span>
+                      <span
+                        className="truncate font-bold"
+                        title={r.bio ?? undefined}
+                      >{r.name}</span>
                       {r.isCurrentUser && (
                         <Badge className="bg-[#2EA3F2] text-white">You</Badge>
+                      )}
+                      {r.hometown && (
+                        <span className="hidden truncate text-xs text-muted-foreground sm:inline">
+                          · {r.hometown}
+                        </span>
                       )}
                       {tierMet && (
                         <Badge

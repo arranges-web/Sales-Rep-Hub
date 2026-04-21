@@ -14,12 +14,18 @@ router.get("/feed", requireAuth, async (req, res, next) => {
     );
     const authorRows = authorIds.length
       ? await db
-          .select({ id: usersTable.id, accentColor: usersTable.accentColor, avatarUrl: usersTable.avatarUrl })
+          .select({
+            id: usersTable.id,
+            accentColor: usersTable.accentColor,
+            avatarUrl: usersTable.avatarUrl,
+            hometown: usersTable.hometown,
+          })
           .from(usersTable)
           .where(sql`${usersTable.id} = ANY(${authorIds})`)
       : [];
     const accentById = new Map(authorRows.map((a) => [a.id, a.accentColor]));
     const avatarById = new Map(authorRows.map((a) => [a.id, a.avatarUrl]));
+    const hometownById = new Map(authorRows.map((a) => [a.id, a.hometown]));
     const result = await Promise.all(
       posts.map(async (p) => {
         const [hf] = await db
@@ -41,6 +47,7 @@ router.get("/feed", requireAuth, async (req, res, next) => {
           authorName: p.authorName,
           authorAvatarUrl: (p.authorId != null ? avatarById.get(p.authorId) : null) ?? p.authorAvatarUrl ?? null,
           authorAccentColor: p.authorId != null ? accentById.get(p.authorId) ?? null : null,
+          authorHometown: p.authorId != null ? hometownById.get(p.authorId) ?? null : null,
           content: p.content,
           imageUrl: p.imageUrl ?? null,
           isBot: p.isBot,
@@ -79,6 +86,7 @@ router.post("/feed", requireAuth, async (req, res, next) => {
       authorName: created!.authorName,
       authorAvatarUrl: created!.authorAvatarUrl,
       authorAccentColor: me.accentColor,
+      authorHometown: me.hometown ?? null,
       content: created!.content,
       imageUrl: created!.imageUrl,
       isBot: created!.isBot,
