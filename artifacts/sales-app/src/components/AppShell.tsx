@@ -18,6 +18,7 @@ import { useGetMe } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/Logo";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -39,15 +40,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isAdmin = me?.role === "admin";
 
   const Sidebar = (
-    <aside className="flex h-full w-64 flex-col border-r border-border bg-sidebar">
-      <div className="flex items-center gap-3 border-b border-sidebar-border px-5 py-4">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#2EA3F2] text-white font-extrabold">
-          JT
-        </div>
-        <div className="leading-tight">
-          <div className="text-sm font-extrabold text-[#2C8214]">JOSHUA</div>
-          <div className="text-sm font-extrabold text-[#2EA3F2]">TREE</div>
-        </div>
+    <aside className="flex h-full w-64 flex-col border-r border-sidebar-border bg-sidebar">
+      <div className="flex items-center justify-center border-b border-sidebar-border px-5 py-5">
+        <Logo className="h-10" />
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
@@ -144,12 +139,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             <Menu className="h-5 w-5" />
           </button>
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#2EA3F2] text-white text-xs font-extrabold">
-              JT
-            </div>
-            <span className="text-sm font-bold">Joshua Tree Sales</span>
-          </div>
+          <Logo className="h-7" />
           <div className="w-9" />
         </header>
         <main className="min-w-0 flex-1">{children}</main>

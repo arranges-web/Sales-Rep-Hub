@@ -1,20 +1,18 @@
 import { SignInButton, SignUpButton } from "@clerk/react";
 import { Button } from "@/components/ui/button";
 import { Trophy, MapPin, Gift, Zap } from "lucide-react";
+import { Logo } from "@/components/Logo";
 
 export default function LandingPage() {
   return (
-    <div className="min-h-[100dvh] bg-gradient-to-br from-sky-50 via-white to-emerald-50">
+    <div className="relative min-h-[100dvh] overflow-hidden bg-gradient-to-br from-sky-50 via-white to-emerald-50">
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute -left-40 top-10 h-96 w-96 rounded-full bg-[#2EA3F2]/15 blur-3xl" />
+        <div className="absolute -right-32 top-1/3 h-[28rem] w-[28rem] rounded-full bg-[#2C8214]/15 blur-3xl" />
+        <div className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-[#FFBF00]/15 blur-3xl" />
+      </div>
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#2EA3F2] text-white font-extrabold shadow-md">
-            JT
-          </div>
-          <div className="leading-tight">
-            <div className="text-sm font-extrabold text-[#2C8214]">JOSHUA</div>
-            <div className="text-sm font-extrabold text-[#2EA3F2]">TREE</div>
-          </div>
-        </div>
+        <Logo className="h-10" />
         <div className="flex items-center gap-2">
           <SignInButton mode="modal">
             <Button variant="ghost" className="rounded-xl">Sign in</Button>
@@ -27,9 +25,12 @@ export default function LandingPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-6 py-12 sm:py-20">
+      <main className="mx-auto max-w-6xl px-6 py-10 sm:py-16">
         <div className="text-center">
-          <div className="inline-flex items-center gap-2 rounded-full bg-[#FFBF00]/20 px-4 py-1.5 text-xs font-semibold text-[#7a5a00]">
+          <div className="mb-8 flex justify-center">
+            <Logo className="h-20 sm:h-24 drop-shadow-sm" />
+          </div>
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#FFBF00]/40 bg-[#FFBF00]/15 px-4 py-1.5 text-xs font-semibold text-[#7a5a00]">
             <Zap className="h-3.5 w-3.5" />
             SWFL Sales Team Hub
           </div>
@@ -67,7 +68,7 @@ export default function LandingPage() {
           ].map((f) => {
             const Icon = f.icon;
             return (
-              <div key={f.title} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div key={f.title} className="rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm backdrop-blur transition hover:-translate-y-0.5 hover:shadow-md">
                 <div
                   className="flex h-11 w-11 items-center justify-center rounded-xl text-white"
                   style={{ backgroundColor: f.color }}

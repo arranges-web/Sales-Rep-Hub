@@ -57,7 +57,7 @@ const clerkAppearance = {
     logoLinkUrl: basePath || "/",
     logoImageUrl:
       typeof window !== "undefined"
-        ? `${window.location.origin}${basePath}/logo.svg`
+        ? `${window.location.origin}${basePath}/logo.png`
         : "",
   },
   variables: {
@@ -90,7 +90,7 @@ const clerkAppearance = {
     formFieldSuccessText: "text-emerald-600",
     alertText: "text-slate-800",
     logoBox: "justify-center mb-4",
-    logoImage: "h-12 w-auto",
+    logoImage: "h-14 w-auto",
     socialButtonsBlockButton:
       "border border-slate-200 hover:bg-slate-50 rounded-lg",
     formButtonPrimary:

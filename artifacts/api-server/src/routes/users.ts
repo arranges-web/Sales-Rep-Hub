@@ -3,6 +3,7 @@ import { db, usersTable, territoriesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../middlewares/auth";
 import { getAuth } from "@clerk/express";
+import { seedDataForNewRep } from "../lib/seed";
 
 const router: IRouter = Router();
 
@@ -54,7 +55,22 @@ router.post("/users", async (req, res, next) => {
       .insert(usersTable)
       .values({ clerkId, name, email, avatarUrl: avatarUrl ?? null, role })
       .returning();
-    res.status(201).json(serializeUser(created!));
+    // Seed a baseline of mock activity for new reps so the dashboard isn't
+    // empty on first load. Awaited so /users/me sees the data immediately.
+    if (created && role === "rep") {
+      await seedDataForNewRep({
+        userId: created.id,
+        userName: created.name,
+        userAvatarUrl: created.avatarUrl ?? null,
+      });
+    }
+    // Re-fetch so totalPoints reflects seeded deals.
+    const [final] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.id, created!.id))
+      .limit(1);
+    res.status(201).json(serializeUser(final ?? created!));
   } catch (e) {
     next(e);
   }
