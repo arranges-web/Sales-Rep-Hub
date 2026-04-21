@@ -3,20 +3,36 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Joshua Tree Sales Rep App API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: users
+    description: User/rep management
+  - name: deals
+    description: Deal management
+  - name: leaderboard
+    description: Leaderboard and rankings
+  - name: feed
+    description: Hype feed posts and reactions
+  - name: map
+    description: Canvassing map pins and territories
+  - name: rewards
+    description: Incentive vault and redemptions
+  - name: badges
+    description: Closer badges
+  - name: admin
+    description: Admin operations
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +40,919 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ─── Users / Reps ────────────────────────────────────────────────
+  /users/me:
+    get:
+      operationId: getMe
+      tags: [users]
+      summary: Get current user profile
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    patch:
+      operationId: updateMe
+      tags: [users]
+      summary: Update current user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserBody"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List all users (admin)
+      responses:
+        "200":
+          description: All users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+    post:
+      operationId: createUser
+      tags: [users]
+      summary: Upsert user from Clerk (called after sign-in)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserBody"
+      responses:
+        "200":
+          description: Created or existing user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/{userId}:
+    get:
+      operationId: getUser
+      tags: [users]
+      summary: Get a specific user
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    patch:
+      operationId: updateUser
+      tags: [users]
+      summary: Update a user (admin)
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserBody"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    delete:
+      operationId: deleteUser
+      tags: [users]
+      summary: Delete a user (admin)
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── Deals ───────────────────────────────────────────────────────
+  /deals:
+    get:
+      operationId: listDeals
+      tags: [deals]
+      summary: List deals
+      parameters:
+        - name: repId
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [lead, closed, paid]
+      responses:
+        "200":
+          description: List of deals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Deal"
+    post:
+      operationId: createDeal
+      tags: [deals]
+      summary: Create a new deal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDealBody"
+      responses:
+        "201":
+          description: Created deal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Deal"
+
+  /deals/{dealId}:
+    get:
+      operationId: getDeal
+      tags: [deals]
+      summary: Get a deal
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Deal"
+    patch:
+      operationId: updateDeal
+      tags: [deals]
+      summary: Update a deal (triggers point/badge/feed logic on status change)
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDealBody"
+      responses:
+        "200":
+          description: Updated deal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Deal"
+    delete:
+      operationId: deleteDeal
+      tags: [deals]
+      summary: Delete a deal (admin)
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── Leaderboard ────────────────────────────────────────────────
+  /leaderboard:
+    get:
+      operationId: getLeaderboard
+      tags: [leaderboard]
+      summary: Get ranked leaderboard of reps by points
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [all_time, month, week]
+      responses:
+        "200":
+          description: Leaderboard entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LeaderboardEntry"
+
+  /leaderboard/summary:
+    get:
+      operationId: getLeaderboardSummary
+      tags: [leaderboard]
+      summary: Get totals and stats for dashboard
+      responses:
+        "200":
+          description: Summary stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeaderboardSummary"
+
+  # ─── Feed ─────────────────────────────────────────────────────────
+  /feed:
+    get:
+      operationId: listFeedPosts
+      tags: [feed]
+      summary: List hype feed posts
+      responses:
+        "200":
+          description: Feed posts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FeedPost"
+    post:
+      operationId: createFeedPost
+      tags: [feed]
+      summary: Create a feed post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFeedPostBody"
+      responses:
+        "201":
+          description: Created post
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeedPost"
+
+  /feed/{postId}:
+    delete:
+      operationId: deleteFeedPost
+      tags: [feed]
+      summary: Delete a feed post
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /feed/{postId}/highfive:
+    post:
+      operationId: toggleHighFive
+      tags: [feed]
+      summary: Toggle high-five (like) on a post
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated high-five count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HighFiveResult"
+
+  /feed/{postId}/comments:
+    get:
+      operationId: listComments
+      tags: [feed]
+      summary: List comments on a post
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Comments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Comment"
+    post:
+      operationId: createComment
+      tags: [feed]
+      summary: Add a comment to a post
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCommentBody"
+      responses:
+        "201":
+          description: Created comment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Comment"
+
+  /feed/{postId}/comments/{commentId}:
+    delete:
+      operationId: deleteComment
+      tags: [feed]
+      summary: Delete a comment
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── Map Pins & Territories ─────────────────────────────────────
+  /pins:
+    get:
+      operationId: listPins
+      tags: [map]
+      summary: List map pins
+      parameters:
+        - name: repId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Pins
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MapPin"
+    post:
+      operationId: createPin
+      tags: [map]
+      summary: Drop a map pin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePinBody"
+      responses:
+        "201":
+          description: Created pin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MapPin"
+
+  /pins/{pinId}:
+    get:
+      operationId: getPin
+      tags: [map]
+      summary: Get a pin with notes
+      parameters:
+        - name: pinId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Pin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MapPin"
+    patch:
+      operationId: updatePin
+      tags: [map]
+      summary: Update a pin (status, notes, photos)
+      parameters:
+        - name: pinId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePinBody"
+      responses:
+        "200":
+          description: Updated pin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MapPin"
+    delete:
+      operationId: deletePin
+      tags: [map]
+      summary: Delete a pin
+      parameters:
+        - name: pinId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /territories:
+    get:
+      operationId: listTerritories
+      tags: [map]
+      summary: List all territories
+      responses:
+        "200":
+          description: Territories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Territory"
+    post:
+      operationId: createTerritory
+      tags: [map]
+      summary: Create a territory (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTerritoryBody"
+      responses:
+        "201":
+          description: Created territory
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Territory"
+
+  /territories/{territoryId}:
+    patch:
+      operationId: updateTerritory
+      tags: [map]
+      summary: Update a territory (admin)
+      parameters:
+        - name: territoryId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTerritoryBody"
+      responses:
+        "200":
+          description: Updated territory
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Territory"
+    delete:
+      operationId: deleteTerritory
+      tags: [map]
+      summary: Delete a territory (admin)
+      parameters:
+        - name: territoryId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── Rewards ─────────────────────────────────────────────────────
+  /rewards:
+    get:
+      operationId: listRewards
+      tags: [rewards]
+      summary: List all available rewards
+      responses:
+        "200":
+          description: Rewards catalog
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Reward"
+    post:
+      operationId: createReward
+      tags: [rewards]
+      summary: Create a reward (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRewardBody"
+      responses:
+        "201":
+          description: Created reward
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reward"
+
+  /rewards/{rewardId}:
+    patch:
+      operationId: updateReward
+      tags: [rewards]
+      summary: Update a reward (admin)
+      parameters:
+        - name: rewardId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateRewardBody"
+      responses:
+        "200":
+          description: Updated reward
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reward"
+    delete:
+      operationId: deleteReward
+      tags: [rewards]
+      summary: Delete a reward (admin)
+      parameters:
+        - name: rewardId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /redemptions:
+    get:
+      operationId: listRedemptions
+      tags: [rewards]
+      summary: List redemption requests
+      parameters:
+        - name: repId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Redemptions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Redemption"
+    post:
+      operationId: createRedemption
+      tags: [rewards]
+      summary: Redeem a reward (spend points)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRedemptionBody"
+      responses:
+        "201":
+          description: Redemption created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Redemption"
+
+  /redemptions/{redemptionId}:
+    patch:
+      operationId: updateRedemption
+      tags: [rewards]
+      summary: Update redemption status (admin approve/reject)
+      parameters:
+        - name: redemptionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateRedemptionBody"
+      responses:
+        "200":
+          description: Updated redemption
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Redemption"
+
+  # ─── Badges ───────────────────────────────────────────────────────
+  /badges:
+    get:
+      operationId: listBadges
+      tags: [badges]
+      summary: List badges for a user
+      parameters:
+        - name: userId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Badges
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Badge"
+
+  # ─── Incentive Tiers ─────────────────────────────────────────────
+  /incentive-tiers:
+    get:
+      operationId: listIncentiveTiers
+      tags: [admin]
+      summary: List all incentive tier cutoffs
+      responses:
+        "200":
+          description: Tiers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/IncentiveTier"
+    post:
+      operationId: createIncentiveTier
+      tags: [admin]
+      summary: Create an incentive tier (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateIncentiveTierBody"
+      responses:
+        "201":
+          description: Created tier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IncentiveTier"
+
+  /incentive-tiers/{tierId}:
+    patch:
+      operationId: updateIncentiveTier
+      tags: [admin]
+      summary: Update an incentive tier (admin)
+      parameters:
+        - name: tierId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateIncentiveTierBody"
+      responses:
+        "200":
+          description: Updated tier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IncentiveTier"
+    delete:
+      operationId: deleteIncentiveTier
+      tags: [admin]
+      summary: Delete an incentive tier (admin)
+      parameters:
+        - name: tierId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── Service Point Config ─────────────────────────────────────────
+  /point-configs:
+    get:
+      operationId: listPointConfigs
+      tags: [admin]
+      summary: List point-per-$100 configs for service types
+      responses:
+        "200":
+          description: Point configs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PointConfig"
+    post:
+      operationId: createPointConfig
+      tags: [admin]
+      summary: Create a point config (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePointConfigBody"
+      responses:
+        "201":
+          description: Created config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PointConfig"
+
+  /point-configs/{configId}:
+    patch:
+      operationId: updatePointConfig
+      tags: [admin]
+      summary: Update a point config (admin)
+      parameters:
+        - name: configId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePointConfigBody"
+      responses:
+        "200":
+          description: Updated config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PointConfig"
+    delete:
+      operationId: deletePointConfig
+      tags: [admin]
+      summary: Delete a point config (admin)
+      parameters:
+        - name: configId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── Training Resources ───────────────────────────────────────────
+  /training:
+    get:
+      operationId: listTrainingResources
+      tags: [admin]
+      summary: List training resources
+      responses:
+        "200":
+          description: Training resources
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TrainingResource"
+    post:
+      operationId: createTrainingResource
+      tags: [admin]
+      summary: Create a training resource (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTrainingResourceBody"
+      responses:
+        "201":
+          description: Created resource
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrainingResource"
+
+  /training/{resourceId}:
+    patch:
+      operationId: updateTrainingResource
+      tags: [admin]
+      summary: Update a training resource (admin)
+      parameters:
+        - name: resourceId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTrainingResourceBody"
+      responses:
+        "200":
+          description: Updated resource
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrainingResource"
+    delete:
+      operationId: deleteTrainingResource
+      tags: [admin]
+      summary: Delete a training resource (admin)
+      parameters:
+        - name: resourceId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +963,762 @@ components:
       required:
         - status
 
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        clerkId:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [admin, rep]
+        avatarUrl:
+          type: ["string", "null"]
+        totalPoints:
+          type: integer
+        territoryId:
+          type: ["integer", "null"]
+        territoryName:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - clerkId
+        - name
+        - email
+        - role
+        - totalPoints
+        - createdAt
+
+    CreateUserBody:
+      type: object
+      properties:
+        clerkId:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+      required:
+        - clerkId
+        - name
+        - email
+
+    UpdateUserBody:
+      type: object
+      properties:
+        name:
+          type: string
+        role:
+          type: string
+          enum: [admin, rep]
+        avatarUrl:
+          type: ["string", "null"]
+        territoryId:
+          type: ["integer", "null"]
+
+    Deal:
+      type: object
+      properties:
+        id:
+          type: integer
+        repId:
+          type: integer
+        repName:
+          type: string
+        customerName:
+          type: string
+        address:
+          type: string
+        serviceType:
+          type: string
+          enum: [large_removal, trimming_pruning, stump_grinding, other]
+        amount:
+          type: number
+        status:
+          type: string
+          enum: [lead, closed, paid]
+        pointsAwarded:
+          type: integer
+        notes:
+          type: ["string", "null"]
+        closedAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - repId
+        - repName
+        - customerName
+        - address
+        - serviceType
+        - amount
+        - status
+        - pointsAwarded
+        - createdAt
+
+    CreateDealBody:
+      type: object
+      properties:
+        customerName:
+          type: string
+        address:
+          type: string
+        serviceType:
+          type: string
+          enum: [large_removal, trimming_pruning, stump_grinding, other]
+        amount:
+          type: number
+        status:
+          type: string
+          enum: [lead, closed, paid]
+        notes:
+          type: ["string", "null"]
+      required:
+        - customerName
+        - address
+        - serviceType
+        - amount
+        - status
+
+    UpdateDealBody:
+      type: object
+      properties:
+        customerName:
+          type: string
+        address:
+          type: string
+        serviceType:
+          type: string
+          enum: [large_removal, trimming_pruning, stump_grinding, other]
+        amount:
+          type: number
+        status:
+          type: string
+          enum: [lead, closed, paid]
+        notes:
+          type: ["string", "null"]
+
+    LeaderboardEntry:
+      type: object
+      properties:
+        rank:
+          type: integer
+        userId:
+          type: integer
+        name:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+        totalPoints:
+          type: integer
+        dealsCount:
+          type: integer
+        totalRevenue:
+          type: number
+        badges:
+          type: array
+          items:
+            $ref: "#/components/schemas/Badge"
+        isCurrentUser:
+          type: boolean
+      required:
+        - rank
+        - userId
+        - name
+        - totalPoints
+        - dealsCount
+        - totalRevenue
+        - badges
+        - isCurrentUser
+
+    LeaderboardSummary:
+      type: object
+      properties:
+        totalReps:
+          type: integer
+        totalDeals:
+          type: integer
+        totalRevenue:
+          type: number
+        totalPointsAwarded:
+          type: integer
+        topRepName:
+          type: ["string", "null"]
+        topRepPoints:
+          type: integer
+        dealsThisMonth:
+          type: integer
+        revenueThisMonth:
+          type: number
+      required:
+        - totalReps
+        - totalDeals
+        - totalRevenue
+        - totalPointsAwarded
+        - topRepPoints
+        - dealsThisMonth
+        - revenueThisMonth
+
+    FeedPost:
+      type: object
+      properties:
+        id:
+          type: integer
+        authorId:
+          type: ["integer", "null"]
+        authorName:
+          type: string
+        authorAvatarUrl:
+          type: ["string", "null"]
+        content:
+          type: string
+        imageUrl:
+          type: ["string", "null"]
+        isBot:
+          type: boolean
+        highFiveCount:
+          type: integer
+        hasHighFived:
+          type: boolean
+        commentCount:
+          type: integer
+        dealId:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - authorName
+        - content
+        - isBot
+        - highFiveCount
+        - hasHighFived
+        - commentCount
+        - createdAt
+
+    CreateFeedPostBody:
+      type: object
+      properties:
+        content:
+          type: string
+        imageUrl:
+          type: ["string", "null"]
+      required:
+        - content
+
+    HighFiveResult:
+      type: object
+      properties:
+        highFiveCount:
+          type: integer
+        hasHighFived:
+          type: boolean
+      required:
+        - highFiveCount
+        - hasHighFived
+
+    Comment:
+      type: object
+      properties:
+        id:
+          type: integer
+        postId:
+          type: integer
+        authorId:
+          type: integer
+        authorName:
+          type: string
+        authorAvatarUrl:
+          type: ["string", "null"]
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - postId
+        - authorId
+        - authorName
+        - content
+        - createdAt
+
+    CreateCommentBody:
+      type: object
+      properties:
+        content:
+          type: string
+      required:
+        - content
+
+    MapPin:
+      type: object
+      properties:
+        id:
+          type: integer
+        repId:
+          type: integer
+        repName:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        status:
+          type: string
+          enum: [lead, sold]
+        address:
+          type: string
+        notes:
+          type: ["string", "null"]
+        photoUrl:
+          type: ["string", "null"]
+        dealId:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - repId
+        - repName
+        - latitude
+        - longitude
+        - status
+        - address
+        - createdAt
+
+    CreatePinBody:
+      type: object
+      properties:
+        latitude:
+          type: number
+        longitude:
+          type: number
+        address:
+          type: string
+        status:
+          type: string
+          enum: [lead, sold]
+        notes:
+          type: ["string", "null"]
+        photoUrl:
+          type: ["string", "null"]
+        dealId:
+          type: ["integer", "null"]
+      required:
+        - latitude
+        - longitude
+        - address
+        - status
+
+    UpdatePinBody:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [lead, sold]
+        notes:
+          type: ["string", "null"]
+        photoUrl:
+          type: ["string", "null"]
+        dealId:
+          type: ["integer", "null"]
+
+    Territory:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        assignedRepId:
+          type: ["integer", "null"]
+        assignedRepName:
+          type: ["string", "null"]
+        color:
+          type: string
+        bounds:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - color
+        - createdAt
+
+    CreateTerritoryBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        assignedRepId:
+          type: ["integer", "null"]
+        color:
+          type: string
+        bounds:
+          type: ["string", "null"]
+      required:
+        - name
+        - color
+
+    UpdateTerritoryBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        assignedRepId:
+          type: ["integer", "null"]
+        color:
+          type: string
+        bounds:
+          type: ["string", "null"]
+
+    Reward:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        pointCost:
+          type: integer
+        category:
+          type: string
+          enum: [gear, pto, trip, cash, other]
+        imageUrl:
+          type: ["string", "null"]
+        available:
+          type: boolean
+        stock:
+          type: ["integer", "null"]
+      required:
+        - id
+        - name
+        - description
+        - pointCost
+        - category
+        - available
+
+    CreateRewardBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        pointCost:
+          type: integer
+        category:
+          type: string
+          enum: [gear, pto, trip, cash, other]
+        imageUrl:
+          type: ["string", "null"]
+        available:
+          type: boolean
+        stock:
+          type: ["integer", "null"]
+      required:
+        - name
+        - description
+        - pointCost
+        - category
+        - available
+
+    UpdateRewardBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        pointCost:
+          type: integer
+        category:
+          type: string
+          enum: [gear, pto, trip, cash, other]
+        imageUrl:
+          type: ["string", "null"]
+        available:
+          type: boolean
+        stock:
+          type: ["integer", "null"]
+
+    Redemption:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        userName:
+          type: string
+        rewardId:
+          type: integer
+        rewardName:
+          type: string
+        pointCost:
+          type: integer
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - userName
+        - rewardId
+        - rewardName
+        - pointCost
+        - status
+        - createdAt
+
+    CreateRedemptionBody:
+      type: object
+      properties:
+        rewardId:
+          type: integer
+      required:
+        - rewardId
+
+    UpdateRedemptionBody:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+      required:
+        - status
+
+    Badge:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        type:
+          type: string
+          enum: [century_club, hat_trick, top_closer, first_deal, five_star]
+        label:
+          type: string
+        description:
+          type: string
+        earnedAt:
+          type: string
+          format: date-time
+        dealId:
+          type: ["integer", "null"]
+      required:
+        - id
+        - userId
+        - type
+        - label
+        - description
+        - earnedAt
+
+    IncentiveTier:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        pointThreshold:
+          type: integer
+        color:
+          type: string
+        description:
+          type: string
+        rewardDescription:
+          type: string
+        displayOrder:
+          type: integer
+      required:
+        - id
+        - name
+        - pointThreshold
+        - color
+        - description
+        - rewardDescription
+        - displayOrder
+
+    CreateIncentiveTierBody:
+      type: object
+      properties:
+        name:
+          type: string
+        pointThreshold:
+          type: integer
+        color:
+          type: string
+        description:
+          type: string
+        rewardDescription:
+          type: string
+        displayOrder:
+          type: integer
+      required:
+        - name
+        - pointThreshold
+        - color
+        - description
+        - rewardDescription
+        - displayOrder
+
+    UpdateIncentiveTierBody:
+      type: object
+      properties:
+        name:
+          type: string
+        pointThreshold:
+          type: integer
+        color:
+          type: string
+        description:
+          type: string
+        rewardDescription:
+          type: string
+        displayOrder:
+          type: integer
+
+    PointConfig:
+      type: object
+      properties:
+        id:
+          type: integer
+        serviceType:
+          type: string
+          enum: [large_removal, trimming_pruning, stump_grinding, other]
+        pointsPer100:
+          type: integer
+        label:
+          type: string
+      required:
+        - id
+        - serviceType
+        - pointsPer100
+        - label
+
+    CreatePointConfigBody:
+      type: object
+      properties:
+        serviceType:
+          type: string
+          enum: [large_removal, trimming_pruning, stump_grinding, other]
+        pointsPer100:
+          type: integer
+        label:
+          type: string
+      required:
+        - serviceType
+        - pointsPer100
+        - label
+
+    UpdatePointConfigBody:
+      type: object
+      properties:
+        pointsPer100:
+          type: integer
+        label:
+          type: string
+
+    TrainingResource:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+          enum: [sales_script, tree_identification, product_knowledge, objection_handling, other]
+        contentUrl:
+          type: ["string", "null"]
+        contentText:
+          type: ["string", "null"]
+        thumbnailUrl:
+          type: ["string", "null"]
+        displayOrder:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - description
+        - category
+        - displayOrder
+        - createdAt
+
+    CreateTrainingResourceBody:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+          enum: [sales_script, tree_identification, product_knowledge, objection_handling, other]
+        contentUrl:
+          type: ["string", "null"]
+        contentText:
+          type: ["string", "null"]
+        thumbnailUrl:
+          type: ["string", "null"]
+        displayOrder:
+          type: integer
+      required:
+        - title
+        - description
+        - category
+        - displayOrder
+
+    UpdateTrainingResourceBody:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+          enum: [sales_script, tree_identification, product_knowledge, objection_handling, other]
+        contentUrl:
+          type: ["string", "null"]
+        contentText:
+          type: ["string", "null"]
+        thumbnailUrl:
+          type: ["string", "null"]
+        displayOrder:
+          type: integer
