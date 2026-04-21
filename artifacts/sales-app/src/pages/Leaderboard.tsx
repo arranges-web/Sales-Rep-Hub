@@ -64,12 +64,20 @@ export default function LeaderboardPage() {
                       )}>#{r.rank}</span>
                     )}
                   </div>
-                  <Avatar className="h-11 w-11">
-                    <AvatarImage src={r.avatarUrl ?? undefined} />
-                    <AvatarFallback className="bg-[#2C8214] text-white">
-                      {r.name.slice(0, 1)}
-                    </AvatarFallback>
-                  </Avatar>
+                  <div
+                    className="rounded-full p-[2px]"
+                    style={{ background: r.accentColor || "#2C8214" }}
+                  >
+                    <Avatar className="h-11 w-11 ring-2 ring-white">
+                      <AvatarImage src={r.avatarUrl ?? undefined} />
+                      <AvatarFallback
+                        className="text-white"
+                        style={{ background: r.accentColor || "#2C8214" }}
+                      >
+                        {r.name.slice(0, 1)}
+                      </AvatarFallback>
+                    </Avatar>
+                  </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="truncate font-bold">{r.name}</span>

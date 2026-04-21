@@ -7,6 +7,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Trophy, DollarSign, Zap, Award } from "lucide-react";
+import { AvatarRing } from "@/components/AvatarRing";
 
 export default function DashboardPage() {
   const { data: me } = useGetMe();
@@ -25,13 +26,23 @@ export default function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
-      <div>
-        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
-          Welcome back, {me?.name?.split(" ")[0] ?? "Rep"} 🌳
-        </h1>
-        <p className="mt-1 text-muted-foreground">
-          Here's how the SWFL crew is crushing it today.
-        </p>
+      <div className="flex items-center gap-4">
+        <AvatarRing
+          src={me?.avatarUrl}
+          name={me?.name ?? "Rep"}
+          accentColor={me?.accentColor}
+          size={56}
+        />
+        <div className="min-w-0">
+          <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
+            Welcome back, {me?.name?.split(" ")[0] ?? "Rep"} 🌳
+          </h1>
+          <p className="mt-1 text-muted-foreground">
+            {me?.hawaiiGoal
+              ? `🌺 ${me.hawaiiGoal}`
+              : "Here's how the SWFL crew is crushing it today."}
+          </p>
+        </div>
       </div>
 
       {/* Points to Paradise */}

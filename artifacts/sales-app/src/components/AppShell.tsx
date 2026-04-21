@@ -13,6 +13,7 @@ import {
   LogOut,
   Menu,
   X,
+  UserCircle,
 } from "lucide-react";
 import { useGetMe } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
@@ -83,14 +84,26 @@ export function AppShell({ children }: { children: ReactNode }) {
         )}
       </nav>
 
-      <div className="border-t border-sidebar-border p-3">
-        <div className="mb-2 flex items-center gap-3 rounded-xl p-2">
-          <Avatar className="h-9 w-9">
-            <AvatarImage src={user?.imageUrl} />
-            <AvatarFallback className="bg-[#2C8214] text-white">
-              {(me?.name || user?.firstName || "R").slice(0, 1)}
-            </AvatarFallback>
-          </Avatar>
+      <div className="border-t border-sidebar-border p-3 space-y-2">
+        <Link
+          href="/profile"
+          onClick={() => setMobileOpen(false)}
+          className="flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-sidebar-accent"
+        >
+          <div
+            className="rounded-full p-[2px]"
+            style={{ background: me?.accentColor || "#2C8214" }}
+          >
+            <Avatar className="h-9 w-9 ring-2 ring-white">
+              <AvatarImage src={me?.avatarUrl ?? user?.imageUrl} />
+              <AvatarFallback
+                className="text-white font-bold"
+                style={{ background: me?.accentColor || "#2C8214" }}
+              >
+                {(me?.name || user?.firstName || "R").slice(0, 1).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+          </div>
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-semibold">
               {me?.name || user?.fullName || "Sales Rep"}
@@ -100,7 +113,8 @@ export function AppShell({ children }: { children: ReactNode }) {
               {isAdmin && <span className="ml-1 text-[#FFBF00] font-bold">• Admin</span>}
             </div>
           </div>
-        </div>
+          <UserCircle className="h-4 w-4 text-muted-foreground" />
+        </Link>
         <Button
           variant="outline"
           size="sm"

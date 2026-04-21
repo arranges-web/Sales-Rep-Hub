@@ -460,7 +460,13 @@ export default function MapPage() {
                   <div className="mt-1 truncate font-semibold text-sm">
                     {p.address}
                   </div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                    {p.repAccentColor && (
+                      <span
+                        className="inline-block h-2 w-2 rounded-full"
+                        style={{ background: p.repAccentColor }}
+                      />
+                    )}
                     by {p.repName}
                   </div>
                   {p.notes && <p className="mt-1 text-sm">{p.notes}</p>}

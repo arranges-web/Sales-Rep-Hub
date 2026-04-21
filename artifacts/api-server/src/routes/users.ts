@@ -7,6 +7,13 @@ import { seedDataForNewRep } from "../lib/seed";
 
 const router: IRouter = Router();
 
+const HEX_RE = /^#[0-9a-fA-F]{6}$/;
+
+function sanitizeAccent(c: unknown): string | undefined {
+  if (typeof c !== "string") return undefined;
+  return HEX_RE.test(c) ? c : undefined;
+}
+
 function serializeUser(u: typeof usersTable.$inferSelect, territoryName: string | null = null) {
   return {
     id: u.id,
@@ -15,6 +22,11 @@ function serializeUser(u: typeof usersTable.$inferSelect, territoryName: string 
     email: u.email,
     role: u.role as "admin" | "rep",
     avatarUrl: u.avatarUrl ?? null,
+    accentColor: u.accentColor ?? "#2EA3F2",
+    hometown: u.hometown ?? null,
+    bio: u.bio ?? null,
+    hawaiiGoal: u.hawaiiGoal ?? null,
+    favoriteService: u.favoriteService ?? null,
     totalPoints: u.totalPoints,
     territoryId: u.territoryId ?? null,
     territoryName,
@@ -103,6 +115,38 @@ router.patch("/users/me", requireAuth, async (req, res, next) => {
       .set({
         ...(name !== undefined ? { name } : {}),
         ...(avatarUrl !== undefined ? { avatarUrl } : {}),
+      })
+      .where(eq(usersTable.id, u.id))
+      .returning();
+    res.json(serializeUser(updated!));
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.patch("/users/me/profile", requireAuth, async (req, res, next) => {
+  try {
+    const u = req.currentUser!;
+    const body = req.body ?? {};
+    const accent = sanitizeAccent(body.accentColor);
+    const trim = (v: unknown) =>
+      v === null ? null : typeof v === "string" ? v.slice(0, 500) : undefined;
+    const [updated] = await db
+      .update(usersTable)
+      .set({
+        ...(typeof body.name === "string" && body.name.trim()
+          ? { name: body.name.trim().slice(0, 120) }
+          : {}),
+        ...(body.avatarUrl !== undefined ? { avatarUrl: body.avatarUrl ?? null } : {}),
+        ...(accent ? { accentColor: accent } : {}),
+        ...(body.hometown !== undefined ? { hometown: trim(body.hometown) ?? null } : {}),
+        ...(body.bio !== undefined ? { bio: trim(body.bio) ?? null } : {}),
+        ...(body.hawaiiGoal !== undefined
+          ? { hawaiiGoal: trim(body.hawaiiGoal) ?? null }
+          : {}),
+        ...(body.favoriteService !== undefined
+          ? { favoriteService: trim(body.favoriteService) ?? null }
+          : {}),
       })
       .where(eq(usersTable.id, u.id))
       .returning();

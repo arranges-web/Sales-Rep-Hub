@@ -5,11 +5,18 @@ import { requireAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
 
-function ser(p: typeof pinsTable.$inferSelect, repName: string) {
+function ser(
+  p: typeof pinsTable.$inferSelect,
+  repName: string,
+  repAvatarUrl: string | null = null,
+  repAccentColor: string | null = null,
+) {
   return {
     id: p.id,
     repId: p.repId,
     repName,
+    repAvatarUrl,
+    repAccentColor,
     latitude: p.latitude,
     longitude: p.longitude,
     status: p.status as "lead" | "sold",
@@ -24,11 +31,20 @@ function ser(p: typeof pinsTable.$inferSelect, repName: string) {
 router.get("/pins", requireAuth, async (_req, res, next) => {
   try {
     const rows = await db
-      .select({ p: pinsTable, repName: usersTable.name })
+      .select({
+        p: pinsTable,
+        repName: usersTable.name,
+        repAvatarUrl: usersTable.avatarUrl,
+        repAccentColor: usersTable.accentColor,
+      })
       .from(pinsTable)
       .leftJoin(usersTable, eq(pinsTable.repId, usersTable.id))
       .orderBy(desc(pinsTable.createdAt));
-    res.json(rows.map((r) => ser(r.p, r.repName ?? "Unknown")));
+    res.json(
+      rows.map((r) =>
+        ser(r.p, r.repName ?? "Unknown", r.repAvatarUrl ?? null, r.repAccentColor ?? null),
+      ),
+    );
   } catch (e) {
     next(e);
   }
@@ -51,7 +67,7 @@ router.post("/pins", requireAuth, async (req, res, next) => {
         dealId: dealId ?? null,
       })
       .returning();
-    res.status(201).json(ser(created!, me.name));
+    res.status(201).json(ser(created!, me.name, me.avatarUrl ?? null, me.accentColor ?? null));
   } catch (e) {
     next(e);
   }
@@ -61,7 +77,12 @@ router.get("/pins/:pinId", requireAuth, async (req, res, next) => {
   try {
     const id = Number(req.params.pinId);
     const [row] = await db
-      .select({ p: pinsTable, repName: usersTable.name })
+      .select({
+        p: pinsTable,
+        repName: usersTable.name,
+        repAvatarUrl: usersTable.avatarUrl,
+        repAccentColor: usersTable.accentColor,
+      })
       .from(pinsTable)
       .leftJoin(usersTable, eq(pinsTable.repId, usersTable.id))
       .where(eq(pinsTable.id, id))
@@ -70,7 +91,9 @@ router.get("/pins/:pinId", requireAuth, async (req, res, next) => {
       res.status(404).end();
       return;
     }
-    res.json(ser(row.p, row.repName ?? "Unknown"));
+    res.json(
+      ser(row.p, row.repName ?? "Unknown", row.repAvatarUrl ?? null, row.repAccentColor ?? null),
+    );
   } catch (e) {
     next(e);
   }
@@ -100,8 +123,18 @@ router.patch("/pins/:pinId", requireAuth, async (req, res, next) => {
       })
       .where(eq(pinsTable.id, id))
       .returning();
-    const [rep] = await db.select({ name: usersTable.name }).from(usersTable).where(eq(usersTable.id, existing.repId)).limit(1);
-    res.json(ser(updated!, rep?.name ?? "Unknown"));
+    const [rep] = await db
+      .select({
+        name: usersTable.name,
+        avatarUrl: usersTable.avatarUrl,
+        accentColor: usersTable.accentColor,
+      })
+      .from(usersTable)
+      .where(eq(usersTable.id, existing.repId))
+      .limit(1);
+    res.json(
+      ser(updated!, rep?.name ?? "Unknown", rep?.avatarUrl ?? null, rep?.accentColor ?? null),
+    );
   } catch (e) {
     next(e);
   }

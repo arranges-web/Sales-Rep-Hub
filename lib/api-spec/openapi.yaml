@@ -155,6 +155,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/User"
 
+  /users/me/profile:
+    patch:
+      operationId: updateMyProfile
+      tags: [users]
+      summary: Update current user's profile (self-only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileBody"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
   /users:
     get:
       operationId: listUsers
@@ -1093,6 +1112,16 @@ components:
           enum: [admin, rep]
         avatarUrl:
           type: ["string", "null"]
+        accentColor:
+          type: string
+        hometown:
+          type: ["string", "null"]
+        bio:
+          type: ["string", "null"]
+        hawaiiGoal:
+          type: ["string", "null"]
+        favoriteService:
+          type: ["string", "null"]
         totalPoints:
           type: integer
         territoryId:
@@ -1108,8 +1137,27 @@ components:
         - name
         - email
         - role
+        - accentColor
         - totalPoints
         - createdAt
+
+    UpdateProfileBody:
+      type: object
+      properties:
+        name:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+        accentColor:
+          type: string
+        hometown:
+          type: ["string", "null"]
+        bio:
+          type: ["string", "null"]
+        hawaiiGoal:
+          type: ["string", "null"]
+        favoriteService:
+          type: ["string", "null"]
 
     CreateUserBody:
       type: object
@@ -1236,6 +1284,8 @@ components:
           type: string
         avatarUrl:
           type: ["string", "null"]
+        accentColor:
+          type: string
         totalPoints:
           type: integer
         dealsCount:
@@ -1296,6 +1346,8 @@ components:
         authorName:
           type: string
         authorAvatarUrl:
+          type: ["string", "null"]
+        authorAccentColor:
           type: ["string", "null"]
         content:
           type: string
@@ -1358,6 +1410,8 @@ components:
           type: string
         authorAvatarUrl:
           type: ["string", "null"]
+        authorAccentColor:
+          type: ["string", "null"]
         content:
           type: string
         createdAt:
@@ -1388,6 +1442,10 @@ components:
           type: integer
         repName:
           type: string
+        repAvatarUrl:
+          type: ["string", "null"]
+        repAccentColor:
+          type: ["string", "null"]
         latitude:
           type: number
         longitude:

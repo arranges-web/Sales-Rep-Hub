@@ -73,12 +73,28 @@ export default function HypeFeedPage() {
         {(posts ?? []).map((p) => (
           <Card key={p.id} className="overflow-hidden">
             <div className="flex items-start gap-3 p-4">
-              <Avatar className="h-10 w-10">
-                <AvatarImage src={p.authorAvatarUrl ?? undefined} />
-                <AvatarFallback className={p.isBot ? "bg-[#FFBF00] text-slate-900" : "bg-[#2C8214] text-white"}>
-                  {p.isBot ? <Bot className="h-5 w-5" /> : p.authorName.slice(0, 1)}
-                </AvatarFallback>
-              </Avatar>
+              <div
+                className="rounded-full p-[2px] shrink-0"
+                style={{
+                  background: p.isBot
+                    ? "#FFBF00"
+                    : p.authorAccentColor || "#2C8214",
+                }}
+              >
+                <Avatar className="h-10 w-10 ring-2 ring-white">
+                  <AvatarImage src={p.authorAvatarUrl ?? undefined} />
+                  <AvatarFallback
+                    className={p.isBot ? "bg-[#FFBF00] text-slate-900" : "text-white"}
+                    style={
+                      p.isBot
+                        ? undefined
+                        : { background: p.authorAccentColor || "#2C8214" }
+                    }
+                  >
+                    {p.isBot ? <Bot className="h-5 w-5" /> : p.authorName.slice(0, 1)}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="font-bold">{p.authorName}</span>
@@ -169,12 +185,20 @@ function CommentsList({ postId }: { postId: number }) {
     <div className="basis-full border-t border-border bg-muted/30 p-3 space-y-3">
       {(comments ?? []).map((c) => (
         <div key={c.id} className="flex items-start gap-2">
-          <Avatar className="h-7 w-7">
-            <AvatarImage src={c.authorAvatarUrl ?? undefined} />
-            <AvatarFallback className="bg-[#2EA3F2] text-white text-xs">
-              {c.authorName.slice(0, 1)}
-            </AvatarFallback>
-          </Avatar>
+          <div
+            className="rounded-full p-[1.5px] shrink-0"
+            style={{ background: c.authorAccentColor || "#2EA3F2" }}
+          >
+            <Avatar className="h-7 w-7 ring-2 ring-white">
+              <AvatarImage src={c.authorAvatarUrl ?? undefined} />
+              <AvatarFallback
+                className="text-white text-xs"
+                style={{ background: c.authorAccentColor || "#2EA3F2" }}
+              >
+                {c.authorName.slice(0, 1)}
+              </AvatarFallback>
+            </Avatar>
+          </div>
           <div className="flex-1 rounded-xl bg-background px-3 py-1.5">
             <div className="text-xs font-semibold">{c.authorName}</div>
             <div className="text-sm">{c.content}</div>

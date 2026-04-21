@@ -43,12 +43,36 @@ export interface User {
   role: UserRole;
   /** @nullable */
   avatarUrl?: string | null;
+  accentColor: string;
+  /** @nullable */
+  hometown?: string | null;
+  /** @nullable */
+  bio?: string | null;
+  /** @nullable */
+  hawaiiGoal?: string | null;
+  /** @nullable */
+  favoriteService?: string | null;
   totalPoints: number;
   /** @nullable */
   territoryId?: number | null;
   /** @nullable */
   territoryName?: string | null;
   createdAt: string;
+}
+
+export interface UpdateProfileBody {
+  name?: string;
+  /** @nullable */
+  avatarUrl?: string | null;
+  accentColor?: string;
+  /** @nullable */
+  hometown?: string | null;
+  /** @nullable */
+  bio?: string | null;
+  /** @nullable */
+  hawaiiGoal?: string | null;
+  /** @nullable */
+  favoriteService?: string | null;
 }
 
 export interface CreateUserBody {
@@ -196,6 +220,7 @@ export interface LeaderboardEntry {
   name: string;
   /** @nullable */
   avatarUrl?: string | null;
+  accentColor?: string;
   totalPoints: number;
   dealsCount: number;
   totalRevenue: number;
@@ -222,6 +247,8 @@ export interface FeedPost {
   authorName: string;
   /** @nullable */
   authorAvatarUrl?: string | null;
+  /** @nullable */
+  authorAccentColor?: string | null;
   content: string;
   /** @nullable */
   imageUrl?: string | null;
@@ -252,6 +279,8 @@ export interface Comment {
   authorName: string;
   /** @nullable */
   authorAvatarUrl?: string | null;
+  /** @nullable */
+  authorAccentColor?: string | null;
   content: string;
   createdAt: string;
 }
@@ -271,6 +300,10 @@ export interface MapPin {
   id: number;
   repId: number;
   repName: string;
+  /** @nullable */
+  repAvatarUrl?: string | null;
+  /** @nullable */
+  repAccentColor?: string | null;
   latitude: number;
   longitude: number;
   status: MapPinStatus;

@@ -9,6 +9,17 @@ router.get("/feed", requireAuth, async (req, res, next) => {
   try {
     const me = req.currentUser!;
     const posts = await db.select().from(feedPostsTable).orderBy(desc(feedPostsTable.createdAt));
+    const authorIds = Array.from(
+      new Set(posts.map((p) => p.authorId).filter((x): x is number => typeof x === "number")),
+    );
+    const authorRows = authorIds.length
+      ? await db
+          .select({ id: usersTable.id, accentColor: usersTable.accentColor, avatarUrl: usersTable.avatarUrl })
+          .from(usersTable)
+          .where(sql`${usersTable.id} = ANY(${authorIds})`)
+      : [];
+    const accentById = new Map(authorRows.map((a) => [a.id, a.accentColor]));
+    const avatarById = new Map(authorRows.map((a) => [a.id, a.avatarUrl]));
     const result = await Promise.all(
       posts.map(async (p) => {
         const [hf] = await db
@@ -28,7 +39,8 @@ router.get("/feed", requireAuth, async (req, res, next) => {
           id: p.id,
           authorId: p.authorId ?? null,
           authorName: p.authorName,
-          authorAvatarUrl: p.authorAvatarUrl ?? null,
+          authorAvatarUrl: (p.authorId != null ? avatarById.get(p.authorId) : null) ?? p.authorAvatarUrl ?? null,
+          authorAccentColor: p.authorId != null ? accentById.get(p.authorId) ?? null : null,
           content: p.content,
           imageUrl: p.imageUrl ?? null,
           isBot: p.isBot,
@@ -66,6 +78,7 @@ router.post("/feed", requireAuth, async (req, res, next) => {
       authorId: created!.authorId,
       authorName: created!.authorName,
       authorAvatarUrl: created!.authorAvatarUrl,
+      authorAccentColor: me.accentColor,
       content: created!.content,
       imageUrl: created!.imageUrl,
       isBot: created!.isBot,
@@ -137,6 +150,7 @@ router.get("/feed/:postId/comments", requireAuth, async (req, res, next) => {
         c: commentsTable,
         authorName: usersTable.name,
         authorAvatarUrl: usersTable.avatarUrl,
+        authorAccentColor: usersTable.accentColor,
       })
       .from(commentsTable)
       .leftJoin(usersTable, eq(commentsTable.authorId, usersTable.id))
@@ -149,6 +163,7 @@ router.get("/feed/:postId/comments", requireAuth, async (req, res, next) => {
         authorId: r.c.authorId,
         authorName: r.authorName ?? "Unknown",
         authorAvatarUrl: r.authorAvatarUrl ?? null,
+        authorAccentColor: r.authorAccentColor ?? null,
         content: r.c.content,
         createdAt: r.c.createdAt.toISOString(),
       })),
@@ -173,6 +188,7 @@ router.post("/feed/:postId/comments", requireAuth, async (req, res, next) => {
       authorId: created!.authorId,
       authorName: me.name,
       authorAvatarUrl: me.avatarUrl ?? null,
+      authorAccentColor: me.accentColor ?? null,
       content: created!.content,
       createdAt: created!.createdAt.toISOString(),
     });
