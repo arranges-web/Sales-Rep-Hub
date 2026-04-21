@@ -1,0 +1,51 @@
+1. The "Closed-Deal" Point Engine
+
+The backend logic will ignore activity-based metrics (like doors knocked or pins dropped) and only trigger point updates based on "Closed" or "Paid" status.
+
+Weighted Categories: You can assign different point values based on the service type. For example:
+
+Large Removals: 10 points per $100.
+
+Trimming/Pruning: 5 points per $100.
+
+Stump Grinding Upsells: 15 points per $100 (to incentivize add-ons).
+
+The Hawaii Goal Tracker: A primary visual on the rep's profile showing a "Points to Paradise" progress bar. It only moves when a contract is signed or a deposit is collected.
+
+2. High-Stakes Sales Leaderboards
+
+Since points are only tied to closed deals, the leaderboard becomes a pure "Production" board.
+
+"Deal Feed" Integration: When a rep closes a deal, their name moves up the leaderboard in real-time.
+
+Closer Badges: Automated badges like "Century Club" (for a $10k+ deal) or "Hat Trick" (3 closed deals in one day) appear next to their name to signify quality over quantity.
+
+Incentive Tiers: The leaderboard should visually mark where the "Incentive Cutoffs" are (e.g., a gold line for the Hawaii Trip, a silver line for a weekend getaway).
+
+3. The Messaging "Hype" Feed
+
+This acts as the digital sales floor where the team celebrates closed business.
+
+Transaction Bots: An automated bot posts to the main feed every time a deal is closed: "BOOM! [Rep Name] just closed a $4,500 Removal in Fort Myers! +450 points toward Hawaii! 🌴"
+
+Proof of Work: Encourage reps to post a "Before and After" photo of the job site directly into the feed.
+
+Interaction: Other reps can "High Five" (like) or comment on the post, keeping the competitive energy high even when teams are spread out across SWFL.
+
+4. Canvassing & Lead Management (The Utility)
+
+While doors knocked don't grant points, the canvassing tool is the "utility" used to get to the closed deal.
+
+Status-Based Pins: Reps drop pins to track their pipeline, but the app UI should clearly distinguish between a "Lead" (No Points) and a "Sold Project" (Points Awarded).
+
+Area Ownership: Reps can see their assigned territories on the map to ensure they are focusing on the high-value residential areas assigned by management.
+
+Property History: Reps can view past notes or tree photos to help them close the deal on the spot.
+
+5. Automated Rewards & "Other Stuff"
+
+Incentive Vault: A section of the app where reps can view the full catalog of rewards they can "buy" with their closed-deal points (e.g., company gear, extra PTO, or the Hawaii trip).
+
+Reputation Gating: Once a deal is closed and paid, the app automatically triggers the 5-star review request to the homeowner to protect the company's local standing.
+
+Training Vault: Access to sales scripts and Florida-specific tree identification to help reps transition from a "knocker" to a "closer."
