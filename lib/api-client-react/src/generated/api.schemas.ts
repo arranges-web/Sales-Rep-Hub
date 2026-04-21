@@ -58,6 +58,13 @@ export interface User {
   /** @nullable */
   territoryName?: string | null;
   createdAt: string;
+  level: number;
+  nextLevelAt: number;
+  pointsThisLevel: number;
+  pointsPerLevel: number;
+  currentStreak: number;
+  bestStreak: number;
+  streakAtRisk: boolean;
 }
 
 export interface UpdateProfileBody {
@@ -128,6 +135,29 @@ export const DealStatus = {
   paid: "paid",
 } as const;
 
+export type CelebrationBadgeType =
+  (typeof CelebrationBadgeType)[keyof typeof CelebrationBadgeType];
+
+export const CelebrationBadgeType = {
+  century_club: "century_club",
+  hat_trick: "hat_trick",
+  top_closer: "top_closer",
+  first_deal: "first_deal",
+  five_star: "five_star",
+} as const;
+
+/**
+ * Lightweight badge payload returned alongside a freshly closed deal,
+carrying just enough info to drive a UI celebration.
+
+ */
+export interface CelebrationBadge {
+  id: number;
+  type: CelebrationBadgeType;
+  label: string;
+  description: string;
+}
+
 export interface Deal {
   id: number;
   repId: number;
@@ -143,6 +173,13 @@ export interface Deal {
   /** @nullable */
   closedAt?: string | null;
   createdAt: string;
+  newBadges?: CelebrationBadge[];
+  /** @nullable */
+  levelBefore?: number | null;
+  /** @nullable */
+  levelAfter?: number | null;
+  /** @nullable */
+  totalPoints?: number | null;
 }
 
 export type CreateDealBodyServiceType =
@@ -242,6 +279,11 @@ export interface LeaderboardEntry {
   totalRevenue: number;
   badges: Badge[];
   isCurrentUser: boolean;
+  level: number;
+  nextLevelAt: number;
+  currentStreak: number;
+  bestStreak: number;
+  streakAtRisk: boolean;
 }
 
 export interface LeaderboardSummary {
@@ -267,6 +309,8 @@ export interface FeedPost {
   authorAccentColor?: string | null;
   /** @nullable */
   authorHometown?: string | null;
+  /** @nullable */
+  authorLevel?: number | null;
   content: string;
   /** @nullable */
   imageUrl?: string | null;

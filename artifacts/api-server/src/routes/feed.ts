@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { db, feedPostsTable, highFivesTable, commentsTable, usersTable } from "@workspace/db";
 import { eq, desc, and, sql } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../middlewares/auth";
+import { levelInfo } from "../lib/streaks";
 
 const router: IRouter = Router();
 
@@ -19,6 +20,7 @@ router.get("/feed", requireAuth, async (req, res, next) => {
             accentColor: usersTable.accentColor,
             avatarUrl: usersTable.avatarUrl,
             hometown: usersTable.hometown,
+            totalPoints: usersTable.totalPoints,
           })
           .from(usersTable)
           .where(sql`${usersTable.id} = ANY(${authorIds})`)
@@ -26,39 +28,55 @@ router.get("/feed", requireAuth, async (req, res, next) => {
     const accentById = new Map(authorRows.map((a) => [a.id, a.accentColor]));
     const avatarById = new Map(authorRows.map((a) => [a.id, a.avatarUrl]));
     const hometownById = new Map(authorRows.map((a) => [a.id, a.hometown]));
-    const result = await Promise.all(
-      posts.map(async (p) => {
-        const [hf] = await db
-          .select({ c: sql<number>`COUNT(*)` })
+    const levelById = new Map(authorRows.map((a) => [a.id, levelInfo(a.totalPoints).level]));
+
+    const postIds = posts.map((p) => p.id);
+    const hfCountRows = postIds.length
+      ? await db
+          .select({ postId: highFivesTable.postId, c: sql<number>`COUNT(*)` })
           .from(highFivesTable)
-          .where(eq(highFivesTable.postId, p.id));
-        const [cc] = await db
-          .select({ c: sql<number>`COUNT(*)` })
+          .where(sql`${highFivesTable.postId} = ANY(${postIds})`)
+          .groupBy(highFivesTable.postId)
+      : [];
+    const ccCountRows = postIds.length
+      ? await db
+          .select({ postId: commentsTable.postId, c: sql<number>`COUNT(*)` })
           .from(commentsTable)
-          .where(eq(commentsTable.postId, p.id));
-        const [mine] = await db
-          .select()
+          .where(sql`${commentsTable.postId} = ANY(${postIds})`)
+          .groupBy(commentsTable.postId)
+      : [];
+    const mineRows = postIds.length
+      ? await db
+          .select({ postId: highFivesTable.postId })
           .from(highFivesTable)
-          .where(and(eq(highFivesTable.postId, p.id), eq(highFivesTable.userId, me.id)))
-          .limit(1);
-        return {
-          id: p.id,
-          authorId: p.authorId ?? null,
-          authorName: p.authorName,
-          authorAvatarUrl: (p.authorId != null ? avatarById.get(p.authorId) : null) ?? p.authorAvatarUrl ?? null,
-          authorAccentColor: p.authorId != null ? accentById.get(p.authorId) ?? null : null,
-          authorHometown: p.authorId != null ? hometownById.get(p.authorId) ?? null : null,
-          content: p.content,
-          imageUrl: p.imageUrl ?? null,
-          isBot: p.isBot,
-          highFiveCount: Number(hf?.c ?? 0),
-          hasHighFived: !!mine,
-          commentCount: Number(cc?.c ?? 0),
-          dealId: p.dealId ?? null,
-          createdAt: p.createdAt.toISOString(),
-        };
-      }),
-    );
+          .where(
+            and(
+              sql`${highFivesTable.postId} = ANY(${postIds})`,
+              eq(highFivesTable.userId, me.id),
+            ),
+          )
+      : [];
+    const hfByPost = new Map(hfCountRows.map((r) => [r.postId, Number(r.c)]));
+    const ccByPost = new Map(ccCountRows.map((r) => [r.postId, Number(r.c)]));
+    const minedSet = new Set(mineRows.map((r) => r.postId));
+
+    const result = posts.map((p) => ({
+      id: p.id,
+      authorId: p.authorId ?? null,
+      authorName: p.authorName,
+      authorAvatarUrl: (p.authorId != null ? avatarById.get(p.authorId) : null) ?? p.authorAvatarUrl ?? null,
+      authorAccentColor: p.authorId != null ? accentById.get(p.authorId) ?? null : null,
+      authorHometown: p.authorId != null ? hometownById.get(p.authorId) ?? null : null,
+      authorLevel: p.authorId != null ? levelById.get(p.authorId) ?? null : null,
+      content: p.content,
+      imageUrl: p.imageUrl ?? null,
+      isBot: p.isBot,
+      highFiveCount: hfByPost.get(p.id) ?? 0,
+      hasHighFived: minedSet.has(p.id),
+      commentCount: ccByPost.get(p.id) ?? 0,
+      dealId: p.dealId ?? null,
+      createdAt: p.createdAt.toISOString(),
+    }));
     res.json(result);
   } catch (e) {
     next(e);
@@ -87,6 +105,7 @@ router.post("/feed", requireAuth, async (req, res, next) => {
       authorAvatarUrl: created!.authorAvatarUrl,
       authorAccentColor: me.accentColor,
       authorHometown: me.hometown ?? null,
+      authorLevel: levelInfo(me.totalPoints).level,
       content: created!.content,
       imageUrl: created!.imageUrl,
       isBot: created!.isBot,

@@ -17,7 +17,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Hand, MessageCircle, Trash2, Send, Bot } from "lucide-react";
+import { Hand, MessageCircle, Trash2, Send, Bot, MessageSquareHeart } from "lucide-react";
+import { BrandHeader } from "@/components/BrandHeader";
 import { formatDistanceToNow } from "date-fns";
 import { useGetMe } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
@@ -43,10 +44,11 @@ export default function HypeFeedPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-5 p-4 sm:p-6 lg:p-8">
-      <div>
-        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Hype Feed 🎉</h1>
-        <p className="mt-1 text-muted-foreground">Wins, high-fives, and team energy.</p>
-      </div>
+      <BrandHeader
+        title="Hype Feed"
+        subtitle="Wins, high-fives, and team energy."
+        icon={<MessageSquareHeart className="h-6 w-6" />}
+      />
 
       <Card className="p-4">
         <Textarea
@@ -98,6 +100,11 @@ export default function HypeFeedPage() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="font-bold">{p.authorName}</span>
+                  {!p.isBot && p.authorLevel != null && (
+                    <span className="rounded-full bg-[#2EA3F2]/15 px-1.5 py-0.5 text-[10px] font-bold text-[#2EA3F2]">
+                      L{p.authorLevel}
+                    </span>
+                  )}
                   {p.isBot && (
                     <Badge className="bg-[#FFBF00] text-slate-900">BOT</Badge>
                   )}

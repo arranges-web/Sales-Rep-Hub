@@ -16,7 +16,8 @@ import { Label } from "@/components/ui/label";
 import { PhotoUpload } from "@/components/PhotoUpload";
 import { AvatarRing } from "@/components/AvatarRing";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Palette } from "lucide-react";
+import { Save, Palette, UserCircle } from "lucide-react";
+import { BrandHeader } from "@/components/BrandHeader";
 import { cn } from "@/lib/utils";
 
 const PALETTE = [
@@ -96,12 +97,11 @@ export default function ProfilePage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-4 sm:p-6 lg:p-8">
-      <div>
-        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">My Profile 🌴</h1>
-        <p className="mt-1 text-muted-foreground">
-          Make this account yours — your team will see these touches everywhere.
-        </p>
-      </div>
+      <BrandHeader
+        title="My Profile"
+        subtitle="Make this account yours — your team will see these touches everywhere."
+        icon={<UserCircle className="h-6 w-6" />}
+      />
 
       <Card
         className="overflow-hidden border-0 p-6 text-white shadow-lg"

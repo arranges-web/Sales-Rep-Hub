@@ -9,6 +9,7 @@ interface AvatarRingProps {
   size?: number;
   fallbackClassName?: string;
   className?: string;
+  pulse?: boolean;
 }
 
 export function AvatarRing({
@@ -18,12 +19,17 @@ export function AvatarRing({
   size = 40,
   fallbackClassName,
   className,
+  pulse = false,
 }: AvatarRingProps) {
   const ring = accentColor || "transparent";
   const resolvedSrc = src ? photoServingUrl(src) ?? src : undefined;
   return (
     <div
-      className={cn("rounded-full p-[2px]", className)}
+      className={cn(
+        "rounded-full p-[2px]",
+        pulse && "animate-pulse-ring",
+        className,
+      )}
       style={{ background: accentColor ? ring : undefined }}
     >
       <Avatar

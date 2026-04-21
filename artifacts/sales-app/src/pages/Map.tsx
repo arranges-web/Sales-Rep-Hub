@@ -26,6 +26,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Plus, Trash2, CheckCircle2 } from "lucide-react";
 import { AvatarRing } from "@/components/AvatarRing";
+import { BrandHeader } from "@/components/BrandHeader";
+import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { PhotoUpload, photoServingUrl } from "@/components/PhotoUpload";
 
@@ -287,15 +289,33 @@ export default function MapPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-5 p-4 sm:p-6 lg:p-8">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
-            Canvassing Map 📍
-          </h1>
-          <p className="mt-1 text-muted-foreground">
-            Tap the map to drop a pin at any location.
-          </p>
-        </div>
+      <BrandHeader
+        title="Canvassing Map"
+        subtitle="Tap the map to drop a pin at any location."
+        icon={<MapPin className="h-6 w-6" />}
+        actions={
+          <div className="flex gap-2">
+            {(["all", "lead", "sold"] as const).map((f) => (
+              <Button
+                key={f}
+                size="sm"
+                variant={filter === f ? "default" : "outline"}
+                onClick={() => setFilter(f)}
+                className={cn(
+                  "rounded-xl capitalize",
+                  filter === f
+                    ? "bg-white text-[#2EA3F2] hover:bg-white/90"
+                    : "bg-white/15 text-white border-white/30 hover:bg-white/25 hover:text-white",
+                )}
+              >
+                {f}
+              </Button>
+            ))}
+          </div>
+        }
+      />
+      {/* legacy filter row removed (now in header) */}
+      <div className="hidden" aria-hidden>
         <div className="flex gap-2">
           {(["all", "lead", "sold"] as const).map((f) => (
             <Button

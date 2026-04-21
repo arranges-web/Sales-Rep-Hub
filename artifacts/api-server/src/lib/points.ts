@@ -109,14 +109,19 @@ export async function awardBadgesForClosedDeal(opts: {
     }
   }
 
+  const inserted: { id: number; type: string; label: string; description: string }[] = [];
   for (const b of newBadges) {
-    await db.insert(badgesTable).values({
-      userId,
-      type: b.type,
-      label: b.label,
-      description: b.description,
-      dealId,
-    });
+    const [row] = await db
+      .insert(badgesTable)
+      .values({
+        userId,
+        type: b.type,
+        label: b.label,
+        description: b.description,
+        dealId,
+      })
+      .returning();
+    if (row) inserted.push({ id: row.id, type: b.type, label: b.label, description: b.description });
     await db.insert(feedPostsTable).values({
       authorId: null,
       authorName: "Joshua Tree Bot",
@@ -127,7 +132,7 @@ export async function awardBadgesForClosedDeal(opts: {
     });
   }
 
-  return newBadges;
+  return inserted;
 }
 
 export async function postDealClosedToFeed(opts: {

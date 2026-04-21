@@ -31,6 +31,8 @@ import {
 } from "@/components/ui/select";
 import { Briefcase, Plus, CheckCircle2, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useCelebrate } from "@/hooks/useCelebrate";
+import { BrandHeader } from "@/components/BrandHeader";
 
 const SERVICE_OPTIONS: { value: CreateDealBodyServiceType; label: string }[] = [
   { value: "large_removal", label: "Large Removal" },
@@ -48,6 +50,35 @@ export default function DealsPage() {
   const remove = useDeleteDeal();
   const { data: me } = useGetMe();
   const { toast } = useToast();
+  const celebrate = useCelebrate();
+
+  const handleDealResponse = (
+    res: { pointsAwarded?: number; status?: string; customerName?: string; newBadges?: { label: string; description: string }[] | null; levelBefore?: number | null; levelAfter?: number | null },
+  ) => {
+    const closed = res.status === "closed" || res.status === "paid";
+    if (closed && (res.pointsAwarded ?? 0) > 0) {
+      celebrate.dealClosed({
+        pointsAwarded: res.pointsAwarded ?? 0,
+        customerName: res.customerName,
+      });
+    }
+    if (res.newBadges && res.newBadges.length > 0) {
+      // Stagger badge celebrations slightly so they're visible.
+      res.newBadges.forEach((b, i) => {
+        setTimeout(
+          () => celebrate.badgeEarned({ label: b.label, description: b.description }),
+          400 + i * 600,
+        );
+      });
+    }
+    if (
+      res.levelBefore != null &&
+      res.levelAfter != null &&
+      res.levelAfter > res.levelBefore
+    ) {
+      setTimeout(() => celebrate.levelUp({ levelAfter: res.levelAfter! }), 900);
+    }
+  };
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<{
     customerName: string;
@@ -80,19 +111,19 @@ export default function DealsPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-4 sm:p-6 lg:p-8">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">My Deals 💼</h1>
-          <p className="mt-1 text-muted-foreground">
-            Log every job. Closing a deal awards points and badges.
-          </p>
-        </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button className="rounded-xl bg-[#2EA3F2] hover:bg-[#1d8fd8]">
-              <Plus className="mr-1 h-4 w-4" /> New Deal
-            </Button>
-          </DialogTrigger>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <BrandHeader
+          title="My Deals"
+          subtitle="Log every job. Closing a deal awards points and badges."
+          icon={<Briefcase className="h-6 w-6" />}
+          actions={
+            <DialogTrigger asChild>
+              <Button className="rounded-xl bg-white text-[#2EA3F2] hover:bg-white/90">
+                <Plus className="mr-1 h-4 w-4" /> New Deal
+              </Button>
+            </DialogTrigger>
+          }
+        />
           <DialogContent className="rounded-2xl">
             <DialogHeader>
               <DialogTitle>New deal</DialogTitle>
@@ -156,7 +187,7 @@ export default function DealsPage() {
                     toast({ title: "Missing info", description: "Customer, service, and amount are required.", variant: "destructive" });
                     return;
                   }
-                  await create.mutateAsync({
+                  const res = await create.mutateAsync({
                     data: {
                       customerName: form.customerName,
                       address: form.address,
@@ -169,15 +200,18 @@ export default function DealsPage() {
                   invalidateAll();
                   setForm({ customerName: "", address: "", serviceType: "", amount: 0, notes: "", status: "lead" });
                   setOpen(false);
-                  toast({ title: form.status === "closed" ? "Deal closed! 🎉" : "Deal logged" });
+                  if (form.status === "closed") {
+                    handleDealResponse(res);
+                  } else {
+                    toast({ title: "Deal logged" });
+                  }
                 }}
               >
                 Save deal
               </Button>
             </div>
           </DialogContent>
-        </Dialog>
-      </div>
+      </Dialog>
 
       <div className="space-y-3">
         {(deals ?? []).map((d) => {
@@ -219,12 +253,12 @@ export default function DealsPage() {
                       size="sm"
                       className="rounded-xl bg-[#2C8214] hover:bg-[#236812]"
                       onClick={async () => {
-                        await update.mutateAsync({
+                        const res = await update.mutateAsync({
                           dealId: d.id,
                           data: { status: "closed" },
                         });
                         invalidateAll();
-                        toast({ title: "Deal closed! 🎉", description: "Points and badges updated." });
+                        handleDealResponse(res);
                       }}
                     >
                       <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Close

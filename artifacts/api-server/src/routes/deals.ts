@@ -8,10 +8,22 @@ import {
   awardBadgesForClosedDeal,
   postDealClosedToFeed,
 } from "../lib/points";
+import { levelInfo } from "../lib/streaks";
 
 const router: IRouter = Router();
 
-function serializeDeal(d: typeof dealsTable.$inferSelect, repName: string) {
+interface CelebrationExtras {
+  newBadges?: { id: number; type: string; label: string; description: string }[];
+  levelBefore?: number;
+  levelAfter?: number;
+  totalPoints?: number;
+}
+
+function serializeDeal(
+  d: typeof dealsTable.$inferSelect,
+  repName: string,
+  extras: CelebrationExtras = {},
+) {
   return {
     id: d.id,
     repId: d.repId,
@@ -25,6 +37,10 @@ function serializeDeal(d: typeof dealsTable.$inferSelect, repName: string) {
     notes: d.notes ?? null,
     closedAt: d.closedAt ? d.closedAt.toISOString() : null,
     createdAt: d.createdAt.toISOString(),
+    newBadges: extras.newBadges ?? [],
+    levelBefore: extras.levelBefore ?? null,
+    levelAfter: extras.levelAfter ?? null,
+    totalPoints: extras.totalPoints ?? null,
   };
 }
 
@@ -75,8 +91,11 @@ router.post("/deals", requireAuth, async (req, res, next) => {
         closedAt,
       })
       .returning();
+    let extras: CelebrationExtras = {};
     if (isClosed && created) {
-      await recomputeUserPoints(u.id);
+      const levelBefore = levelInfo(u.totalPoints).level;
+      const totalAfter = await recomputeUserPoints(u.id);
+      const levelAfter = levelInfo(totalAfter).level;
       await postDealClosedToFeed({
         userId: u.id,
         userName: u.name,
@@ -86,7 +105,7 @@ router.post("/deals", requireAuth, async (req, res, next) => {
         customerName,
         pointsAwarded: points,
       });
-      await awardBadgesForClosedDeal({
+      const newBadges = await awardBadgesForClosedDeal({
         userId: u.id,
         userName: u.name,
         userAvatarUrl: u.avatarUrl,
@@ -94,8 +113,9 @@ router.post("/deals", requireAuth, async (req, res, next) => {
         dealAmount: numericAmount,
         closedAt: closedAt!,
       });
+      extras = { newBadges, levelBefore, levelAfter, totalPoints: totalAfter };
     }
-    res.status(201).json(serializeDeal(created!, u.name));
+    res.status(201).json(serializeDeal(created!, u.name, extras));
   } catch (e) {
     next(e);
   }
@@ -170,31 +190,37 @@ router.patch("/deals/:dealId", requireAuth, async (req, res, next) => {
       })
       .where(eq(dealsTable.id, id))
       .returning();
-    await recomputeUserPoints(existing.repId);
-    if (justClosed && updated) {
-      const [rep] = await db.select().from(usersTable).where(eq(usersTable.id, existing.repId)).limit(1);
-      if (rep) {
-        await postDealClosedToFeed({
-          userId: rep.id,
-          userName: rep.name,
-          userAvatarUrl: rep.avatarUrl,
-          dealId: updated.id,
-          dealAmount: newAmount,
-          customerName: updated.customerName,
-          pointsAwarded,
-        });
-        await awardBadgesForClosedDeal({
-          userId: rep.id,
-          userName: rep.name,
-          userAvatarUrl: rep.avatarUrl,
-          dealId: updated.id,
-          dealAmount: newAmount,
-          closedAt: closedAt!,
-        });
-      }
+    const [repBefore] = await db.select().from(usersTable).where(eq(usersTable.id, existing.repId)).limit(1);
+    const levelBefore = repBefore ? levelInfo(repBefore.totalPoints).level : 1;
+    const totalAfter = await recomputeUserPoints(existing.repId);
+    const levelAfter = levelInfo(totalAfter).level;
+    let extras: CelebrationExtras = {
+      levelBefore,
+      levelAfter,
+      totalPoints: totalAfter,
+      newBadges: [],
+    };
+    if (justClosed && updated && repBefore) {
+      await postDealClosedToFeed({
+        userId: repBefore.id,
+        userName: repBefore.name,
+        userAvatarUrl: repBefore.avatarUrl,
+        dealId: updated.id,
+        dealAmount: newAmount,
+        customerName: updated.customerName,
+        pointsAwarded,
+      });
+      const newBadges = await awardBadgesForClosedDeal({
+        userId: repBefore.id,
+        userName: repBefore.name,
+        userAvatarUrl: repBefore.avatarUrl,
+        dealId: updated.id,
+        dealAmount: newAmount,
+        closedAt: closedAt!,
+      });
+      extras = { ...extras, newBadges };
     }
-    const [repRow] = await db.select({ name: usersTable.name }).from(usersTable).where(eq(usersTable.id, existing.repId)).limit(1);
-    res.json(serializeDeal(updated!, repRow?.name ?? "Unknown"));
+    res.json(serializeDeal(updated!, repBefore?.name ?? "Unknown", extras));
   } catch (e) {
     next(e);
   }

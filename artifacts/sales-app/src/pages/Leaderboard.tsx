@@ -1,10 +1,11 @@
 import { useGetLeaderboard, useListIncentiveTiers } from "@workspace/api-client-react";
 import { Card } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { photoServingUrl } from "@/components/PhotoUpload";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Award } from "lucide-react";
+import { Trophy, Award, Flame } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { AvatarRing } from "@/components/AvatarRing";
+import { BrandHeader } from "@/components/BrandHeader";
+import { AnimatedNumber } from "@/components/AnimatedNumber";
 
 export default function LeaderboardPage() {
   const { data: rows } = useGetLeaderboard();
@@ -13,14 +14,11 @@ export default function LeaderboardPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-4 sm:p-6 lg:p-8">
-      <div>
-        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
-          Leaderboard 🏆
-        </h1>
-        <p className="mt-1 text-muted-foreground">
-          Closed deals only. Cutoff lines show incentive tiers.
-        </p>
-      </div>
+      <BrandHeader
+        title="Leaderboard"
+        subtitle="Closed deals only. Cutoff lines show incentive tiers."
+        icon={<Trophy className="h-6 w-6 text-[#FFBF00]" />}
+      />
 
       <Card className="overflow-hidden">
         <div className="divide-y divide-border">
@@ -65,26 +63,36 @@ export default function LeaderboardPage() {
                       )}>#{r.rank}</span>
                     )}
                   </div>
-                  <div
-                    className="rounded-full p-[2px]"
-                    style={{ background: r.accentColor || "#2C8214" }}
-                  >
-                    <Avatar className="h-11 w-11 ring-2 ring-white">
-                      <AvatarImage src={r.avatarUrl ? photoServingUrl(r.avatarUrl) ?? r.avatarUrl : undefined} />
-                      <AvatarFallback
-                        className="text-white"
-                        style={{ background: r.accentColor || "#2C8214" }}
-                      >
-                        {r.name.slice(0, 1)}
-                      </AvatarFallback>
-                    </Avatar>
-                  </div>
+                  <AvatarRing
+                    src={r.avatarUrl}
+                    name={r.name}
+                    accentColor={r.accentColor}
+                    size={44}
+                    pulse={!!r.streakAtRisk}
+                  />
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       <span
                         className="truncate font-bold"
                         title={r.bio ?? undefined}
                       >{r.name}</span>
+                      <span className="rounded-full bg-[#2EA3F2]/15 px-1.5 py-0.5 text-[10px] font-bold text-[#2EA3F2]">
+                        L{r.level}
+                      </span>
+                      {r.currentStreak > 0 && (
+                        <span
+                          className={cn(
+                            "inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold",
+                            r.streakAtRisk
+                              ? "bg-[#FFBF00]/30 text-[#7a5a00]"
+                              : "bg-[#2C8214]/15 text-[#2C8214]",
+                          )}
+                          title={r.streakAtRisk ? "At risk — needs a deal today" : `Best: ${r.bestStreak}`}
+                        >
+                          <Flame className="h-2.5 w-2.5" />
+                          {r.currentStreak}d
+                        </span>
+                      )}
                       {r.isCurrentUser && (
                         <Badge className="bg-[#2EA3F2] text-white">You</Badge>
                       )}
@@ -107,9 +115,10 @@ export default function LeaderboardPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-lg font-extrabold tabular-nums text-[#2EA3F2]">
-                      {r.totalPoints.toLocaleString()}
-                    </div>
+                    <AnimatedNumber
+                      value={r.totalPoints}
+                      className="block text-lg font-extrabold tabular-nums text-[#2EA3F2]"
+                    />
                     <div className="text-[11px] uppercase tracking-wide text-muted-foreground">pts</div>
                   </div>
                   {r.badges.length > 0 && (

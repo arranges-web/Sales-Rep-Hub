@@ -69,6 +69,13 @@ export const GetMeResponse = zod.object({
   territoryId: zod.number().nullish(),
   territoryName: zod.string().nullish(),
   createdAt: zod.coerce.date(),
+  level: zod.number(),
+  nextLevelAt: zod.number(),
+  pointsThisLevel: zod.number(),
+  pointsPerLevel: zod.number(),
+  currentStreak: zod.number(),
+  bestStreak: zod.number(),
+  streakAtRisk: zod.boolean(),
 });
 
 /**
@@ -102,6 +109,13 @@ export const UpdateMeResponse = zod.object({
   territoryId: zod.number().nullish(),
   territoryName: zod.string().nullish(),
   createdAt: zod.coerce.date(),
+  level: zod.number(),
+  nextLevelAt: zod.number(),
+  pointsThisLevel: zod.number(),
+  pointsPerLevel: zod.number(),
+  currentStreak: zod.number(),
+  bestStreak: zod.number(),
+  streakAtRisk: zod.boolean(),
 });
 
 /**
@@ -133,6 +147,13 @@ export const UpdateMyProfileResponse = zod.object({
   territoryId: zod.number().nullish(),
   territoryName: zod.string().nullish(),
   createdAt: zod.coerce.date(),
+  level: zod.number(),
+  nextLevelAt: zod.number(),
+  pointsThisLevel: zod.number(),
+  pointsPerLevel: zod.number(),
+  currentStreak: zod.number(),
+  bestStreak: zod.number(),
+  streakAtRisk: zod.boolean(),
 });
 
 /**
@@ -154,6 +175,13 @@ export const ListUsersResponseItem = zod.object({
   territoryId: zod.number().nullish(),
   territoryName: zod.string().nullish(),
   createdAt: zod.coerce.date(),
+  level: zod.number(),
+  nextLevelAt: zod.number(),
+  pointsThisLevel: zod.number(),
+  pointsPerLevel: zod.number(),
+  currentStreak: zod.number(),
+  bestStreak: zod.number(),
+  streakAtRisk: zod.boolean(),
 });
 export const ListUsersResponse = zod.array(ListUsersResponseItem);
 
@@ -183,6 +211,13 @@ export const CreateUserResponse = zod.object({
   territoryId: zod.number().nullish(),
   territoryName: zod.string().nullish(),
   createdAt: zod.coerce.date(),
+  level: zod.number(),
+  nextLevelAt: zod.number(),
+  pointsThisLevel: zod.number(),
+  pointsPerLevel: zod.number(),
+  currentStreak: zod.number(),
+  bestStreak: zod.number(),
+  streakAtRisk: zod.boolean(),
 });
 
 /**
@@ -208,6 +243,13 @@ export const GetUserResponse = zod.object({
   territoryId: zod.number().nullish(),
   territoryName: zod.string().nullish(),
   createdAt: zod.coerce.date(),
+  level: zod.number(),
+  nextLevelAt: zod.number(),
+  pointsThisLevel: zod.number(),
+  pointsPerLevel: zod.number(),
+  currentStreak: zod.number(),
+  bestStreak: zod.number(),
+  streakAtRisk: zod.boolean(),
 });
 
 /**
@@ -245,6 +287,13 @@ export const UpdateUserResponse = zod.object({
   territoryId: zod.number().nullish(),
   territoryName: zod.string().nullish(),
   createdAt: zod.coerce.date(),
+  level: zod.number(),
+  nextLevelAt: zod.number(),
+  pointsThisLevel: zod.number(),
+  pointsPerLevel: zod.number(),
+  currentStreak: zod.number(),
+  bestStreak: zod.number(),
+  streakAtRisk: zod.boolean(),
 });
 
 /**
@@ -280,6 +329,29 @@ export const ListDealsResponseItem = zod.object({
   notes: zod.string().nullish(),
   closedAt: zod.coerce.date().nullish(),
   createdAt: zod.coerce.date(),
+  newBadges: zod
+    .array(
+      zod
+        .object({
+          id: zod.number(),
+          type: zod.enum([
+            "century_club",
+            "hat_trick",
+            "top_closer",
+            "first_deal",
+            "five_star",
+          ]),
+          label: zod.string(),
+          description: zod.string(),
+        })
+        .describe(
+          "Lightweight badge payload returned alongside a freshly closed deal,\ncarrying just enough info to drive a UI celebration.\n",
+        ),
+    )
+    .optional(),
+  levelBefore: zod.number().nullish(),
+  levelAfter: zod.number().nullish(),
+  totalPoints: zod.number().nullish(),
 });
 export const ListDealsResponse = zod.array(ListDealsResponseItem);
 
@@ -325,6 +397,29 @@ export const GetDealResponse = zod.object({
   notes: zod.string().nullish(),
   closedAt: zod.coerce.date().nullish(),
   createdAt: zod.coerce.date(),
+  newBadges: zod
+    .array(
+      zod
+        .object({
+          id: zod.number(),
+          type: zod.enum([
+            "century_club",
+            "hat_trick",
+            "top_closer",
+            "first_deal",
+            "five_star",
+          ]),
+          label: zod.string(),
+          description: zod.string(),
+        })
+        .describe(
+          "Lightweight badge payload returned alongside a freshly closed deal,\ncarrying just enough info to drive a UI celebration.\n",
+        ),
+    )
+    .optional(),
+  levelBefore: zod.number().nullish(),
+  levelAfter: zod.number().nullish(),
+  totalPoints: zod.number().nullish(),
 });
 
 /**
@@ -363,6 +458,29 @@ export const UpdateDealResponse = zod.object({
   notes: zod.string().nullish(),
   closedAt: zod.coerce.date().nullish(),
   createdAt: zod.coerce.date(),
+  newBadges: zod
+    .array(
+      zod
+        .object({
+          id: zod.number(),
+          type: zod.enum([
+            "century_club",
+            "hat_trick",
+            "top_closer",
+            "first_deal",
+            "five_star",
+          ]),
+          label: zod.string(),
+          description: zod.string(),
+        })
+        .describe(
+          "Lightweight badge payload returned alongside a freshly closed deal,\ncarrying just enough info to drive a UI celebration.\n",
+        ),
+    )
+    .optional(),
+  levelBefore: zod.number().nullish(),
+  levelAfter: zod.number().nullish(),
+  totalPoints: zod.number().nullish(),
 });
 
 /**
@@ -409,6 +527,11 @@ export const GetLeaderboardResponseItem = zod.object({
     }),
   ),
   isCurrentUser: zod.boolean(),
+  level: zod.number(),
+  nextLevelAt: zod.number(),
+  currentStreak: zod.number(),
+  bestStreak: zod.number(),
+  streakAtRisk: zod.boolean(),
 });
 export const GetLeaderboardResponse = zod.array(GetLeaderboardResponseItem);
 
@@ -436,6 +559,7 @@ export const ListFeedPostsResponseItem = zod.object({
   authorAvatarUrl: zod.string().nullish(),
   authorAccentColor: zod.string().nullish(),
   authorHometown: zod.string().nullish(),
+  authorLevel: zod.number().nullish(),
   content: zod.string(),
   imageUrl: zod.string().nullish(),
   isBot: zod.boolean(),

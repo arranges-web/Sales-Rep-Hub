@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { db, usersTable, dealsTable, badgesTable } from "@workspace/db";
 import { eq, and, sql, gte, desc } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
+import { computeStreaksForAll, levelInfo } from "../lib/streaks";
 
 const router: IRouter = Router();
 
@@ -14,41 +15,74 @@ router.get("/leaderboard", requireAuth, async (req, res, next) => {
       .where(eq(usersTable.role, "rep"))
       .orderBy(desc(usersTable.totalPoints));
 
-    const result = await Promise.all(
-      reps.map(async (u, idx) => {
-        const stats = await db
+    const repIds = reps.map((r) => r.id);
+    const streaks = await computeStreaksForAll(repIds);
+
+    // Bulk fetch deal stats and badges to avoid N+1.
+    const statsRows = repIds.length
+      ? await db
           .select({
+            repId: dealsTable.repId,
             cnt: sql<number>`COUNT(*)`,
             rev: sql<number>`COALESCE(SUM(${dealsTable.amount}), 0)`,
           })
           .from(dealsTable)
-          .where(and(eq(dealsTable.repId, u.id), sql`${dealsTable.status} IN ('closed','paid')`));
-        const badges = await db.select().from(badgesTable).where(eq(badgesTable.userId, u.id));
-        return {
-          rank: idx + 1,
-          userId: u.id,
-          name: u.name,
-          avatarUrl: u.avatarUrl ?? null,
-          accentColor: u.accentColor ?? "#2EA3F2",
-          hometown: u.hometown ?? null,
-          bio: u.bio ?? null,
-          hawaiiGoal: u.hawaiiGoal ?? null,
-          totalPoints: u.totalPoints,
-          dealsCount: Number(stats[0]?.cnt ?? 0),
-          totalRevenue: Number(stats[0]?.rev ?? 0),
-          badges: badges.map((b) => ({
-            id: b.id,
-            userId: b.userId,
-            type: b.type,
-            label: b.label,
-            description: b.description,
-            earnedAt: b.earnedAt.toISOString(),
-            dealId: b.dealId ?? null,
-          })),
-          isCurrentUser: u.id === me.id,
-        };
-      }),
-    );
+          .where(
+            and(
+              sql`${dealsTable.repId} = ANY(${repIds})`,
+              sql`${dealsTable.status} IN ('closed','paid')`,
+            ),
+          )
+          .groupBy(dealsTable.repId)
+      : [];
+    const statsByRep = new Map(statsRows.map((s) => [s.repId, s]));
+    const badgeRows = repIds.length
+      ? await db
+          .select()
+          .from(badgesTable)
+          .where(sql`${badgesTable.userId} = ANY(${repIds})`)
+      : [];
+    const badgesByUser = new Map<number, typeof badgeRows>();
+    for (const b of badgeRows) {
+      const arr = badgesByUser.get(b.userId) ?? [];
+      arr.push(b);
+      badgesByUser.set(b.userId, arr);
+    }
+
+    const result = reps.map((u, idx) => {
+      const s = statsByRep.get(u.id);
+      const badges = badgesByUser.get(u.id) ?? [];
+      const lvl = levelInfo(u.totalPoints);
+      const streak = streaks.get(u.id) ?? { currentStreak: 0, bestStreak: 0, streakAtRisk: false };
+      return {
+        rank: idx + 1,
+        userId: u.id,
+        name: u.name,
+        avatarUrl: u.avatarUrl ?? null,
+        accentColor: u.accentColor ?? "#2EA3F2",
+        hometown: u.hometown ?? null,
+        bio: u.bio ?? null,
+        hawaiiGoal: u.hawaiiGoal ?? null,
+        totalPoints: u.totalPoints,
+        dealsCount: Number(s?.cnt ?? 0),
+        totalRevenue: Number(s?.rev ?? 0),
+        badges: badges.map((b) => ({
+          id: b.id,
+          userId: b.userId,
+          type: b.type,
+          label: b.label,
+          description: b.description,
+          earnedAt: b.earnedAt.toISOString(),
+          dealId: b.dealId ?? null,
+        })),
+        isCurrentUser: u.id === me.id,
+        level: lvl.level,
+        nextLevelAt: lvl.nextLevelAt,
+        currentStreak: streak.currentStreak,
+        bestStreak: streak.bestStreak,
+        streakAtRisk: streak.streakAtRisk,
+      };
+    });
     res.json(result);
   } catch (e) {
     next(e);

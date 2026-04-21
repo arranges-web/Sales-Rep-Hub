@@ -12,6 +12,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Gift, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useCelebrate } from "@/hooks/useCelebrate";
+import { BrandHeader } from "@/components/BrandHeader";
+import { AnimatedNumber } from "@/components/AnimatedNumber";
+import { useEffect, useRef } from "react";
 
 export default function RewardsPage() {
   const qc = useQueryClient();
@@ -19,25 +23,46 @@ export default function RewardsPage() {
   const { data: rewards } = useListRewards();
   const { data: redemptions } = useListRedemptions();
   const { toast } = useToast();
+  const celebrate = useCelebrate();
   const create = useCreateRedemption();
 
   const myPoints = me?.totalPoints ?? 0;
 
+  // Surface celebration when a previously pending redemption flips to approved.
+  const seenStatusRef = useRef<Map<number, string>>(new Map());
+  useEffect(() => {
+    if (!redemptions) return;
+    const seen = seenStatusRef.current;
+    for (const r of redemptions) {
+      const prev = seen.get(r.id);
+      if (prev && prev !== r.status && r.status === "approved") {
+        celebrate.redemptionApproved(r.rewardName);
+      }
+      seen.set(r.id, r.status);
+    }
+  }, [redemptions, celebrate]);
+
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Incentive Vault 🎁</h1>
-          <p className="mt-1 text-muted-foreground">Trade your points for rewards.</p>
-        </div>
-        <Card className="flex items-center gap-3 bg-gradient-to-r from-[#FFBF00] to-[#ffdb66] px-5 py-3 shadow-md">
-          <Gift className="h-5 w-5 text-slate-900" />
-          <div>
-            <div className="text-xs font-medium text-slate-800">Your balance</div>
-            <div className="text-xl font-extrabold text-slate-900 tabular-nums">{myPoints.toLocaleString()} pts</div>
+      <BrandHeader
+        title="Incentive Vault"
+        subtitle="Trade your points for rewards."
+        icon={<Gift className="h-6 w-6" />}
+        actions={
+          <div className="flex items-center gap-2 rounded-2xl bg-[#FFBF00] px-4 py-2 text-slate-900 shadow-md">
+            <Gift className="h-4 w-4" />
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-wide opacity-80">
+                Your balance
+              </div>
+              <AnimatedNumber
+                value={myPoints}
+                className="block text-lg font-extrabold tabular-nums leading-tight"
+              />
+            </div>
           </div>
-        </Card>
-      </div>
+        }
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {(rewards ?? []).map((r) => {

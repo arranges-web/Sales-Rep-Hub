@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useUser, useClerk } from "@clerk/react";
 import {
@@ -14,7 +14,11 @@ import {
   Menu,
   X,
   UserCircle,
+  Volume2,
+  VolumeX,
+  Flame,
 } from "lucide-react";
+import { isSoundEnabled, onSoundChanged, setSoundEnabled } from "@/lib/sound";
 import { useGetMe } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -38,6 +42,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { signOut } = useClerk();
   const { data: me } = useGetMe();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [soundOn, setSoundOn] = useState(isSoundEnabled());
+  useEffect(() => onSoundChanged(setSoundOn), []);
 
   const isAdmin = me?.role === "admin";
 
@@ -112,25 +118,56 @@ export function AppShell({ children }: { children: ReactNode }) {
             </Avatar>
           </div>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-semibold">
-              {me?.name || user?.fullName || "Sales Rep"}
+            <div className="flex items-center gap-1.5">
+              <span className="truncate text-sm font-semibold">
+                {me?.name || user?.fullName || "Sales Rep"}
+              </span>
+              {me?.level != null && (
+                <span className="rounded-full bg-[#2EA3F2]/15 px-1.5 py-0.5 text-[10px] font-bold text-[#2EA3F2]">
+                  L{me.level}
+                </span>
+              )}
             </div>
-            <div className="truncate text-xs text-muted-foreground">
-              {me?.totalPoints ?? 0} pts
-              {isAdmin && <span className="ml-1 text-[#FFBF00] font-bold">• Admin</span>}
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="tabular-nums">{me?.totalPoints ?? 0} pts</span>
+              {me?.currentStreak ? (
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold",
+                    me.streakAtRisk
+                      ? "bg-[#FFBF00]/25 text-[#7a5a00]"
+                      : "bg-[#2C8214]/15 text-[#2C8214]",
+                  )}
+                >
+                  <Flame className="h-2.5 w-2.5" />
+                  {me.currentStreak}
+                </span>
+              ) : null}
+              {isAdmin && <span className="text-[#FFBF00] font-bold">• Admin</span>}
             </div>
           </div>
           <UserCircle className="h-4 w-4 text-muted-foreground" />
         </Link>
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full justify-start gap-2 rounded-xl"
-          onClick={() => signOut({ redirectUrl: import.meta.env.BASE_URL })}
-        >
-          <LogOut className="h-4 w-4" />
-          Sign out
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1 justify-start gap-2 rounded-xl"
+            onClick={() => signOut({ redirectUrl: import.meta.env.BASE_URL })}
+          >
+            <LogOut className="h-4 w-4" />
+            Sign out
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            title={soundOn ? "Mute celebration sounds" : "Enable celebration sounds"}
+            className="rounded-xl"
+            onClick={() => setSoundEnabled(!soundOn)}
+          >
+            {soundOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+          </Button>
+        </div>
       </div>
     </aside>
   );

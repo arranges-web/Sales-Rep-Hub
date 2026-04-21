@@ -50,7 +50,8 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter,
   DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
-import { Trash2, Plus, Check, X, Pencil, Palette } from "lucide-react";
+import { Trash2, Plus, Check, X, Pencil, Palette, Settings } from "lucide-react";
+import { BrandHeader } from "@/components/BrandHeader";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { TerritoryDrawMap } from "@/components/TerritoryDrawMap";
@@ -66,10 +67,11 @@ const TRAINING_CATEGORIES: CreateTrainingResourceBodyCategory[] = [
 export default function AdminPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-5 p-4 sm:p-6 lg:p-8">
-      <div>
-        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Admin Panel ⚙️</h1>
-        <p className="mt-1 text-muted-foreground">Manage your team, points, rewards, and content.</p>
-      </div>
+      <BrandHeader
+        title="Admin Panel"
+        subtitle="Manage your team, points, rewards, and content."
+        icon={<Settings className="h-6 w-6" />}
+      />
       <Tabs defaultValue="users" className="space-y-4">
         <TabsList className="rounded-xl flex-wrap h-auto">
           <TabsTrigger value="users" className="rounded-lg">Reps</TabsTrigger>

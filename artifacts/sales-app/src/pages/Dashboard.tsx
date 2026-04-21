@@ -6,8 +6,10 @@ import {
 } from "@workspace/api-client-react";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Trophy, DollarSign, Zap, Award } from "lucide-react";
+import { Trophy, DollarSign, Zap, Award, Flame, TrendingUp } from "lucide-react";
 import { AvatarRing } from "@/components/AvatarRing";
+import { AnimatedNumber } from "@/components/AnimatedNumber";
+import { BrandHeader } from "@/components/BrandHeader";
 
 export default function DashboardPage() {
   const { data: me } = useGetMe();
@@ -26,33 +28,64 @@ export default function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
-      <div className="flex items-center gap-4">
-        <AvatarRing
-          src={me?.avatarUrl}
-          name={me?.name ?? "Rep"}
-          accentColor={me?.accentColor}
-          size={56}
-        />
-        <div className="min-w-0">
-          <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
-            Welcome back, {me?.name?.split(" ")[0] ?? "Rep"} 🌳
-          </h1>
-          <p className="mt-1 text-muted-foreground">
-            {me?.hawaiiGoal
-              ? `🌺 ${me.hawaiiGoal}`
-              : "Here's how the SWFL crew is crushing it today."}
-          </p>
-        </div>
-      </div>
+      <BrandHeader
+        title={`Welcome back, ${me?.name?.split(" ")[0] ?? "Rep"} 🌳`}
+        subtitle={
+          me?.hawaiiGoal
+            ? `🌺 ${me.hawaiiGoal}`
+            : "Here's how the SWFL crew is crushing it today."
+        }
+        icon={
+          <AvatarRing
+            src={me?.avatarUrl}
+            name={me?.name ?? "Rep"}
+            accentColor={me?.accentColor}
+            size={36}
+            pulse={!!me?.streakAtRisk}
+          />
+        }
+        actions={
+          <div className="flex flex-wrap gap-2">
+            {me?.level != null && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-3 py-1 text-xs font-bold backdrop-blur">
+                <TrendingUp className="h-3 w-3" /> Level {me.level}
+              </span>
+            )}
+            {me?.currentStreak ? (
+              <span
+                className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold backdrop-blur ${
+                  me.streakAtRisk
+                    ? "bg-[#FFBF00] text-slate-900"
+                    : "bg-white/20 text-white"
+                }`}
+                title={
+                  me.streakAtRisk
+                    ? "Close one today to keep your streak alive!"
+                    : `Best: ${me.bestStreak}`
+                }
+              >
+                <Flame className="h-3 w-3" />
+                {me.currentStreak}-day streak
+              </span>
+            ) : null}
+          </div>
+        }
+      />
 
       {/* Points to Paradise */}
       <Card className="overflow-hidden border-0 bg-gradient-to-br from-[#2EA3F2] to-[#2C8214] p-6 text-white shadow-lg">
         <div className="flex items-center justify-between">
           <div>
             <div className="text-sm opacity-90">Your Points</div>
-            <div className="mt-1 text-4xl font-extrabold tabular-nums">
-              {myPoints.toLocaleString()}
-            </div>
+            <AnimatedNumber
+              value={myPoints}
+              className="mt-1 block text-4xl font-extrabold tabular-nums"
+            />
+            {me?.pointsPerLevel ? (
+              <div className="mt-1 text-xs opacity-80 tabular-nums">
+                Level {me.level} • {me.pointsThisLevel}/{me.pointsPerLevel} to L{me.level + 1}
+              </div>
+            ) : null}
           </div>
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 backdrop-blur">
             <Trophy className="h-7 w-7" />

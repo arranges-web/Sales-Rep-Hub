@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { GraduationCap, FileText, TreePine, MessageSquare, Lightbulb, Folder } from "lucide-react";
+import { BrandHeader } from "@/components/BrandHeader";
 
 const CATEGORY_META: Record<string, { label: string; icon: React.ComponentType<{ className?: string }>; color: string }> = {
   sales_script: { label: "Sales Scripts", icon: MessageSquare, color: "#2EA3F2" },
@@ -22,12 +23,11 @@ export default function TrainingPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
-      <div>
-        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Training Vault 🎓</h1>
-        <p className="mt-1 text-muted-foreground">
-          Sales scripts, Florida tree identification, and more.
-        </p>
-      </div>
+      <BrandHeader
+        title="Training Vault"
+        subtitle="Sales scripts, Florida tree identification, and more."
+        icon={<GraduationCap className="h-6 w-6" />}
+      />
 
       <div className="flex flex-wrap gap-2">
         <Button

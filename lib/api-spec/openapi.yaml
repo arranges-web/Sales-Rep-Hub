@@ -1131,6 +1131,20 @@ components:
         createdAt:
           type: string
           format: date-time
+        level:
+          type: integer
+        nextLevelAt:
+          type: integer
+        pointsThisLevel:
+          type: integer
+        pointsPerLevel:
+          type: integer
+        currentStreak:
+          type: integer
+        bestStreak:
+          type: integer
+        streakAtRisk:
+          type: boolean
       required:
         - id
         - clerkId
@@ -1140,6 +1154,13 @@ components:
         - accentColor
         - totalPoints
         - createdAt
+        - level
+        - nextLevelAt
+        - pointsThisLevel
+        - pointsPerLevel
+        - currentStreak
+        - bestStreak
+        - streakAtRisk
 
     UpdateProfileBody:
       type: object
@@ -1229,6 +1250,16 @@ components:
         createdAt:
           type: string
           format: date-time
+        newBadges:
+          type: array
+          items:
+            $ref: "#/components/schemas/CelebrationBadge"
+        levelBefore:
+          type: ["integer", "null"]
+        levelAfter:
+          type: ["integer", "null"]
+        totalPoints:
+          type: ["integer", "null"]
       required:
         - id
         - repId
@@ -1314,6 +1345,16 @@ components:
             $ref: "#/components/schemas/Badge"
         isCurrentUser:
           type: boolean
+        level:
+          type: integer
+        nextLevelAt:
+          type: integer
+        currentStreak:
+          type: integer
+        bestStreak:
+          type: integer
+        streakAtRisk:
+          type: boolean
       required:
         - rank
         - userId
@@ -1323,6 +1364,11 @@ components:
         - totalRevenue
         - badges
         - isCurrentUser
+        - level
+        - nextLevelAt
+        - currentStreak
+        - bestStreak
+        - streakAtRisk
 
     LeaderboardSummary:
       type: object
@@ -1367,6 +1413,8 @@ components:
           type: ["string", "null"]
         authorHometown:
           type: ["string", "null"]
+        authorLevel:
+          type: ["integer", "null"]
         content:
           type: string
         imageUrl:
@@ -1705,6 +1753,27 @@ components:
           enum: [pending, approved, rejected]
       required:
         - status
+
+    CelebrationBadge:
+      type: object
+      description: |
+        Lightweight badge payload returned alongside a freshly closed deal,
+        carrying just enough info to drive a UI celebration.
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [century_club, hat_trick, top_closer, first_deal, five_star]
+        label:
+          type: string
+        description:
+          type: string
+      required:
+        - id
+        - type
+        - label
+        - description
 
     Badge:
       type: object

@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../middlewares/auth";
 import { getAuth } from "@clerk/express";
 import { seedDataForNewRep } from "../lib/seed";
+import { computeStreaks, computeStreaksForAll, levelInfo } from "../lib/streaks";
 
 const router: IRouter = Router();
 
@@ -14,7 +15,18 @@ function sanitizeAccent(c: unknown): string | undefined {
   return HEX_RE.test(c) ? c : undefined;
 }
 
-function serializeUser(u: typeof usersTable.$inferSelect, territoryName: string | null = null) {
+interface UserExtras {
+  currentStreak: number;
+  bestStreak: number;
+  streakAtRisk: boolean;
+}
+
+function serializeUser(
+  u: typeof usersTable.$inferSelect,
+  territoryName: string | null = null,
+  streak: UserExtras = { currentStreak: 0, bestStreak: 0, streakAtRisk: false },
+) {
+  const lvl = levelInfo(u.totalPoints);
   return {
     id: u.id,
     clerkId: u.clerkId,
@@ -31,6 +43,13 @@ function serializeUser(u: typeof usersTable.$inferSelect, territoryName: string 
     territoryId: u.territoryId ?? null,
     territoryName,
     createdAt: u.createdAt.toISOString(),
+    level: lvl.level,
+    nextLevelAt: lvl.nextLevelAt,
+    pointsThisLevel: lvl.pointsThisLevel,
+    pointsPerLevel: lvl.pointsPerLevel,
+    currentStreak: streak.currentStreak,
+    bestStreak: streak.bestStreak,
+    streakAtRisk: streak.streakAtRisk,
   };
 }
 
@@ -100,7 +119,8 @@ router.get("/users/me", requireAuth, async (req, res, next) => {
         .limit(1);
       territoryName = t?.name ?? null;
     }
-    res.json(serializeUser(u, territoryName));
+    const streak = await computeStreaks(u.id);
+    res.json(serializeUser(u, territoryName, streak));
   } catch (e) {
     next(e);
   }
@@ -165,7 +185,16 @@ router.get("/users", requireAuth, requireAdmin, async (_req, res, next) => {
       })
       .from(usersTable)
       .leftJoin(territoriesTable, eq(usersTable.territoryId, territoriesTable.id));
-    res.json(rows.map((r) => serializeUser(r.u, r.territoryName)));
+    const streaks = await computeStreaksForAll(rows.map((r) => r.u.id));
+    res.json(
+      rows.map((r) =>
+        serializeUser(
+          r.u,
+          r.territoryName,
+          streaks.get(r.u.id) ?? { currentStreak: 0, bestStreak: 0, streakAtRisk: false },
+        ),
+      ),
+    );
   } catch (e) {
     next(e);
   }
@@ -189,7 +218,8 @@ router.get("/users/:userId", requireAuth, async (req, res, next) => {
         .limit(1);
       territoryName = t?.name ?? null;
     }
-    const full = serializeUser(u, territoryName);
+    const streak = await computeStreaks(u.id);
+    const full = serializeUser(u, territoryName, streak);
     // Admin and the user themselves see the full record (incl. email/clerkId).
     // Other reps see a sanitized public profile only.
     if (me.role === "admin" || me.id === u.id) {
