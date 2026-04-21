@@ -32,6 +32,7 @@ import RewardsPage from "@/pages/Rewards";
 import TrainingPage from "@/pages/Training";
 import DealsPage from "@/pages/Deals";
 import AdminPage from "@/pages/Admin";
+import { useGetMe } from "@workspace/api-client-react";
 import NotFound from "@/pages/not-found";
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -146,17 +147,30 @@ function HomeRedirect() {
   );
 }
 
-function Protected({ children }: { children: React.ReactNode }) {
+function Protected({
+  children,
+  adminOnly = false,
+}: {
+  children: React.ReactNode;
+  adminOnly?: boolean;
+}) {
   return (
     <>
       <Show when="signed-in">
-        <AppShell>{children}</AppShell>
+        {adminOnly ? <AdminGuard>{children}</AdminGuard> : <AppShell>{children}</AppShell>}
       </Show>
       <Show when="signed-out">
         <Redirect to="/" />
       </Show>
     </>
   );
+}
+
+function AdminGuard({ children }: { children: React.ReactNode }) {
+  const { data: me, isLoading } = useGetMe();
+  if (isLoading) return <AppShell>{null}</AppShell>;
+  if (!me || me.role !== "admin") return <Redirect to="/dashboard" />;
+  return <AppShell>{children}</AppShell>;
 }
 
 function ClerkQueryClientCacheInvalidator() {
@@ -213,7 +227,7 @@ function ClerkProviderWithRoutes() {
               <Protected><DealsPage /></Protected>
             </Route>
             <Route path="/admin/:tab?">
-              <Protected><AdminPage /></Protected>
+              <Protected adminOnly><AdminPage /></Protected>
             </Route>
             <Route component={NotFound} />
           </Switch>

@@ -5,6 +5,7 @@ import {
   useUpdateDeal,
   useDeleteDeal,
   useListPointConfigs,
+  useGetMe,
   getListDealsQueryKey,
   getGetMeQueryKey,
   getGetLeaderboardQueryKey,
@@ -45,6 +46,7 @@ export default function DealsPage() {
   const create = useCreateDeal();
   const update = useUpdateDeal();
   const remove = useDeleteDeal();
+  const { data: me } = useGetMe();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<{
@@ -228,17 +230,19 @@ export default function DealsPage() {
                       <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Close
                     </Button>
                   )}
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="rounded-xl"
-                    onClick={async () => {
-                      await remove.mutateAsync({ dealId: d.id });
-                      invalidateAll();
-                    }}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
+                  {me?.role === "admin" && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="rounded-xl"
+                      onClick={async () => {
+                        await remove.mutateAsync({ dealId: d.id });
+                        invalidateAll();
+                      }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
                 </div>
               </div>
             </Card>
