@@ -19,6 +19,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Hand, MessageCircle, Trash2, Send, Bot, MessageSquareHeart } from "lucide-react";
 import { BrandHeader } from "@/components/BrandHeader";
+import { JTSkeletonCard } from "@/components/Skeleton";
+import { EmptyState } from "@/components/EmptyState";
 import { formatDistanceToNow } from "date-fns";
 import { useGetMe } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
@@ -71,9 +73,13 @@ export default function HypeFeedPage() {
         </div>
       </Card>
 
-      <div className="space-y-4">
+      <div className="space-y-4 jt-fade-in-stagger">
+        {posts == null &&
+          Array.from({ length: 3 }).map((_, i) => (
+            <JTSkeletonCard key={`s${i}`} rows={3} />
+          ))}
         {(posts ?? []).map((p) => (
-          <Card key={p.id} className="overflow-hidden">
+          <Card key={p.id} className="overflow-hidden jt-fade-in">
             <div className="flex items-start gap-3 p-4">
               <div
                 className="rounded-full p-[2px] shrink-0"
@@ -159,9 +165,11 @@ export default function HypeFeedPage() {
           </Card>
         ))}
         {posts && posts.length === 0 && (
-          <Card className="p-8 text-center text-sm text-muted-foreground">
-            The feed is quiet… for now. Close a deal to start the hype!
-          </Card>
+          <EmptyState
+            title="The feed is quiet…"
+            description="Close a deal or post a shoutout to kick off the hype."
+            icon={<MessageSquareHeart className="h-7 w-7" />}
+          />
         )}
       </div>
     </div>

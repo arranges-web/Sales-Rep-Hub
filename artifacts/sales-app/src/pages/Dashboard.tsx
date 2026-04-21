@@ -10,6 +10,9 @@ import { Trophy, DollarSign, Zap, Award, Flame, TrendingUp } from "lucide-react"
 import { AvatarRing } from "@/components/AvatarRing";
 import { AnimatedNumber } from "@/components/AnimatedNumber";
 import { BrandHeader } from "@/components/BrandHeader";
+import { PointsDelta } from "@/components/PointsDelta";
+import { JTSkeleton, JTSkeletonCard } from "@/components/Skeleton";
+import { EmptyState } from "@/components/EmptyState";
 
 export default function DashboardPage() {
   const { data: me } = useGetMe();
@@ -75,12 +78,15 @@ export default function DashboardPage() {
       {/* Points to Paradise */}
       <Card className="overflow-hidden border-0 bg-gradient-to-br from-[#2EA3F2] to-[#2C8214] p-6 text-white shadow-lg">
         <div className="flex items-center justify-between">
-          <div>
+          <div className="relative">
             <div className="text-sm opacity-90">Your Points</div>
-            <AnimatedNumber
-              value={myPoints}
-              className="mt-1 block text-4xl font-extrabold tabular-nums"
-            />
+            <div className="relative inline-block">
+              <AnimatedNumber
+                value={myPoints}
+                className="mt-1 block text-4xl font-extrabold tabular-nums"
+              />
+              <PointsDelta value={myPoints} />
+            </div>
             {me?.pointsPerLevel ? (
               <div className="mt-1 text-xs opacity-80 tabular-nums">
                 Level {me.level} • {me.pointsThisLevel}/{me.pointsPerLevel} to L{me.level + 1}
@@ -109,21 +115,38 @@ export default function DashboardPage() {
         </div>
       </Card>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={DollarSign} label="Revenue This Month" value={`$${(summary?.revenueThisMonth ?? 0).toLocaleString()}`} color="#2C8214" />
-        <StatCard icon={Zap} label="Deals This Month" value={summary?.dealsThisMonth ?? 0} color="#2EA3F2" />
-        <StatCard icon={Trophy} label="Top Rep" value={summary?.topRepName ?? "—"} color="#FFBF00" small />
-        <StatCard icon={Award} label="My Badges" value={badges?.length ?? 0} color="#2C8214" />
-      </div>
+      {summary == null ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <JTSkeletonCard key={i} rows={1} />
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 jt-fade-in-stagger">
+          <StatCard icon={DollarSign} label="Revenue This Month" value={`$${(summary.revenueThisMonth ?? 0).toLocaleString()}`} color="#2C8214" />
+          <StatCard icon={Zap} label="Deals This Month" value={summary.dealsThisMonth ?? 0} color="#2EA3F2" />
+          <StatCard icon={Trophy} label="Top Rep" value={summary.topRepName ?? "—"} color="#FFBF00" small />
+          <StatCard icon={Award} label="My Badges" value={badges?.length ?? 0} color="#2C8214" />
+        </div>
+      )}
 
       <Card className="p-5">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-lg font-bold">Recent Badges</h2>
         </div>
-        {badges && badges.length > 0 ? (
+        {badges == null ? (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <JTSkeleton key={i} className="h-16 w-full" />
+            ))}
+          </div>
+        ) : badges.length > 0 ? (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 jt-fade-in-stagger">
             {badges.slice(0, 6).map((b) => (
-              <div key={b.id} className="flex items-center gap-3 rounded-xl border border-border p-3">
+              <div
+                key={b.id}
+                className="jt-tilt flex items-center gap-3 rounded-xl border border-border p-3"
+              >
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#FFBF00]/20 text-[#7a5a00]">
                   <Award className="h-5 w-5" />
                 </div>
@@ -135,9 +158,11 @@ export default function DashboardPage() {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">
-            Close your first deal to earn your first badge.
-          </p>
+          <EmptyState
+            title="No badges yet"
+            description="Close your first deal to unlock your first badge — Century Club, Hat Trick, and more await."
+            icon={<Award className="h-7 w-7" />}
+          />
         )}
       </Card>
     </div>

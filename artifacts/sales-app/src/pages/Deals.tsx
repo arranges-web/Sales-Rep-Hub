@@ -33,6 +33,8 @@ import { Briefcase, Plus, CheckCircle2, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useCelebrate } from "@/hooks/useCelebrate";
 import { BrandHeader } from "@/components/BrandHeader";
+import { JTSkeletonRow } from "@/components/Skeleton";
+import { EmptyState } from "@/components/EmptyState";
 
 const SERVICE_OPTIONS: { value: CreateDealBodyServiceType; label: string }[] = [
   { value: "large_removal", label: "Large Removal" },
@@ -213,11 +215,13 @@ export default function DealsPage() {
           </DialogContent>
       </Dialog>
 
-      <div className="space-y-3">
+      <div className="space-y-3 jt-fade-in-stagger">
+        {deals == null &&
+          Array.from({ length: 4 }).map((_, i) => <JTSkeletonRow key={i} />)}
         {(deals ?? []).map((d) => {
           const isClosed: boolean = d.status === ("closed" as DealStatus) || d.status === ("paid" as DealStatus);
           return (
-            <Card key={d.id} className="p-4">
+            <Card key={d.id} className="p-4 jt-fade-in jt-row-transition">
               <div className="flex items-start gap-4">
                 <div
                   className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
@@ -283,9 +287,11 @@ export default function DealsPage() {
           );
         })}
         {deals && deals.length === 0 && (
-          <Card className="p-8 text-center text-sm text-muted-foreground">
-            No deals yet. Tap "New Deal" to log your first one!
-          </Card>
+          <EmptyState
+            title="No deals yet"
+            description="Tap “New Deal” to log your first job. Closed deals award points and badges instantly."
+            icon={<Briefcase className="h-7 w-7" />}
+          />
         )}
       </div>
     </div>

@@ -15,6 +15,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useCelebrate } from "@/hooks/useCelebrate";
 import { BrandHeader } from "@/components/BrandHeader";
 import { AnimatedNumber } from "@/components/AnimatedNumber";
+import { JTSkeletonCard } from "@/components/Skeleton";
+import { EmptyState } from "@/components/EmptyState";
 import { useEffect, useRef } from "react";
 
 export default function RewardsPage() {
@@ -64,11 +66,15 @@ export default function RewardsPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 jt-fade-in-stagger">
+        {rewards == null &&
+          Array.from({ length: 6 }).map((_, i) => (
+            <JTSkeletonCard key={i} rows={3} />
+          ))}
         {(rewards ?? []).map((r) => {
           const canAfford = myPoints >= r.pointCost && r.available;
           return (
-            <Card key={r.id} className="overflow-hidden flex flex-col">
+            <Card key={r.id} className="overflow-hidden flex flex-col jt-tilt">
               <div
                 className="h-32 w-full"
                 style={{
@@ -110,9 +116,13 @@ export default function RewardsPage() {
           );
         })}
         {rewards && rewards.length === 0 && (
-          <Card className="col-span-full p-8 text-center text-sm text-muted-foreground">
-            No rewards have been added yet. Ask your admin to stock the vault!
-          </Card>
+          <div className="col-span-full">
+            <EmptyState
+              title="The vault is empty"
+              description="Ask your admin to stock rewards — gear, PTO, the Hawaii trip, and more."
+              icon={<Gift className="h-7 w-7" />}
+            />
+          </div>
         )}
       </div>
 

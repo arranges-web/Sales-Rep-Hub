@@ -200,7 +200,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Logo className="h-7" />
           <div className="w-9" />
         </header>
-        <main className="min-w-0 flex-1">{children}</main>
+        <main key={location} className="min-w-0 flex-1 jt-route-fade">{children}</main>
       </div>
 
       {mobileOpen && (

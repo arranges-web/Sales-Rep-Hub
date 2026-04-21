@@ -224,6 +224,47 @@
   }
   .animate-pulse-ring { animation: jt-pulse-ring 1.6s ease-in-out infinite; }
 
+  @keyframes jt-fade-in-up {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .jt-fade-in { animation: jt-fade-in-up .35s ease-out both; }
+  .jt-fade-in-stagger > * { animation: jt-fade-in-up .35s ease-out both; }
+  .jt-fade-in-stagger > *:nth-child(1) { animation-delay: .00s; }
+  .jt-fade-in-stagger > *:nth-child(2) { animation-delay: .04s; }
+  .jt-fade-in-stagger > *:nth-child(3) { animation-delay: .08s; }
+  .jt-fade-in-stagger > *:nth-child(4) { animation-delay: .12s; }
+  .jt-fade-in-stagger > *:nth-child(5) { animation-delay: .16s; }
+  .jt-fade-in-stagger > *:nth-child(6) { animation-delay: .20s; }
+  .jt-fade-in-stagger > *:nth-child(7) { animation-delay: .24s; }
+  .jt-fade-in-stagger > *:nth-child(8) { animation-delay: .28s; }
+  .jt-fade-in-stagger > *:nth-child(n+9) { animation-delay: .32s; }
+
+  .jt-row-transition { transition: transform .45s cubic-bezier(.2,.8,.2,1), background-color .25s ease; }
+
+  .jt-tilt {
+    transition: transform .25s cubic-bezier(.2,.8,.2,1), box-shadow .25s ease;
+    transform: perspective(600px) rotateX(0) rotateY(0) translateY(0);
+    will-change: transform;
+  }
+  .jt-tilt:hover {
+    transform: perspective(600px) rotateX(2deg) rotateY(-2deg) translateY(-2px);
+    box-shadow: 0 14px 28px -12px rgba(46,163,242,.25);
+  }
+
+  @keyframes jt-pop-up {
+    0% { opacity: 0; transform: translateY(0) scale(.9); }
+    25% { opacity: 1; transform: translateY(-6px) scale(1.05); }
+    100% { opacity: 0; transform: translateY(-32px) scale(1); }
+  }
+  .jt-pop { animation: jt-pop-up 1.6s ease-out forwards; }
+
+  @keyframes jt-route-fade {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .jt-route-fade { animation: jt-route-fade .25s ease-out both; }
+
   .jt-skeleton {
     background: linear-gradient(
       90deg,

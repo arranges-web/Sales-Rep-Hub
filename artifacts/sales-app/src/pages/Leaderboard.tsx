@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils";
 import { AvatarRing } from "@/components/AvatarRing";
 import { BrandHeader } from "@/components/BrandHeader";
 import { AnimatedNumber } from "@/components/AnimatedNumber";
+import { JTSkeletonRow } from "@/components/Skeleton";
+import { EmptyState } from "@/components/EmptyState";
 
 export default function LeaderboardPage() {
   const { data: rows } = useGetLeaderboard();
@@ -48,7 +50,7 @@ export default function LeaderboardPage() {
                 })()}
                 <div
                   className={cn(
-                    "flex items-center gap-4 px-4 py-3 sm:px-5",
+                    "jt-row-transition jt-fade-in flex items-center gap-4 px-4 py-3 sm:px-5",
                     r.isCurrentUser && "bg-[#2EA3F2]/8",
                   )}
                 >
@@ -138,9 +140,20 @@ export default function LeaderboardPage() {
               </div>
             );
           })}
+          {rows == null && (
+            <div className="space-y-2 p-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <JTSkeletonRow key={i} />
+              ))}
+            </div>
+          )}
           {rows && rows.length === 0 && (
-            <div className="p-8 text-center text-sm text-muted-foreground">
-              No reps yet. Sign up your team to see the board light up!
+            <div className="p-6">
+              <EmptyState
+                title="The board is empty"
+                description="Sign up your team and close a few deals to see the leaderboard light up with tier cutoffs."
+                icon={<Trophy className="h-7 w-7" />}
+              />
             </div>
           )}
         </div>
