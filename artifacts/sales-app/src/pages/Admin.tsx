@@ -46,8 +46,9 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Trash2, Plus, Check, X } from "lucide-react";
+import { Trash2, Plus, Check, X, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { TerritoryDrawMap } from "@/components/TerritoryDrawMap";
 
 const SERVICE_TYPES: CreatePointConfigBodyServiceType[] = [
   "large_removal", "trimming_pruning", "stump_grinding", "other",
@@ -433,58 +434,147 @@ function TerritoriesTab() {
   const create = useCreateTerritory();
   const remove = useDeleteTerritory();
   const { data: users } = useListUsers();
-  const [form, setForm] = useState<{ name: string; color: string; assignedRepId: number | null; description: string }>({
-    name: "", color: "#2EA3F2", assignedRepId: null, description: "",
+  const { toast } = useToast();
+  const [form, setForm] = useState<{
+    name: string;
+    color: string;
+    assignedRepId: number | null;
+    description: string;
+    bounds: string | null;
+  }>({
+    name: "",
+    color: "#2EA3F2",
+    assignedRepId: null,
+    description: "",
+    bounds: null,
   });
   return (
     <div className="space-y-4">
-      <Card className="p-4">
-        <h3 className="mb-3 font-bold">Add territory</h3>
+      <Card className="p-4 space-y-3">
+        <h3 className="font-bold">Add territory</h3>
         <div className="grid gap-3 sm:grid-cols-3">
-          <Input placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-          <Input type="color" value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} />
-          <Select value={form.assignedRepId?.toString() ?? "none"} onValueChange={(v) => setForm({ ...form, assignedRepId: v === "none" ? null : Number(v) })}>
-            <SelectTrigger className="rounded-xl"><SelectValue placeholder="Assign rep" /></SelectTrigger>
+          <Input
+            placeholder="Name"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            className="rounded-xl"
+          />
+          <Input
+            type="color"
+            value={form.color}
+            onChange={(e) => setForm({ ...form, color: e.target.value })}
+            className="rounded-xl"
+          />
+          <Select
+            value={form.assignedRepId?.toString() ?? "none"}
+            onValueChange={(v) =>
+              setForm({ ...form, assignedRepId: v === "none" ? null : Number(v) })
+            }
+          >
+            <SelectTrigger className="rounded-xl">
+              <SelectValue placeholder="Assign rep" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">Unassigned</SelectItem>
-              {(users ?? []).map((u) => <SelectItem key={u.id} value={u.id.toString()}>{u.name}</SelectItem>)}
+              {(users ?? []).map((u) => (
+                <SelectItem key={u.id} value={u.id.toString()}>
+                  {u.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
-        <Textarea className="mt-3 rounded-xl" placeholder="Description (optional)" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+        <Textarea
+          className="rounded-xl"
+          placeholder="Description (optional)"
+          value={form.description}
+          onChange={(e) => setForm({ ...form, description: e.target.value })}
+        />
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="flex items-center gap-2">
+              <Pencil className="h-4 w-4" /> Draw the territory boundary
+            </Label>
+            {form.bounds && (
+              <span className="text-xs text-[#2C8214] font-semibold">
+                Polygon ready ✓
+              </span>
+            )}
+          </div>
+          <TerritoryDrawMap
+            territories={terrs ?? []}
+            drawColor={form.color}
+            onPolygonDrawn={(geojson) =>
+              setForm((f) => ({ ...f, bounds: geojson }))
+            }
+          />
+          <p className="text-xs text-muted-foreground">
+            Use the polygon tool in the top-right of the map to outline this territory.
+          </p>
+        </div>
         <Button
-          className="mt-3 rounded-xl bg-[#2C8214] hover:bg-[#236812]"
+          className="rounded-xl bg-[#2C8214] hover:bg-[#236812]"
           onClick={async () => {
-            if (!form.name) return;
+            if (!form.name) {
+              toast({ title: "Name required" });
+              return;
+            }
             await create.mutateAsync({
               data: {
-                name: form.name, color: form.color, assignedRepId: form.assignedRepId,
-                description: form.description || null, bounds: null,
+                name: form.name,
+                color: form.color,
+                assignedRepId: form.assignedRepId,
+                description: form.description || null,
+                bounds: form.bounds,
               },
             });
             qc.invalidateQueries({ queryKey: getListTerritoriesQueryKey() });
-            setForm({ name: "", color: "#2EA3F2", assignedRepId: null, description: "" });
+            setForm({
+              name: "",
+              color: "#2EA3F2",
+              assignedRepId: null,
+              description: "",
+              bounds: null,
+            });
+            toast({ title: "Territory added" });
           }}
         >
-          <Plus className="mr-1 h-4 w-4" /> Add
+          <Plus className="mr-1 h-4 w-4" /> Add territory
         </Button>
       </Card>
       <Card className="divide-y divide-border">
-        {(terrs ?? []).map((t) => (
-          <div key={t.id} className="flex items-center gap-3 p-3">
-            <div className="h-6 w-6 rounded-md" style={{ backgroundColor: t.color }} />
-            <div className="flex-1">
-              <div className="font-semibold">{t.name}</div>
-              <div className="text-xs text-muted-foreground">{t.assignedRepName ?? "Unassigned"}</div>
+        {(terrs ?? []).map((t) => {
+          let isPolygon = false;
+          try {
+            const parsed = t.bounds ? JSON.parse(t.bounds) : null;
+            isPolygon = parsed?.type === "Polygon";
+          } catch {
+            /* noop */
+          }
+          return (
+            <div key={t.id} className="flex items-center gap-3 p-3">
+              <div className="h-6 w-6 rounded-md" style={{ backgroundColor: t.color }} />
+              <div className="flex-1">
+                <div className="font-semibold">{t.name}</div>
+                <div className="text-xs text-muted-foreground">
+                  {t.assignedRepName ?? "Unassigned"}
+                  {isPolygon ? " · custom polygon" : t.bounds ? " · legacy bounds" : " · no boundary"}
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-full"
+                onClick={async () => {
+                  await remove.mutateAsync({ territoryId: t.id });
+                  qc.invalidateQueries({ queryKey: getListTerritoriesQueryKey() });
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
-            <Button variant="ghost" size="icon" className="rounded-full" onClick={async () => {
-              await remove.mutateAsync({ territoryId: t.id });
-              qc.invalidateQueries({ queryKey: getListTerritoriesQueryKey() });
-            }}>
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        ))}
+          );
+        })}
       </Card>
     </div>
   );

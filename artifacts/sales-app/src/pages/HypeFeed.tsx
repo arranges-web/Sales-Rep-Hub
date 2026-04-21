@@ -21,13 +21,14 @@ import { Hand, MessageCircle, Trash2, Send, Bot } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useGetMe } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
+import { PhotoUpload, photoServingUrl } from "@/components/PhotoUpload";
 
 export default function HypeFeedPage() {
   const qc = useQueryClient();
   const { data: posts } = useListFeedPosts();
   const { data: me } = useGetMe();
   const [content, setContent] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const create = useCreateFeedPost();
   const remove = useDeleteFeedPost();
   const hf = useToggleHighFive();
@@ -36,7 +37,7 @@ export default function HypeFeedPage() {
     if (!content.trim()) return;
     await create.mutateAsync({ data: { content, imageUrl: imageUrl || null } });
     setContent("");
-    setImageUrl("");
+    setImageUrl(null);
     qc.invalidateQueries({ queryKey: getListFeedPostsQueryKey() });
   };
 
@@ -54,19 +55,9 @@ export default function HypeFeedPage() {
           placeholder="Share a win, a question, or a shoutout…"
           className="min-h-[80px] rounded-xl"
         />
-        <Input
-          value={imageUrl}
-          onChange={(e) => setImageUrl(e.target.value)}
-          placeholder="Optional photo URL (paste a hosted image link)"
-          className="mt-2 rounded-xl"
-        />
-        {imageUrl ? (
-          <img
-            src={imageUrl}
-            alt=""
-            className="mt-2 max-h-60 w-full rounded-xl object-cover"
-          />
-        ) : null}
+        <div className="mt-3">
+          <PhotoUpload value={imageUrl} onChange={setImageUrl} />
+        </div>
         <div className="mt-3 flex justify-end">
           <Button
             onClick={submit}
@@ -100,7 +91,11 @@ export default function HypeFeedPage() {
                 </div>
                 <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed">{p.content}</p>
                 {p.imageUrl && (
-                  <img src={p.imageUrl} alt="" className="mt-3 max-h-80 w-full rounded-xl object-cover" />
+                  <img
+                    src={photoServingUrl(p.imageUrl) ?? undefined}
+                    alt=""
+                    className="mt-3 max-h-80 w-full rounded-xl object-cover"
+                  />
                 )}
               </div>
               {(me?.role === "admin" || me?.id === p.authorId) && (

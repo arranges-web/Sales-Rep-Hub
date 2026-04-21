@@ -9,9 +9,11 @@ import territoriesRouter from "./territories";
 import rewardsRouter from "./rewards";
 import badgesRouter from "./badges";
 import adminRouter from "./admin";
+import storageRouter from "./storage";
 
 const router: IRouter = Router();
 
+router.use(storageRouter);
 router.use(healthRouter);
 router.use(usersRouter);
 router.use(dealsRouter);

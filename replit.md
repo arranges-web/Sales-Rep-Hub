@@ -39,6 +39,10 @@ Internal sales rep app for Joshua Tree Inc. (myjoshuatree.com), SWFL crew.
 - **Codegen workflow**: `pnpm --filter @workspace/api-spec run codegen` runs orval → `lib/api-spec/fix-zod-index.mjs` (rewrites zod barrel) → libs typecheck. Don't add `schemas` output back to `orval.config.ts`.
 - **Schema**: 13 tables in `lib/db/src/schema/index.ts`. Push with `pnpm --filter @workspace/db run push-force` in dev.
 
+- **Canvassing map**: Vanilla Leaflet + OSM tiles in `Map.tsx` with marker clustering, click-to-drop with Nominatim reverse geocoding, popups with sold/delete actions. Territory `bounds` stores GeoJSON Polygon strings; admins draw polygons via `TerritoryDrawMap.tsx` (leaflet-draw). Leaflet + plugin CSS imported in `index.css`.
+- **Photo upload**: `PhotoUpload.tsx` calls `POST /api/storage/uploads/request-url` → `PUT` to presigned URL → stores `objectPath` (`/objects/...`). Display via `photoServingUrl()` → `/api/storage{objectPath}`. Storage routes are `requireAuth`-gated. Mobile camera capture via `capture="environment"`.
+
 ### Known follow-ups
 - Server-side request validation (Zod) on admin/mutation endpoints is minimal; rely on OpenAPI types only at the moment.
 - E2E test of the full deal→points→badge→feed flow was interrupted; manual smoke recommended.
+- Photo serving currently uses authenticated GET on `/api/storage/objects/*`; no per-object ACL check beyond auth.
