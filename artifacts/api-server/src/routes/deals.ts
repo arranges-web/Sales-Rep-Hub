@@ -104,6 +104,7 @@ router.post("/deals", requireAuth, async (req, res, next) => {
 router.get("/deals/:dealId", requireAuth, async (req, res, next) => {
   try {
     const id = Number(req.params.dealId);
+    const me = req.currentUser!;
     const [row] = await db
       .select({ d: dealsTable, repName: usersTable.name })
       .from(dealsTable)
@@ -112,6 +113,10 @@ router.get("/deals/:dealId", requireAuth, async (req, res, next) => {
       .limit(1);
     if (!row) {
       res.status(404).json({ error: "Not found" });
+      return;
+    }
+    if (me.role !== "admin" && row.d.repId !== me.id) {
+      res.status(403).json({ error: "Forbidden" });
       return;
     }
     res.json(serializeDeal(row.d, row.repName ?? "Unknown"));

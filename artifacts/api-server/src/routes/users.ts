@@ -114,6 +114,7 @@ router.get("/users", requireAuth, requireAdmin, async (_req, res, next) => {
 router.get("/users/:userId", requireAuth, async (req, res, next) => {
   try {
     const id = Number(req.params.userId);
+    const me = req.currentUser!;
     const [u] = await db.select().from(usersTable).where(eq(usersTable.id, id)).limit(1);
     if (!u) {
       res.status(404).json({ error: "Not found" });
@@ -128,7 +129,14 @@ router.get("/users/:userId", requireAuth, async (req, res, next) => {
         .limit(1);
       territoryName = t?.name ?? null;
     }
-    res.json(serializeUser(u, territoryName));
+    const full = serializeUser(u, territoryName);
+    // Admin and the user themselves see the full record (incl. email/clerkId).
+    // Other reps see a sanitized public profile only.
+    if (me.role === "admin" || me.id === u.id) {
+      res.json(full);
+      return;
+    }
+    res.json({ ...full, email: "", clerkId: "" });
   } catch (e) {
     next(e);
   }
