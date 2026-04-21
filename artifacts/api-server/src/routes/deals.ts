@@ -30,10 +30,16 @@ function serializeDeal(d: typeof dealsTable.$inferSelect, repName: string) {
 
 router.get("/deals", requireAuth, async (req, res, next) => {
   try {
-    const repId = req.query.repId ? Number(req.query.repId) : null;
+    const me = req.currentUser!;
+    const requestedRepId = req.query.repId ? Number(req.query.repId) : null;
     const status = req.query.status as string | undefined;
     const conditions = [];
-    if (repId) conditions.push(eq(dealsTable.repId, repId));
+    // Reps may only see their own deals; admins may filter by repId or see all.
+    if (me.role !== "admin") {
+      conditions.push(eq(dealsTable.repId, me.id));
+    } else if (requestedRepId) {
+      conditions.push(eq(dealsTable.repId, requestedRepId));
+    }
     if (status) conditions.push(eq(dealsTable.status, status));
     const rows = await db
       .select({ d: dealsTable, repName: usersTable.name })

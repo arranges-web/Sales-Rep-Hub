@@ -1,4 +1,4 @@
-import { db, dealsTable, pointConfigsTable, usersTable, badgesTable, feedPostsTable } from "@workspace/db";
+import { db, dealsTable, pointConfigsTable, usersTable, badgesTable, feedPostsTable, redemptionsTable } from "@workspace/db";
 import { eq, and, sql, gte, lte } from "drizzle-orm";
 
 const DEFAULT_POINTS_PER_100 = 10;
@@ -13,14 +13,20 @@ export async function pointsForDeal(serviceType: string, amount: number): Promis
   return Math.floor((amount / 100) * per100);
 }
 
+// Returns the user's spendable balance: closed-deal points minus
+// points reserved by pending or already-approved redemptions.
 export async function recomputeUserPoints(userId: number): Promise<number> {
-  const result = await db
-    .select({
-      total: sql<number>`COALESCE(SUM(${dealsTable.pointsAwarded}), 0)`,
-    })
+  const earnedRows = await db
+    .select({ total: sql<number>`COALESCE(SUM(${dealsTable.pointsAwarded}), 0)` })
     .from(dealsTable)
     .where(and(eq(dealsTable.repId, userId), sql`${dealsTable.status} IN ('closed','paid')`));
-  const total = Number(result[0]?.total ?? 0);
+  const spentRows = await db
+    .select({ total: sql<number>`COALESCE(SUM(${redemptionsTable.pointCost}), 0)` })
+    .from(redemptionsTable)
+    .where(and(eq(redemptionsTable.userId, userId), sql`${redemptionsTable.status} IN ('pending','approved')`));
+  const earned = Number(earnedRows[0]?.total ?? 0);
+  const spent = Number(spentRows[0]?.total ?? 0);
+  const total = Math.max(0, earned - spent);
   await db.update(usersTable).set({ totalPoints: total }).where(eq(usersTable.id, userId));
   return total;
 }

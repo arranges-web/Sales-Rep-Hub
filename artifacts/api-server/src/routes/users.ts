@@ -96,7 +96,7 @@ router.patch("/users/me", requireAuth, async (req, res, next) => {
   }
 });
 
-router.get("/users", requireAuth, async (_req, res, next) => {
+router.get("/users", requireAuth, requireAdmin, async (_req, res, next) => {
   try {
     const rows = await db
       .select({

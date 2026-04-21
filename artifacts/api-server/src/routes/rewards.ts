@@ -130,6 +130,7 @@ router.post("/redemptions", requireAuth, async (req, res, next) => {
       res.status(400).json({ error: "Reward unavailable" });
       return;
     }
+    // me.totalPoints already reflects pending/approved redemptions deducted.
     if (me.totalPoints < reward.pointCost) {
       res.status(400).json({ error: "Not enough points" });
       return;
@@ -143,6 +144,8 @@ router.post("/redemptions", requireAuth, async (req, res, next) => {
         status: "pending",
       })
       .returning();
+    // Reserve points immediately so reps can't double-spend on a pending request.
+    await recomputeUserPoints(me.id);
     res.status(201).json(serRedemption(created!, me.name, reward.name));
   } catch (e) {
     next(e);
@@ -163,15 +166,12 @@ router.patch("/redemptions/:redemptionId", requireAuth, requireAdmin, async (req
       .set({ status })
       .where(eq(redemptionsTable.id, id))
       .returning();
-    if (status === "approved" && existing.status !== "approved") {
-      // Optionally deduct points - we'll reflect this by storing redemptions.pointCost
-      // For now, do not subtract from totalPoints; the leaderboard counts deal points.
-      // Redemption history shows spend.
-    }
+    // Approval keeps points spent; rejection refunds reserved points.
+    // recomputeUserPoints subtracts pending+approved, so it always lands at the right balance.
+    await recomputeUserPoints(existing.userId);
     const [u] = await db.select().from(usersTable).where(eq(usersTable.id, existing.userId)).limit(1);
     const [rw] = await db.select().from(rewardsTable).where(eq(rewardsTable.id, existing.rewardId)).limit(1);
     res.json(serRedemption(updated!, u?.name ?? "Unknown", rw?.name ?? "Unknown"));
-    void recomputeUserPoints; // unused but kept to ensure import shape
   } catch (e) {
     next(e);
   }

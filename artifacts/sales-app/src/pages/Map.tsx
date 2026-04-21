@@ -43,6 +43,7 @@ export default function MapPage() {
     latitude: CENTER.lat,
     longitude: CENTER.lng,
     notes: "",
+    photoUrl: "",
     status: "lead" as "lead" | "sold",
   });
 
@@ -137,6 +138,22 @@ export default function MapPage() {
                     className="rounded-xl"
                   />
                 </div>
+                <div>
+                  <Label>Photo URL</Label>
+                  <Input
+                    value={form.photoUrl}
+                    onChange={(e) => setForm({ ...form, photoUrl: e.target.value })}
+                    placeholder="https://… (paste a hosted image link)"
+                    className="rounded-xl"
+                  />
+                  {form.photoUrl ? (
+                    <img
+                      src={form.photoUrl}
+                      alt=""
+                      className="mt-2 max-h-40 w-full rounded-xl object-cover"
+                    />
+                  ) : null}
+                </div>
                 <Button
                   className="w-full rounded-xl bg-[#2EA3F2] hover:bg-[#1d8fd8]"
                   onClick={async () => {
@@ -148,11 +165,11 @@ export default function MapPage() {
                         address: form.address,
                         status: form.status,
                         notes: form.notes || null,
-                        photoUrl: null,
+                        photoUrl: form.photoUrl || null,
                         dealId: null,
                       },
                     });
-                    setForm({ ...form, address: "", notes: "" });
+                    setForm({ ...form, address: "", notes: "", photoUrl: "" });
                     setOpen(false);
                     qc.invalidateQueries({ queryKey: getListPinsQueryKey() });
                   }}
@@ -253,6 +270,9 @@ export default function MapPage() {
                 <div className="mt-1 truncate font-semibold text-sm">{p.address}</div>
                 <div className="text-xs text-muted-foreground">by {p.repName}</div>
                 {p.notes && <p className="mt-1 text-sm">{p.notes}</p>}
+                {p.photoUrl && (
+                  <img src={p.photoUrl} alt="" className="mt-2 h-24 w-full rounded-lg object-cover" />
+                )}
                 <div className="mt-2 flex gap-1">
                   {p.status === "lead" && (
                     <Button

@@ -15,6 +15,7 @@ import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Hand, MessageCircle, Trash2, Send, Bot } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
@@ -26,14 +27,16 @@ export default function HypeFeedPage() {
   const { data: posts } = useListFeedPosts();
   const { data: me } = useGetMe();
   const [content, setContent] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const create = useCreateFeedPost();
   const remove = useDeleteFeedPost();
   const hf = useToggleHighFive();
 
   const submit = async () => {
     if (!content.trim()) return;
-    await create.mutateAsync({ data: { content, imageUrl: null } });
+    await create.mutateAsync({ data: { content, imageUrl: imageUrl || null } });
     setContent("");
+    setImageUrl("");
     qc.invalidateQueries({ queryKey: getListFeedPostsQueryKey() });
   };
 
@@ -51,6 +54,19 @@ export default function HypeFeedPage() {
           placeholder="Share a win, a question, or a shoutout…"
           className="min-h-[80px] rounded-xl"
         />
+        <Input
+          value={imageUrl}
+          onChange={(e) => setImageUrl(e.target.value)}
+          placeholder="Optional photo URL (paste a hosted image link)"
+          className="mt-2 rounded-xl"
+        />
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt=""
+            className="mt-2 max-h-60 w-full rounded-xl object-cover"
+          />
+        ) : null}
         <div className="mt-3 flex justify-end">
           <Button
             onClick={submit}
