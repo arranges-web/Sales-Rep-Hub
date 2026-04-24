@@ -113,7 +113,7 @@ function SignInPage() {
   return (
     <div className="relative flex min-h-[100dvh] items-center justify-center bg-background px-4">
       <div className="pointer-events-none absolute inset-0 jt-grid-bg opacity-50" />
-      <div className="pointer-events-none absolute -left-40 top-10 -z-0 h-[28rem] w-[28rem] rounded-full bg-[#2EA3F2]/15 blur-[120px]" />
+      <div className="pointer-events-none absolute -left-40 top-10 z-0 h-[28rem] w-[28rem] rounded-full bg-[#2EA3F2]/15 blur-[120px]" />
       <div className="relative">
         <SignIn
           routing="path"
@@ -131,7 +131,7 @@ function SignUpPage() {
   return (
     <div className="relative flex min-h-[100dvh] items-center justify-center bg-background px-4">
       <div className="pointer-events-none absolute inset-0 jt-grid-bg opacity-50" />
-      <div className="pointer-events-none absolute -right-40 top-10 -z-0 h-[28rem] w-[28rem] rounded-full bg-[#2C8214]/12 blur-[120px]" />
+      <div className="pointer-events-none absolute -right-40 top-10 z-0 h-[28rem] w-[28rem] rounded-full bg-[#2C8214]/12 blur-[120px]" />
       <div className="relative">
         <SignUp
           routing="path"
