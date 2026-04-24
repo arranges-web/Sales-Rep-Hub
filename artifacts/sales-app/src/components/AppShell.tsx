@@ -109,8 +109,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const qc = useQueryClient();
   // Gate on auth-ready so AppShell doesn't fire unauthenticated requests that
   // immediately 401 and force a re-fetch once Clerk resolves.
-  // Use the generated query-options helper so we can spread `enabled` directly
-  // without fighting the generated hook type (which requires full UseQueryOptions).
   const { data: me } = useQuery({ ...getGetMeQueryOptions(), enabled: authReady });
   const [mobileOpen, setMobileOpen] = useState(false);
   const [soundOn, setSoundOn] = useState(isSoundEnabled());
@@ -120,6 +118,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const prefetchedRef = useMemo(() => new Set<string>(), []);
   const prefetchRoute = (href: string) => {
+    // Don't prefetch until auth is ready — prefetching without a token would
+    // write 401 errors into the cache and cause flashes on subsequent renders.
+    if (!authReady) return;
     if (prefetchedRef.has(href)) return;
     const make = PREFETCHERS[href];
     if (!make) return;

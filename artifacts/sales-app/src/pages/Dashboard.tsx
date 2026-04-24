@@ -26,9 +26,8 @@ export default function DashboardPage() {
   const { isLoaded, isSignedIn } = useAuth();
   const enabled = isLoaded && !!isSignedIn;
 
-  // Use the generated query-options helpers so we can spread `enabled` on top
-  // without fighting the generated hook type (which requires a full
-  // UseQueryOptions including queryKey when overriding via the `query` prop).
+  // Spread the generated query-options objects with `enabled` so all four queries
+  // stay pending while Clerk initialises instead of firing unauthenticated.
   const { data: me } = useQuery({ ...getGetMeQueryOptions(), enabled });
   const { data: summary } = useQuery({ ...getGetLeaderboardSummaryQueryOptions(), enabled });
   // Fetch badges via /badges/me — auth context resolves the rep, so this can
