@@ -902,9 +902,10 @@ async function seedFeedSocialSignals(): Promise<void> {
 
   for (let i = 0; i < posts.length; i++) {
     const post = posts[i]!;
-    // Bot/milestone posts get more love; rep posts get a moderate amount.
+    // Spec: 0–8 high-fives, weighted toward bot/milestone posts.
+    // Bot posts: 6–8 hi-fives. Rep posts: 3–7 hi-fives. Capped at 8.
     const baseHighFives = post.isBot ? 6 : 3;
-    const highFiveCount = baseHighFives + Math.floor(rand(post.id * 7) * 5);
+    const highFiveCount = Math.min(8, baseHighFives + Math.floor(rand(post.id * 7) * 5));
     const distinctReps = new Set<number>();
     let safety = 0;
     while (distinctReps.size < Math.min(highFiveCount, repIds.length) && safety < 100) {
@@ -920,9 +921,11 @@ async function seedFeedSocialSignals(): Promise<void> {
       totalHighFives += 1;
     }
 
+    // Spec: 1–4 comments per post, weighted toward bot/milestone posts.
+    // Bot posts: 2–4 comments. Rep posts: 1–3 comments. Always >= 1.
     const commentCount = post.isBot
-      ? 1 + Math.floor(rand(post.id * 17) * 3)
-      : Math.floor(rand(post.id * 19) * 3);
+      ? 2 + Math.floor(rand(post.id * 17) * 3)
+      : 1 + Math.floor(rand(post.id * 19) * 3);
     for (let k = 0; k < commentCount; k++) {
       const authorId = repIds[Math.floor(rand(post.id * 23 + k) * repIds.length)]!;
       const content = pick(MOCK_COMMENTS, post.id + k * 5);
@@ -945,7 +948,12 @@ async function seedFeedSocialSignals(): Promise<void> {
 // admin queue, and "spending points" loop all look operational on launch.
 // Idempotent: skips if any redemption already exists.
 async function seedDemoRedemptions(): Promise<void> {
-  const rewards = await db.select().from(rewardsTable);
+  // Constrain to canonical + currently-available rewards so demo
+  // redemptions never reference stale or unavailable legacy items.
+  const allRewards = await db.select().from(rewardsTable);
+  const rewards = allRewards.filter(
+    (r) => r.available && CURRENT_REWARD_NAMES.has(r.name),
+  );
   if (rewards.length === 0) return;
 
   // Idempotent per status: count ALL mock-rep redemptions broken out by
