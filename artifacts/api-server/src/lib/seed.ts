@@ -10,13 +10,40 @@ import {
   pinsTable,
   feedPostsTable,
   badgesTable,
+  commentsTable,
+  highFivesTable,
+  redemptionsTable,
 } from "@workspace/db";
-import { sql, eq } from "drizzle-orm";
+import { sql, eq, and, inArray, desc, or, isNull } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
 import { logger } from "./logger";
 import { pointsForDeal, recomputeUserPoints } from "./points";
 
 const SEED_CLERK_PREFIX = "seed_mock_";
+
+// Number of mock reps that the demo expects to be live. If fewer exist,
+// the seed self-heals on startup so the launch experience never feels empty.
+const EXPECTED_MOCK_REPS = 25;
+
+// Reward names that ship with the new (masculine) prize lineup. Used to
+// detect a database that still has the old AirPods/Sanibel-era rewards
+// so we can swap it for the current set on the next server boot.
+const CURRENT_REWARD_NAMES = new Set([
+  "JT Logo Hoodie",
+  "Yeti Tumbler (30oz)",
+  "JBL Charge 5 Speaker",
+  "Nike Footwear Voucher",
+  "DeWalt 20V Drill Combo",
+  "Bucs / Lightning Tickets",
+  "Bonus PTO Day",
+  "Traeger Pro 575 Grill",
+  "PlayStation 5 Bundle",
+  "Inshore Fishing Charter",
+  "Top-Golf Bay (4 Hours)",
+  "$500 Visa Gift Card",
+  "Ford F-150 Lease (3 mo)",
+  "Hawaii Trip for Two",
+]);
 
 const ACCENTS = ["#2EA3F2", "#2C8214", "#FFBF00", "#9333ea", "#ec4899", "#f97316", "#0ea5e9", "#14b8a6"];
 const HOMETOWNS = ["Cape Coral, FL", "Fort Myers, FL", "Naples, FL", "Bonita Springs, FL", "Estero, FL", "Sanibel, FL", "Punta Gorda, FL"];
@@ -153,25 +180,221 @@ async function isEmpty(table: PgTable): Promise<boolean> {
 export async function seedBaselineData(): Promise<void> {
   try {
     await seedTerritories();
+    await backfillTerritoryBounds();
     await seedPointConfigs();
     await seedIncentiveTiers();
-    await seedRewards();
-    await seedTrainingResources();
-    await seedMockRepsAndActivity();
+    await restockRewardsIfStale();
+    await restockTrainingIfStale();
+    await healMockRepsIfStale();
+    await seedFeedSocialSignals();
+    await seedDemoRedemptions();
   } catch (err) {
     logger.error({ err }, "Seed failed");
   }
 }
 
+// True once any non-mock (real Clerk) user has signed up. Once this flips
+// true the destructive self-heal paths below downgrade to additive-only
+// mode so we never clobber real activity.
+async function hasRealUsers(): Promise<boolean> {
+  const rows = await db
+    .select({ c: sql<number>`COUNT(*)` })
+    .from(usersTable)
+    .where(sql`${usersTable.clerkId} NOT LIKE ${SEED_CLERK_PREFIX + "%"}`);
+  return Number(rows[0]?.c ?? 0) > 0;
+}
+
+// Insert any rewards from the current lineup that aren't already present
+// (matched by name). Strictly additive — never deletes existing rewards
+// or redemptions.
+async function insertMissingCurrentRewards(): Promise<void> {
+  const existing = await db.select({ name: rewardsTable.name }).from(rewardsTable);
+  const have = new Set(existing.map((r) => r.name));
+  const missing = [...CURRENT_REWARD_NAMES].filter((n) => !have.has(n));
+  if (missing.length === 0) return;
+  logger.info({ added: missing.length }, "Adding missing rewards from current lineup");
+  await seedRewards(missing);
+}
+
+// Reward self-heal:
+//  - Empty table: full seed.
+//  - All current names present: no-op.
+//  - Real users exist OR any redemptions exist: additive only (never
+//    delete). Just insert any missing current-lineup rewards.
+//  - Demo-only environment with stale-only lineup: replace.
+async function restockRewardsIfStale(): Promise<void> {
+  const rows = await db.select({ name: rewardsTable.name }).from(rewardsTable);
+  if (rows.length === 0) {
+    await seedRewards();
+    return;
+  }
+  const allCurrent = rows.every((r) => CURRENT_REWARD_NAMES.has(r.name));
+  if (allCurrent && rows.length >= CURRENT_REWARD_NAMES.size) return;
+
+  const [redemptionRow] = await db
+    .select({ c: sql<number>`COUNT(*)` })
+    .from(redemptionsTable);
+  const hasRedemptions = Number(redemptionRow?.c ?? 0) > 0;
+  if (hasRedemptions || (await hasRealUsers())) {
+    await insertMissingCurrentRewards();
+    return;
+  }
+
+  logger.info({ before: rows.length }, "Replacing stale reward lineup (demo-only env)");
+  await db.delete(redemptionsTable);
+  await db.delete(rewardsTable);
+  await seedRewards();
+}
+
+// Training self-heal: strictly additive — insert any canonical training
+// rows whose title isn't already present. Never deletes admin content.
+async function restockTrainingIfStale(): Promise<void> {
+  const existing = await db
+    .select({ title: trainingResourcesTable.title })
+    .from(trainingResourcesTable);
+  const have = new Set(existing.map((r) => r.title));
+  // Probe canonical titles by inserting via seedTrainingResources, which
+  // is itself empty-guarded. Use a no-op fast path when the table looks
+  // healthy enough.
+  if (existing.length === 0) {
+    await seedTrainingResources();
+    return;
+  }
+  await seedMissingTrainingResources(have);
+}
+
+// If we're missing mock reps (fresh install OR an older partial seed),
+// wipe the existing mock-rep footprint and reseed everything that depends
+// on them. Skipped entirely once any real Clerk user has signed up so we
+// never touch real-user feed/badge/comment data. When we DO wipe, we
+// scope deletions to mock authors only and cascade orphan
+// comments/high-fives by postId so no stragglers are left.
+async function healMockRepsIfStale(): Promise<void> {
+  const mocks = await db
+    .select({ id: usersTable.id })
+    .from(usersTable)
+    .where(sql`${usersTable.clerkId} LIKE ${SEED_CLERK_PREFIX + "%"}`);
+  if (mocks.length >= EXPECTED_MOCK_REPS) return;
+
+  if (await hasRealUsers()) {
+    logger.info(
+      { mocks: mocks.length, expected: EXPECTED_MOCK_REPS },
+      "Skipping mock-rep self-heal because real users exist",
+    );
+    return;
+  }
+
+  if (mocks.length > 0) {
+    const mockIds = mocks.map((m) => m.id);
+    logger.info(
+      { existing: mocks.length, expected: EXPECTED_MOCK_REPS },
+      "Mock rep cohort is incomplete — wiping and reseeding",
+    );
+    // Identify all posts owned by mock reps OR posts authored by the bot
+    // (NULL author OR isBot true). In a no-real-users environment these
+    // are guaranteed seed-owned.
+    const mockPostRows = await db
+      .select({ id: feedPostsTable.id })
+      .from(feedPostsTable)
+      .where(
+        or(
+          isNull(feedPostsTable.authorId),
+          eq(feedPostsTable.isBot, true),
+          inArray(feedPostsTable.authorId, mockIds),
+        ),
+      );
+    const mockPostIds = mockPostRows.map((r) => r.id);
+
+    if (mockPostIds.length > 0) {
+      await db.delete(commentsTable).where(inArray(commentsTable.postId, mockPostIds));
+      await db.delete(highFivesTable).where(inArray(highFivesTable.postId, mockPostIds));
+    }
+    await db.delete(commentsTable).where(inArray(commentsTable.authorId, mockIds));
+    await db.delete(highFivesTable).where(inArray(highFivesTable.userId, mockIds));
+    await db.delete(redemptionsTable).where(inArray(redemptionsTable.userId, mockIds));
+    await db.delete(badgesTable).where(inArray(badgesTable.userId, mockIds));
+    await db.delete(pinsTable).where(inArray(pinsTable.repId, mockIds));
+    await db.delete(dealsTable).where(inArray(dealsTable.repId, mockIds));
+    if (mockPostIds.length > 0) {
+      await db.delete(feedPostsTable).where(inArray(feedPostsTable.id, mockPostIds));
+    }
+    await db
+      .delete(usersTable)
+      .where(sql`${usersTable.clerkId} LIKE ${SEED_CLERK_PREFIX + "%"}`);
+  }
+
+  await seedMockRepsAndActivity();
+}
+
+// Approximate GeoJSON polygons covering the four SWFL routes. These are
+// rough cuts good enough to render meaningfully on the leaflet map; admins
+// can redraw them from the Territories tab.
+function geoPolygon(rect: [[number, number], [number, number]]): string {
+  // rect = [[south, west], [north, east]] — produces a closed 5-point poly
+  const [[s, w], [n, e]] = rect;
+  return JSON.stringify({
+    type: "Polygon",
+    coordinates: [[
+      [w, s],
+      [e, s],
+      [e, n],
+      [w, n],
+      [w, s],
+    ]],
+  });
+}
+
+const TERRITORY_SEED = [
+  {
+    name: "Cape Coral",
+    color: "#2EA3F2",
+    description: "Cape Coral & surrounding canals",
+    bounds: geoPolygon([[26.5500, -82.0500], [26.7100, -81.9700]]),
+  },
+  {
+    name: "Fort Myers",
+    color: "#2C8214",
+    description: "Downtown Fort Myers & River District",
+    bounds: geoPolygon([[26.5500, -81.9200], [26.7000, -81.8200]]),
+  },
+  {
+    name: "Naples",
+    color: "#FFBF00",
+    description: "Naples & Pelican Bay",
+    bounds: geoPolygon([[26.0900, -81.8300], [26.2500, -81.7500]]),
+  },
+  {
+    name: "Bonita / Estero",
+    color: "#9333ea",
+    description: "Bonita Springs & Estero corridor",
+    bounds: geoPolygon([[26.3100, -81.8400], [26.4700, -81.7400]]),
+  },
+];
+
 async function seedTerritories() {
   if (!(await isEmpty(territoriesTable))) return;
-  await db.insert(territoriesTable).values([
-    { name: "Cape Coral",     color: "#2EA3F2", description: "Cape Coral & surrounding canals" },
-    { name: "Fort Myers",     color: "#2C8214", description: "Downtown Fort Myers & River District" },
-    { name: "Naples",         color: "#FFBF00", description: "Naples & Pelican Bay" },
-    { name: "Bonita / Estero", color: "#9333ea", description: "Bonita Springs & Estero corridor" },
-  ]);
+  await db.insert(territoriesTable).values(TERRITORY_SEED);
   logger.info("Seeded territories");
+}
+
+// Backfill polygon bounds on territories that pre-date the polygon migration.
+// Matches by name so admin-renamed rows are left alone.
+async function backfillTerritoryBounds(): Promise<number> {
+  const rows = await db.select().from(territoriesTable);
+  const missing = rows.filter((r) => !r.bounds);
+  if (missing.length === 0) return 0;
+  let patched = 0;
+  for (const t of missing) {
+    const match = TERRITORY_SEED.find((s) => s.name === t.name);
+    if (!match) continue;
+    await db
+      .update(territoriesTable)
+      .set({ bounds: match.bounds })
+      .where(eq(territoriesTable.id, t.id));
+    patched += 1;
+  }
+  if (patched > 0) logger.info({ patched }, "Backfilled territory polygons");
+  return patched;
 }
 
 async function seedPointConfigs() {
@@ -196,30 +419,47 @@ async function seedIncentiveTiers() {
   logger.info("Seeded incentive tiers");
 }
 
-async function seedRewards() {
-  if (!(await isEmpty(rewardsTable))) return;
-  await db.insert(rewardsTable).values([
-    { name: "JT Logo Hoodie",            description: "Premium pullover hoodie with embroidered JT mark.",                pointCost: 300,  category: "gear",        imageUrl: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=600", available: true },
-    { name: "Yeti Tumbler (30oz)",       description: "Stainless tumbler. Keeps coffee hot, beer cold.",                  pointCost: 450,  category: "gear",        imageUrl: "https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=600", available: true },
-    { name: "JBL Charge 5 Speaker",      description: "Rugged Bluetooth speaker for the truck or the tailgate.",           pointCost: 800,  category: "electronics", imageUrl: "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=600", available: true },
-    { name: "Nike Footwear Voucher",     description: "$200 to spend on Nike kicks or training gear.",                    pointCost: 900,  category: "gear",        imageUrl: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600", available: true },
-    { name: "DeWalt 20V Drill Combo",    description: "Cordless drill + impact driver kit. Tool truck favorite.",          pointCost: 1100, category: "tools",       imageUrl: "https://images.unsplash.com/photo-1572981779307-38b8cabb2407?w=600", available: true },
-    { name: "Bucs / Lightning Tickets",  description: "Two lower-bowl seats to a Bucs or Lightning home game.",            pointCost: 1300, category: "sports",      imageUrl: "https://images.unsplash.com/photo-1521412644187-c49fa049e84d?w=600", available: true },
-    { name: "Bonus PTO Day",             description: "An extra paid day off. Burn it whenever.",                          pointCost: 1500, category: "pto",         imageUrl: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600", available: true },
-    { name: "Traeger Pro 575 Grill",     description: "Wi-Fi-controlled pellet grill. Sunday brisket sorted.",             pointCost: 2200, category: "gear",        imageUrl: "https://images.unsplash.com/photo-1544025162-d76694265947?w=600", available: true },
-    { name: "PlayStation 5 Bundle",      description: "PS5 console with one game of your choice.",                         pointCost: 2400, category: "electronics", imageUrl: "https://images.unsplash.com/photo-1606318313846-f8e8b6c4aef9?w=600", available: true },
-    { name: "Inshore Fishing Charter",   description: "Half-day for two with a guide out of Pine Island Sound.",           pointCost: 2600, category: "experiences", imageUrl: "https://images.unsplash.com/photo-1545566239-0ee5b1b06ba0?w=600", available: true },
-    { name: "Top-Golf Bay (4 Hours)",    description: "Reserved bay for you and the boys. Food and drinks on the house.",  pointCost: 1800, category: "experiences", imageUrl: "https://images.unsplash.com/photo-1500932334442-8761ee4810a7?w=600", available: true },
-    { name: "$500 Visa Gift Card",       description: "Cold cash on a card. Spend it however.",                            pointCost: 3000, category: "cash",        imageUrl: "https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?w=600", available: true },
-    { name: "Ford F-150 Lease (3 mo)",   description: "Three months on a JT-branded F-150. Daily driver dialed.",          pointCost: 5500, category: "experiences", imageUrl: "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=600", available: true },
-    { name: "Hawaii Trip for Two",       description: "All-expenses-paid 5-night trip to Maui or Oahu. The big one.",      pointCost: 7500, category: "trip",        imageUrl: "https://images.unsplash.com/photo-1542259009477-d625272157b7?w=600", available: true },
-  ]);
-  logger.info("Seeded rewards");
+const REWARDS_SEED: Array<{
+  name: string;
+  description: string;
+  pointCost: number;
+  category: string;
+  imageUrl: string;
+  available: boolean;
+}> = [
+  { name: "JT Logo Hoodie",            description: "Premium pullover hoodie with embroidered JT mark.",                pointCost: 300,  category: "gear",        imageUrl: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=600", available: true },
+  { name: "Yeti Tumbler (30oz)",       description: "Stainless tumbler. Keeps coffee hot, beer cold.",                  pointCost: 450,  category: "gear",        imageUrl: "https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=600", available: true },
+  { name: "JBL Charge 5 Speaker",      description: "Rugged Bluetooth speaker for the truck or the tailgate.",           pointCost: 800,  category: "electronics", imageUrl: "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=600", available: true },
+  { name: "Nike Footwear Voucher",     description: "$200 to spend on Nike kicks or training gear.",                    pointCost: 900,  category: "gear",        imageUrl: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600", available: true },
+  { name: "DeWalt 20V Drill Combo",    description: "Cordless drill + impact driver kit. Tool truck favorite.",          pointCost: 1100, category: "tools",       imageUrl: "https://images.unsplash.com/photo-1572981779307-38b8cabb2407?w=600", available: true },
+  { name: "Bucs / Lightning Tickets",  description: "Two lower-bowl seats to a Bucs or Lightning home game.",            pointCost: 1300, category: "sports",      imageUrl: "https://images.unsplash.com/photo-1521412644187-c49fa049e84d?w=600", available: true },
+  { name: "Bonus PTO Day",             description: "An extra paid day off. Burn it whenever.",                          pointCost: 1500, category: "pto",         imageUrl: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600", available: true },
+  { name: "Traeger Pro 575 Grill",     description: "Wi-Fi-controlled pellet grill. Sunday brisket sorted.",             pointCost: 2200, category: "gear",        imageUrl: "https://images.unsplash.com/photo-1544025162-d76694265947?w=600", available: true },
+  { name: "PlayStation 5 Bundle",      description: "PS5 console with one game of your choice.",                         pointCost: 2400, category: "electronics", imageUrl: "https://images.unsplash.com/photo-1606318313846-f8e8b6c4aef9?w=600", available: true },
+  { name: "Inshore Fishing Charter",   description: "Half-day for two with a guide out of Pine Island Sound.",           pointCost: 2600, category: "experiences", imageUrl: "https://images.unsplash.com/photo-1545566239-0ee5b1b06ba0?w=600", available: true },
+  { name: "Top-Golf Bay (4 Hours)",    description: "Reserved bay for you and the boys. Food and drinks on the house.",  pointCost: 1800, category: "experiences", imageUrl: "https://images.unsplash.com/photo-1500932334442-8761ee4810a7?w=600", available: true },
+  { name: "$500 Visa Gift Card",       description: "Cold cash on a card. Spend it however.",                            pointCost: 3000, category: "cash",        imageUrl: "https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?w=600", available: true },
+  { name: "Ford F-150 Lease (3 mo)",   description: "Three months on a JT-branded F-150. Daily driver dialed.",          pointCost: 5500, category: "experiences", imageUrl: "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=600", available: true },
+  { name: "Hawaii Trip for Two",       description: "All-expenses-paid 5-night trip to Maui or Oahu. The big one.",      pointCost: 7500, category: "trip",        imageUrl: "https://images.unsplash.com/photo-1542259009477-d625272157b7?w=600", available: true },
+];
+
+async function seedRewards(onlyNames?: string[]) {
+  const filter = onlyNames ? new Set(onlyNames) : null;
+  if (!filter && !(await isEmpty(rewardsTable))) return;
+  const rows = filter ? REWARDS_SEED.filter((r) => filter.has(r.name)) : REWARDS_SEED;
+  if (rows.length === 0) return;
+  await db.insert(rewardsTable).values(rows);
+  logger.info({ count: rows.length }, "Seeded rewards");
 }
 
-async function seedTrainingResources() {
-  if (!(await isEmpty(trainingResourcesTable))) return;
-  await db.insert(trainingResourcesTable).values([
+const TRAINING_SEED: Array<{
+  title: string;
+  description: string;
+  category: string;
+  contentText: string;
+  thumbnailUrl: string;
+  displayOrder: number;
+}> = [
     {
       title: "The 7-Step Door Knock Script",
       description: "Our proven opener for SWFL homeowners.",
@@ -316,8 +556,19 @@ async function seedTrainingResources() {
       thumbnailUrl: "https://images.unsplash.com/photo-1527482797697-8795b05a13fe?w=600",
       displayOrder: 12,
     },
-  ]);
-  logger.info("Seeded training resources");
+];
+
+async function seedTrainingResources() {
+  if (!(await isEmpty(trainingResourcesTable))) return;
+  await db.insert(trainingResourcesTable).values(TRAINING_SEED);
+  logger.info({ count: TRAINING_SEED.length }, "Seeded training resources");
+}
+
+async function seedMissingTrainingResources(have: Set<string>) {
+  const missing = TRAINING_SEED.filter((t) => !have.has(t.title));
+  if (missing.length === 0) return;
+  await db.insert(trainingResourcesTable).values(missing);
+  logger.info({ added: missing.length }, "Added missing training resources");
 }
 
 async function seedMockRepsAndActivity() {
@@ -518,6 +769,181 @@ async function seedMockRepsAndActivity() {
   }
 
   logger.info("Seeded mock activity (deals, pins, feed, badges)");
+}
+
+// Lines of canned hype + banter posted as comments by mock reps. Cycled
+// deterministically so the feed feels active without repeating obviously.
+const MOCK_COMMENTS = [
+  "Let's go!",
+  "This crew is unreal.",
+  "Stack 'em up — Hawaii incoming.",
+  "Big W. Inspiration.",
+  "Was on that street last week — same vibe.",
+  "Take notes y'all.",
+  "Closer mentality.",
+  "That's the energy.",
+  "Goin' for the streak — hold my beer.",
+  "Backing you up Saturday if you need a hand.",
+  "Get it.",
+  "Filed away. Stealing this approach.",
+  "Smashing it lately.",
+  "Watch out for that ganoderma — quick W follow-up.",
+  "Sandwich close worked again huh.",
+  "We feasting.",
+];
+
+// Seed comments + high-fives across feed posts so the social proof on the
+// Hype Feed never looks empty. Idempotent: only runs when the feed has
+// posts and existing comments/high-fives are below the demo threshold.
+async function seedFeedSocialSignals(): Promise<void> {
+  // Demo-only: never touch live interaction history once any real Clerk
+  // user has signed up.
+  if (await hasRealUsers()) return;
+
+  // Only reach into mock/bot posts so we never alter interactions on
+  // real-user-authored content (defence-in-depth alongside the
+  // hasRealUsers gate above).
+  const posts = await db
+    .select({ id: feedPostsTable.id, isBot: feedPostsTable.isBot })
+    .from(feedPostsTable)
+    .where(or(isNull(feedPostsTable.authorId), eq(feedPostsTable.isBot, true)))
+    .orderBy(desc(feedPostsTable.createdAt));
+  if (posts.length === 0) return;
+
+  const reps = await db
+    .select({ id: usersTable.id })
+    .from(usersTable)
+    .where(sql`${usersTable.clerkId} LIKE ${SEED_CLERK_PREFIX + "%"}`);
+  if (reps.length === 0) return;
+
+  const existingComments = await db
+    .select({ c: sql<number>`COUNT(*)` })
+    .from(commentsTable);
+  const existingHighFives = await db
+    .select({ c: sql<number>`COUNT(*)` })
+    .from(highFivesTable);
+
+  // If the feed already feels alive, leave it alone.
+  if (
+    Number(existingComments[0]?.c ?? 0) >= posts.length &&
+    Number(existingHighFives[0]?.c ?? 0) >= posts.length * 3
+  ) {
+    return;
+  }
+
+  // Wipe the sparse signals tied to mock reps on demo-only posts and
+  // rebuild a richer set so counts on every demo post are deterministic.
+  const repIds = reps.map((r) => r.id);
+  const postIds = posts.map((p) => p.id);
+  await db
+    .delete(commentsTable)
+    .where(and(inArray(commentsTable.authorId, repIds), inArray(commentsTable.postId, postIds)));
+  await db
+    .delete(highFivesTable)
+    .where(and(inArray(highFivesTable.userId, repIds), inArray(highFivesTable.postId, postIds)));
+
+  let totalHighFives = 0;
+  let totalComments = 0;
+
+  for (let i = 0; i < posts.length; i++) {
+    const post = posts[i]!;
+    // Bot/milestone posts get more love; rep posts get a moderate amount.
+    const baseHighFives = post.isBot ? 6 : 3;
+    const highFiveCount = baseHighFives + Math.floor(rand(post.id * 7) * 5);
+    const distinctReps = new Set<number>();
+    let safety = 0;
+    while (distinctReps.size < Math.min(highFiveCount, repIds.length) && safety < 100) {
+      const idx = Math.floor(rand(post.id * 13 + safety) * repIds.length);
+      distinctReps.add(repIds[idx]!);
+      safety += 1;
+    }
+    for (const userId of distinctReps) {
+      await db
+        .insert(highFivesTable)
+        .values({ postId: post.id, userId })
+        .onConflictDoNothing();
+      totalHighFives += 1;
+    }
+
+    const commentCount = post.isBot
+      ? 1 + Math.floor(rand(post.id * 17) * 3)
+      : Math.floor(rand(post.id * 19) * 3);
+    for (let k = 0; k < commentCount; k++) {
+      const authorId = repIds[Math.floor(rand(post.id * 23 + k) * repIds.length)]!;
+      const content = pick(MOCK_COMMENTS, post.id + k * 5);
+      await db.insert(commentsTable).values({
+        postId: post.id,
+        authorId,
+        content,
+      });
+      totalComments += 1;
+    }
+  }
+
+  logger.info(
+    { posts: posts.length, highFives: totalHighFives, comments: totalComments },
+    "Seeded feed social signals",
+  );
+}
+
+// Seed a handful of redemption requests by mock reps so the Vault history,
+// admin queue, and "spending points" loop all look operational on launch.
+// Idempotent: skips if any redemption already exists.
+async function seedDemoRedemptions(): Promise<void> {
+  // Demo-only: never seed mock redemptions once any real Clerk user has
+  // signed up.
+  if (await hasRealUsers()) return;
+  const existing = await db.select({ id: redemptionsTable.id }).from(redemptionsTable).limit(1);
+  if (existing.length > 0) return;
+
+  const rewards = await db.select().from(rewardsTable);
+  if (rewards.length === 0) return;
+
+  // Top 6 mock reps by points = the redeemers (they have enough to spend).
+  const topReps = await db
+    .select()
+    .from(usersTable)
+    .where(sql`${usersTable.clerkId} LIKE ${SEED_CLERK_PREFIX + "%"}`)
+    .orderBy(desc(usersTable.totalPoints))
+    .limit(6);
+  if (topReps.length === 0) return;
+
+  const now = Date.now();
+  const day = 24 * 60 * 60 * 1000;
+  const cheap = rewards.filter((r) => r.pointCost <= 1500).sort((a, b) => a.pointCost - b.pointCost);
+  const mid = rewards.filter((r) => r.pointCost > 1500 && r.pointCost <= 2600);
+  if (cheap.length === 0) return;
+
+  const plan: Array<{ rep: typeof topReps[number]; reward: typeof rewards[number]; status: "approved" | "pending" | "rejected"; daysAgo: number }> = [
+    { rep: topReps[0]!, reward: cheap[0]!,                              status: "approved", daysAgo: 18 },
+    { rep: topReps[1]!, reward: cheap[Math.min(1, cheap.length - 1)]!, status: "approved", daysAgo: 14 },
+    { rep: topReps[2]!, reward: cheap[Math.min(2, cheap.length - 1)]!, status: "approved", daysAgo: 9 },
+    { rep: topReps[0]!, reward: mid[0] ?? cheap[cheap.length - 1]!,    status: "approved", daysAgo: 5 },
+    { rep: topReps[3]!, reward: cheap[Math.min(1, cheap.length - 1)]!, status: "approved", daysAgo: 3 },
+    { rep: topReps[4]!, reward: cheap[0]!,                              status: "rejected", daysAgo: 6 },
+    { rep: topReps[1]!, reward: mid[1] ?? mid[0] ?? cheap[cheap.length - 1]!, status: "pending", daysAgo: 1 },
+    { rep: topReps[5 % topReps.length]!, reward: cheap[Math.min(2, cheap.length - 1)]!, status: "pending", daysAgo: 0 },
+  ];
+
+  const touched = new Set<number>();
+  for (const p of plan) {
+    if (p.rep.totalPoints < p.reward.pointCost) continue;
+    await db.insert(redemptionsTable).values({
+      userId: p.rep.id,
+      rewardId: p.reward.id,
+      pointCost: p.reward.pointCost,
+      status: p.status,
+      createdAt: new Date(now - p.daysAgo * day),
+    });
+    touched.add(p.rep.id);
+  }
+
+  // Recompute balances so the deduction shows on each rep's dashboard.
+  for (const id of touched) {
+    await recomputeUserPoints(id);
+  }
+
+  logger.info({ count: plan.length, reps: touched.size }, "Seeded demo redemptions");
 }
 
 // Seed minimal personal data for a freshly-registered real rep so the dashboard

@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, usersTable, dealsTable, badgesTable } from "@workspace/db";
-import { eq, and, sql, gte, desc } from "drizzle-orm";
+import { eq, and, sql, gte, desc, inArray } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 import { computeStreaksForAll, levelInfo } from "../lib/streaks";
 
@@ -29,7 +29,7 @@ router.get("/leaderboard", requireAuth, async (req, res, next) => {
           .from(dealsTable)
           .where(
             and(
-              sql`${dealsTable.repId} = ANY(${repIds})`,
+              inArray(dealsTable.repId, repIds),
               sql`${dealsTable.status} IN ('closed','paid')`,
             ),
           )
@@ -40,7 +40,7 @@ router.get("/leaderboard", requireAuth, async (req, res, next) => {
       ? await db
           .select()
           .from(badgesTable)
-          .where(sql`${badgesTable.userId} = ANY(${repIds})`)
+          .where(inArray(badgesTable.userId, repIds))
       : [];
     const badgesByUser = new Map<number, typeof badgeRows>();
     for (const b of badgeRows) {

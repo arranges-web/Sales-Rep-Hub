@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, feedPostsTable, highFivesTable, commentsTable, usersTable } from "@workspace/db";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, desc, and, sql, inArray } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../middlewares/auth";
 import { levelInfo } from "../lib/streaks";
 
@@ -23,7 +23,7 @@ router.get("/feed", requireAuth, async (req, res, next) => {
             totalPoints: usersTable.totalPoints,
           })
           .from(usersTable)
-          .where(sql`${usersTable.id} = ANY(${authorIds})`)
+          .where(inArray(usersTable.id, authorIds))
       : [];
     const accentById = new Map(authorRows.map((a) => [a.id, a.accentColor]));
     const avatarById = new Map(authorRows.map((a) => [a.id, a.avatarUrl]));
@@ -35,14 +35,14 @@ router.get("/feed", requireAuth, async (req, res, next) => {
       ? await db
           .select({ postId: highFivesTable.postId, c: sql<number>`COUNT(*)` })
           .from(highFivesTable)
-          .where(sql`${highFivesTable.postId} = ANY(${postIds})`)
+          .where(inArray(highFivesTable.postId, postIds))
           .groupBy(highFivesTable.postId)
       : [];
     const ccCountRows = postIds.length
       ? await db
           .select({ postId: commentsTable.postId, c: sql<number>`COUNT(*)` })
           .from(commentsTable)
-          .where(sql`${commentsTable.postId} = ANY(${postIds})`)
+          .where(inArray(commentsTable.postId, postIds))
           .groupBy(commentsTable.postId)
       : [];
     const mineRows = postIds.length
@@ -51,7 +51,7 @@ router.get("/feed", requireAuth, async (req, res, next) => {
           .from(highFivesTable)
           .where(
             and(
-              sql`${highFivesTable.postId} = ANY(${postIds})`,
+              inArray(highFivesTable.postId, postIds),
               eq(highFivesTable.userId, me.id),
             ),
           )

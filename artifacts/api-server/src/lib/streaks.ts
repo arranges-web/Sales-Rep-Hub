@@ -1,5 +1,5 @@
 import { db, dealsTable } from "@workspace/db";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 
 export const POINTS_PER_LEVEL = 500;
 
@@ -89,7 +89,7 @@ export async function computeStreaksForAll(userIds: number[]): Promise<Map<numbe
     .from(dealsTable)
     .where(
       and(
-        sql`${dealsTable.repId} = ANY(${userIds})`,
+        inArray(dealsTable.repId, userIds),
         sql`${dealsTable.status} IN ('closed','paid')`,
       ),
     );
