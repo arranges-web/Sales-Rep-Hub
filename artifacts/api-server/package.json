@@ -7,9 +7,11 @@
     "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "create-demo-user": "tsx src/scripts/createDemoUser.ts"
   },
   "dependencies": {
+    "@clerk/backend": "^3.3.0",
     "@clerk/express": "^2.1.5",
     "@google-cloud/storage": "^7.19.0",
     "@workspace/api-zod": "workspace:*",
@@ -31,6 +33,7 @@
     "esbuild": "^0.27.3",
     "esbuild-plugin-pino": "^2.3.3",
     "pino-pretty": "^13",
-    "thread-stream": "3.1.0"
+    "thread-stream": "3.1.0",
+    "tsx": "catalog:"
   }
 }
