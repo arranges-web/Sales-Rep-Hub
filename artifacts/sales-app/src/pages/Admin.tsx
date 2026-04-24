@@ -659,7 +659,7 @@ function TerritoriesTab() {
             </Label>
             {form.bounds && (
               <span className="text-xs text-[#2C8214] font-semibold">
-                Polygon ready ✓
+                Polygon ready
               </span>
             )}
           </div>

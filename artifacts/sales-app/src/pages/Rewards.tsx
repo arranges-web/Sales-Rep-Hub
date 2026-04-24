@@ -20,8 +20,12 @@ import { useEffect, useRef } from "react";
 
 const CATEGORY_ACCENT: Record<string, string> = {
   gear: "#2EA3F2",
-  pto: "#7ed85c",
+  tools: "#f97316",
+  sports: "#ef4444",
+  electronics: "#a855f7",
+  experiences: "#ec4899",
   trip: "#FFBF00",
+  pto: "#7ed85c",
   cash: "#2C8214",
   other: "#94a3b8",
 };

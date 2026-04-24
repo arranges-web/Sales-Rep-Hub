@@ -100,7 +100,7 @@ export function useCelebrate() {
         colors: JT_COLORS,
       });
       toast({
-        title: `🎁 ${rewardName} approved!`,
+        title: `${rewardName} approved.`,
         description: "Check with admin to claim your reward.",
       });
     },
