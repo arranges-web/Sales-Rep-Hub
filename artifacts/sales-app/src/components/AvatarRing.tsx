@@ -34,7 +34,7 @@ export function AvatarRing({
     >
       <Avatar
         style={{ width: size, height: size }}
-        className="ring-2 ring-white"
+        className="ring-2 ring-background"
       >
         <AvatarImage src={resolvedSrc} />
         <AvatarFallback

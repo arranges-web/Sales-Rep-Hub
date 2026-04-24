@@ -148,7 +148,7 @@ export async function postDealClosedToFeed(opts: {
     authorId: null,
     authorName: "Joshua Tree Bot",
     authorAvatarUrl: null,
-    content: `🌳 ${opts.userName} just closed a $${opts.dealAmount.toLocaleString()} deal with ${opts.customerName} — earned ${opts.pointsAwarded} points!`,
+    content: `${opts.userName} just closed a $${opts.dealAmount.toLocaleString()} deal with ${opts.customerName} — earned ${opts.pointsAwarded} points!`,
     isBot: true,
     dealId: opts.dealId,
   });

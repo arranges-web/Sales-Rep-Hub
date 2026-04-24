@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap");
 @layer theme, base, clerk, components, utilities;
 @import "tailwindcss";
 @import "@clerk/themes/shadcn.css";
@@ -73,74 +73,75 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* LIGHT MODE - Joshua Tree branding */
+/* DARK by default. Light variables retained under .light for future toggle. */
 :root {
-  --button-outline: rgba(0,0,0, .10);
-  --badge-outline: rgba(0,0,0, .05);
-  --opaque-button-border-intensity: -8;
-  --elevate-1: rgba(0,0,0, .03);
-  --elevate-2: rgba(0,0,0, .08);
+  --button-outline: rgba(255,255,255, .10);
+  --badge-outline: rgba(255,255,255, .06);
+  --opaque-button-border-intensity: 9;
+  --elevate-1: rgba(255,255,255, .04);
+  --elevate-2: rgba(255,255,255, .08);
 
-  --background: 210 20% 98%;
-  --foreground: 215 25% 15%;
-  --border: 215 16% 88%;
-  --card: 0 0% 100%;
-  --card-foreground: 215 25% 15%;
-  --card-border: 215 16% 90%;
+  /* Near-black base, slightly cool */
+  --background: 220 28% 6%;
+  --foreground: 210 18% 96%;
+  --border: 220 16% 18%;
+  --card: 220 26% 9%;
+  --card-foreground: 210 18% 96%;
+  --card-border: 220 16% 18%;
 
-  --sidebar: 0 0% 100%;
-  --sidebar-foreground: 215 25% 20%;
-  --sidebar-border: 215 16% 90%;
+  --sidebar: 220 30% 5%;
+  --sidebar-foreground: 210 14% 78%;
+  --sidebar-border: 220 16% 14%;
   --sidebar-primary: 202 89% 56%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 210 20% 95%;
-  --sidebar-accent-foreground: 215 25% 15%;
+  --sidebar-primary-foreground: 220 28% 6%;
+  --sidebar-accent: 220 22% 12%;
+  --sidebar-accent-foreground: 210 18% 96%;
   --sidebar-ring: 202 89% 56%;
 
-  --popover: 0 0% 100%;
-  --popover-foreground: 215 25% 15%;
-  --popover-border: 215 16% 90%;
+  --popover: 220 26% 9%;
+  --popover-foreground: 210 18% 96%;
+  --popover-border: 220 16% 18%;
 
   /* JT Blue */
   --primary: 202 89% 56%;
-  --primary-foreground: 0 0% 100%;
+  --primary-foreground: 220 28% 6%;
 
   /* JT Green */
-  --secondary: 105 73% 30%;
+  --secondary: 105 60% 38%;
   --secondary-foreground: 0 0% 100%;
 
-  --muted: 210 20% 94%;
-  --muted-foreground: 215 16% 45%;
+  --muted: 220 22% 14%;
+  --muted-foreground: 215 12% 62%;
 
   /* JT Gold */
-  --accent: 45 100% 50%;
-  --accent-foreground: 215 25% 15%;
+  --accent: 45 100% 55%;
+  --accent-foreground: 220 28% 6%;
 
-  --destructive: 0 84% 60%;
+  --destructive: 0 70% 55%;
   --destructive-foreground: 0 0% 100%;
 
-  --input: 215 16% 88%;
+  --input: 220 18% 16%;
   --ring: 202 89% 56%;
 
   --chart-1: 202 89% 56%;
-  --chart-2: 105 73% 30%;
-  --chart-3: 45 100% 50%;
-  --chart-4: 280 70% 55%;
-  --chart-5: 15 85% 55%;
+  --chart-2: 105 60% 45%;
+  --chart-3: 45 100% 55%;
+  --chart-4: 280 70% 60%;
+  --chart-5: 15 85% 60%;
 
-  --app-font-sans: 'Open Sans', system-ui, sans-serif;
+  --app-font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --app-font-serif: Georgia, serif;
-  --app-font-mono: Menlo, monospace;
+  --app-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   --radius: .75rem;
 
-  --shadow-2xs: 0px 1px 2px 0px hsl(202 89% 56% / 0.04);
-  --shadow-xs: 0px 1px 2px 0px hsl(202 89% 56% / 0.06);
-  --shadow-sm: 0px 1px 3px 0px hsl(202 89% 56% / 0.08), 0px 1px 2px -1px hsl(202 89% 56% / 0.06);
-  --shadow: 0px 4px 6px -1px hsl(215 25% 15% / 0.06), 0px 2px 4px -2px hsl(215 25% 15% / 0.04);
-  --shadow-md: 0px 6px 10px -2px hsl(215 25% 15% / 0.08), 0px 4px 6px -2px hsl(215 25% 15% / 0.04);
-  --shadow-lg: 0px 12px 20px -4px hsl(215 25% 15% / 0.10), 0px 6px 10px -4px hsl(215 25% 15% / 0.06);
-  --shadow-xl: 0px 20px 32px -8px hsl(215 25% 15% / 0.12);
-  --shadow-2xl: 0px 32px 48px -12px hsl(215 25% 15% / 0.18);
+  --shadow-2xs: 0px 1px 2px 0px hsl(0 0% 0% / 0.20);
+  --shadow-xs: 0px 1px 2px 0px hsl(0 0% 0% / 0.30);
+  --shadow-sm: 0px 1px 3px 0px hsl(0 0% 0% / 0.35), 0px 1px 2px -1px hsl(0 0% 0% / 0.25);
+  --shadow: 0px 4px 6px -1px hsl(0 0% 0% / 0.40), 0px 2px 4px -2px hsl(0 0% 0% / 0.30);
+  --shadow-md: 0px 6px 10px -2px hsl(0 0% 0% / 0.45), 0px 4px 6px -2px hsl(0 0% 0% / 0.30);
+  --shadow-lg: 0px 12px 24px -6px hsl(0 0% 0% / 0.55), 0px 6px 10px -4px hsl(0 0% 0% / 0.35);
+  --shadow-xl: 0px 20px 40px -10px hsl(0 0% 0% / 0.65);
+  --shadow-2xl: 0px 32px 56px -14px hsl(0 0% 0% / 0.75);
   --tracking-normal: 0em;
   --spacing: 0.25rem;
 
@@ -160,76 +161,52 @@
   --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
 }
 
+/* The .dark class is kept as a no-op alias of :root so any consumer that
+   adds it (e.g. shadcn pieces or Clerk's CSS layer) still resolves correctly. */
 .dark {
-  --button-outline: rgba(255,255,255, .10);
-  --badge-outline: rgba(255,255,255, .05);
-  --opaque-button-border-intensity: 9;
-  --elevate-1: rgba(255,255,255, .04);
-  --elevate-2: rgba(255,255,255, .09);
-
-  --background: 215 30% 8%;
-  --foreground: 210 20% 95%;
-  --border: 215 20% 22%;
-  --card: 215 30% 12%;
-  --card-foreground: 210 20% 95%;
-  --card-border: 215 20% 22%;
-
-  --sidebar: 215 30% 10%;
-  --sidebar-foreground: 210 20% 90%;
-  --sidebar-border: 215 20% 20%;
-  --sidebar-primary: 202 89% 56%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 215 30% 16%;
-  --sidebar-accent-foreground: 210 20% 95%;
-  --sidebar-ring: 202 89% 56%;
-
-  --popover: 215 30% 12%;
-  --popover-foreground: 210 20% 95%;
-  --popover-border: 215 20% 22%;
-
-  --primary: 202 89% 56%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 105 60% 40%;
-  --secondary-foreground: 0 0% 100%;
-  --muted: 215 25% 18%;
-  --muted-foreground: 215 16% 65%;
-  --accent: 45 100% 55%;
-  --accent-foreground: 215 25% 10%;
-  --destructive: 0 70% 55%;
-  --destructive-foreground: 0 0% 100%;
-  --input: 215 20% 22%;
-  --ring: 202 89% 56%;
-  --chart-1: 202 89% 56%;
-  --chart-2: 105 60% 45%;
-  --chart-3: 45 100% 55%;
-  --chart-4: 280 70% 60%;
-  --chart-5: 15 85% 60%;
+  color-scheme: dark;
 }
 
 @layer base {
   * { @apply border-border; }
+  html { color-scheme: dark; }
   body {
     @apply font-sans antialiased bg-background text-foreground;
     font-feature-settings: "ss01", "cv11";
     letter-spacing: -0.005em;
   }
-  h1, h2, h3, h4 { letter-spacing: -0.018em; }
+  h1, h2, h3, h4 { letter-spacing: -0.022em; font-weight: 700; }
   .tabular-nums { font-variant-numeric: tabular-nums; }
+  /* Mono-stat utility for big numbers / counters */
+  .font-stat { font-family: var(--app-font-mono); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
 }
 
 @layer utilities {
+  /* Subtle hairline grid background you can drop on a hero / section */
+  .jt-grid-bg {
+    background-image:
+      linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  .jt-noise {
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(255,255,255,0.025) 1px, transparent 0);
+    background-size: 4px 4px;
+  }
+
   @keyframes jt-pulse-ring {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 191, 0, 0.65); }
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 191, 0, 0.55); }
     50% { box-shadow: 0 0 0 8px rgba(255, 191, 0, 0); }
   }
   .animate-pulse-ring { animation: jt-pulse-ring 1.6s ease-in-out infinite; }
 
   @keyframes jt-fade-in-up {
-    from { opacity: 0; transform: translateY(8px); }
+    from { opacity: 0; transform: translateY(6px); }
     to   { opacity: 1; transform: translateY(0); }
   }
-  .jt-fade-in { animation: jt-fade-in-up .35s ease-out both; }
-  .jt-fade-in-stagger > * { animation: jt-fade-in-up .35s ease-out both; }
+  .jt-fade-in { animation: jt-fade-in-up .3s ease-out both; }
+  .jt-fade-in-stagger > * { animation: jt-fade-in-up .3s ease-out both; }
   .jt-fade-in-stagger > *:nth-child(1) { animation-delay: .00s; }
   .jt-fade-in-stagger > *:nth-child(2) { animation-delay: .04s; }
   .jt-fade-in-stagger > *:nth-child(3) { animation-delay: .08s; }
@@ -240,16 +217,15 @@
   .jt-fade-in-stagger > *:nth-child(8) { animation-delay: .28s; }
   .jt-fade-in-stagger > *:nth-child(n+9) { animation-delay: .32s; }
 
-  .jt-row-transition { transition: transform .45s cubic-bezier(.2,.8,.2,1), background-color .25s ease; }
+  .jt-row-transition { transition: transform .35s cubic-bezier(.2,.8,.2,1), background-color .25s ease; }
 
-  .jt-tilt {
-    transition: transform .25s cubic-bezier(.2,.8,.2,1), box-shadow .25s ease;
-    transform: perspective(600px) rotateX(0) rotateY(0) translateY(0);
-    will-change: transform;
+  /* Replaces .jt-tilt — flat hover with subtle accent glow, no transform jump */
+  .jt-card-hover {
+    transition: border-color .2s ease, box-shadow .25s ease, background-color .2s ease;
   }
-  .jt-tilt:hover {
-    transform: perspective(600px) rotateX(2deg) rotateY(-2deg) translateY(-2px);
-    box-shadow: 0 14px 28px -12px rgba(46,163,242,.25);
+  .jt-card-hover:hover {
+    border-color: rgba(46,163,242,.45);
+    box-shadow: 0 0 0 1px rgba(46,163,242,.15), 0 12px 32px -16px rgba(46,163,242,.45);
   }
 
   @keyframes jt-pop-up {
@@ -268,9 +244,9 @@
   .jt-skeleton {
     background: linear-gradient(
       90deg,
-      hsl(210 20% 94%) 0%,
-      hsl(202 89% 96%) 50%,
-      hsl(210 20% 94%) 100%
+      hsl(220 22% 12%) 0%,
+      hsl(220 22% 18%) 50%,
+      hsl(220 22% 12%) 100%
     );
     background-size: 200% 100%;
     animation: jt-shimmer 1.4s linear infinite;

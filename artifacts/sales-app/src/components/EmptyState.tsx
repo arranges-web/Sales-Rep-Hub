@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { TreePine } from "lucide-react";
+import { Inbox } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface EmptyStateProps {
@@ -20,14 +20,14 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-[#2EA3F2]/30 bg-gradient-to-b from-white to-[#2EA3F2]/5 px-6 py-10 text-center",
+        "flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-card/60 px-6 py-12 text-center",
         className,
       )}
     >
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#2EA3F2] to-[#2C8214] text-white shadow-md">
-        {icon ?? <TreePine className="h-7 w-7" />}
+      <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-background text-[#2EA3F2]">
+        {icon ?? <Inbox className="h-6 w-6" strokeWidth={1.5} />}
       </div>
-      <div className="text-base font-bold text-foreground">{title}</div>
+      <div className="text-base font-semibold text-foreground">{title}</div>
       {description ? (
         <div className="max-w-sm text-sm text-muted-foreground">
           {description}

@@ -47,61 +47,101 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const isAdmin = me?.role === "admin";
 
+  const NavItem = ({
+    href,
+    label,
+    Icon,
+    active,
+    accentColor = "#2EA3F2",
+  }: {
+    href: string;
+    label: string;
+    Icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+    active: boolean;
+    accentColor?: string;
+  }) => (
+    <Link
+      href={href}
+      onClick={() => setMobileOpen(false)}
+      className={cn(
+        "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+        active
+          ? "bg-sidebar-accent text-foreground"
+          : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-foreground",
+      )}
+    >
+      {active && (
+        <span
+          aria-hidden
+          className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full"
+          style={{ background: accentColor }}
+        />
+      )}
+      <Icon
+        className={cn("h-[18px] w-[18px] shrink-0")}
+        strokeWidth={active ? 2.25 : 1.75}
+      />
+      <span className="truncate">{label}</span>
+    </Link>
+  );
+
   const Sidebar = (
-    <aside className="flex h-full w-64 flex-col border-r border-sidebar-border bg-sidebar">
-      <div className="flex items-center justify-center border-b border-sidebar-border px-5 py-5">
-        <Logo className="h-10" />
+    <aside className="flex h-full w-56 flex-col border-r border-sidebar-border bg-sidebar">
+      <div className="flex items-center gap-2 border-b border-sidebar-border px-4 py-4">
+        <Logo className="h-8" />
+        <div className="ml-auto flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+          <span
+            className="inline-block h-1.5 w-1.5 rounded-full bg-[#2EA3F2]"
+            aria-hidden
+          />
+          SWFL
+        </div>
       </div>
 
-      <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+      <nav className="flex-1 space-y-0.5 overflow-y-auto p-2">
+        <div className="px-3 pb-1.5 pt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+          Workspace
+        </div>
         {NAV_ITEMS.map((item) => {
-          const Icon = item.icon;
-          const active = location === item.href || location.startsWith(item.href + "/");
+          const active =
+            location === item.href || location.startsWith(item.href + "/");
           return (
-            <Link
+            <NavItem
               key={item.href}
               href={item.href}
-              onClick={() => setMobileOpen(false)}
-              className={cn(
-                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
-                active
-                  ? "bg-[#2EA3F2] text-white shadow-sm"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent",
-              )}
-            >
-              <Icon className="h-5 w-5 shrink-0" />
-              <span>{item.label}</span>
-            </Link>
+              label={item.label}
+              Icon={item.icon}
+              active={active}
+            />
           );
         })}
         {isAdmin && (
-          <Link
-            href="/admin"
-            onClick={() => setMobileOpen(false)}
-            className={cn(
-              "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
-              location.startsWith("/admin")
-                ? "bg-[#FFBF00] text-slate-900 shadow-sm"
-                : "text-sidebar-foreground hover:bg-sidebar-accent",
-            )}
-          >
-            <Settings className="h-5 w-5 shrink-0" />
-            <span>Admin Panel</span>
-          </Link>
+          <>
+            <div className="px-3 pb-1.5 pt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              Admin
+            </div>
+            <NavItem
+              href="/admin"
+              label="Admin Panel"
+              Icon={Settings}
+              active={location.startsWith("/admin")}
+              accentColor="#FFBF00"
+            />
+          </>
         )}
       </nav>
 
-      <div className="border-t border-sidebar-border p-3 space-y-2">
+      <div className="border-t border-sidebar-border p-2 space-y-1.5">
         <Link
           href="/profile"
           onClick={() => setMobileOpen(false)}
-          className="flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-sidebar-accent"
+          className="flex items-center gap-2.5 rounded-lg p-2 transition-colors hover:bg-sidebar-accent"
         >
           <div
-            className="rounded-full p-[2px]"
-            style={{ background: me?.accentColor || "#2C8214" }}
+            className="rounded-full p-[1.5px]"
+            style={{ background: me?.accentColor || "#2EA3F2" }}
           >
-            <Avatar className="h-9 w-9 ring-2 ring-white">
+            <Avatar className="h-8 w-8 ring-1 ring-background">
               <AvatarImage
                 src={
                   me?.avatarUrl
@@ -110,8 +150,8 @@ export function AppShell({ children }: { children: ReactNode }) {
                 }
               />
               <AvatarFallback
-                className="text-white font-bold"
-                style={{ background: me?.accentColor || "#2C8214" }}
+                className="text-white text-xs font-bold"
+                style={{ background: me?.accentColor || "#2EA3F2" }}
               >
                 {(me?.name || user?.firstName || "R").slice(0, 1).toUpperCase()}
               </AvatarFallback>
@@ -119,24 +159,24 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
-              <span className="truncate text-sm font-semibold">
+              <span className="truncate text-[13px] font-semibold text-foreground">
                 {me?.name || user?.fullName || "Sales Rep"}
               </span>
               {me?.level != null && (
-                <span className="rounded-full bg-[#2EA3F2]/15 px-1.5 py-0.5 text-[10px] font-bold text-[#2EA3F2]">
+                <span className="font-stat rounded border border-border bg-background/60 px-1 text-[9px] font-bold text-[#2EA3F2]">
                   L{me.level}
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span className="tabular-nums">{me?.totalPoints ?? 0} pts</span>
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <span className="font-stat">
+                {(me?.totalPoints ?? 0).toLocaleString()} pts
+              </span>
               {me?.currentStreak ? (
                 <span
                   className={cn(
-                    "inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold",
-                    me.streakAtRisk
-                      ? "bg-[#FFBF00]/25 text-[#7a5a00]"
-                      : "bg-[#2C8214]/15 text-[#2C8214]",
+                    "inline-flex items-center gap-0.5 font-bold",
+                    me.streakAtRisk ? "text-[#FFBF00]" : "text-[#2C8214]",
                   )}
                 >
                   <Flame className="h-2.5 w-2.5" />
@@ -148,24 +188,24 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
           <UserCircle className="h-4 w-4 text-muted-foreground" />
         </Link>
-        <div className="flex gap-2">
+        <div className="flex gap-1.5">
           <Button
             variant="outline"
             size="sm"
-            className="flex-1 justify-start gap-2 rounded-xl"
+            className="h-8 flex-1 justify-start gap-2 rounded-lg text-xs"
             onClick={() => signOut({ redirectUrl: import.meta.env.BASE_URL })}
           >
-            <LogOut className="h-4 w-4" />
+            <LogOut className="h-3.5 w-3.5" />
             Sign out
           </Button>
           <Button
             variant="outline"
-            size="icon"
-            title={soundOn ? "Mute celebration sounds" : "Enable celebration sounds"}
-            className="rounded-xl"
+            size="sm"
+            title={soundOn ? "Mute celebrations" : "Enable celebrations"}
+            className="h-8 w-8 rounded-lg p-0"
             onClick={() => setSoundEnabled(!soundOn)}
           >
-            {soundOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+            {soundOn ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
           </Button>
         </div>
       </div>
@@ -181,7 +221,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       {mobileOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div
-            className="absolute inset-0 bg-black/40"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
           />
           <div className="absolute left-0 top-0 h-full">{Sidebar}</div>
@@ -189,7 +229,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background/80 px-4 py-3 backdrop-blur lg:hidden">
+        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background/85 px-4 py-3 backdrop-blur lg:hidden">
           <button
             onClick={() => setMobileOpen(true)}
             className="rounded-lg p-2 hover:bg-muted"
@@ -206,7 +246,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       {mobileOpen && (
         <button
           onClick={() => setMobileOpen(false)}
-          className="fixed right-4 top-4 z-50 rounded-full bg-white p-2 shadow-lg lg:hidden"
+          className="fixed right-4 top-4 z-50 rounded-full border border-border bg-card p-2 text-foreground shadow-lg lg:hidden"
           aria-label="Close menu"
         >
           <X className="h-5 w-5" />

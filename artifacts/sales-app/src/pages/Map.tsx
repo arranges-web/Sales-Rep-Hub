@@ -246,7 +246,7 @@ export default function MapPage() {
           : null;
       const safeStatus = String(p.status).replace(/[^a-z_]/gi, "");
       const popupHtml = `
-        <div style="min-width:180px;font-family:'Open Sans',sans-serif;">
+        <div style="min-width:180px;font-family:'Inter',system-ui,sans-serif;">
           <div style="font-weight:700;margin-bottom:2px;">${escapeHtml(p.address)}</div>
           <div style="font-size:11px;color:#64748b;margin-bottom:4px;">
             by ${escapeHtml(p.repName)} · ${escapeHtml(safeStatus)}
@@ -289,11 +289,11 @@ export default function MapPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-5 p-4 sm:p-6 lg:p-8">
       <BrandHeader
-        title="Canvassing Map"
-        subtitle="Tap the map to drop a pin at any location."
-        icon={<MapPin className="h-6 w-6" />}
+        title="Canvas Map"
+        subtitle="Tap the map to drop a pin. Work the streets, win the blocks."
+        icon={<MapPin className="h-6 w-6" strokeWidth={1.5} />}
         actions={
-          <div className="flex gap-2">
+          <div className="flex gap-1.5">
             {(["all", "lead", "sold"] as const).map((f) => (
               <Button
                 key={f}
@@ -301,10 +301,10 @@ export default function MapPage() {
                 variant={filter === f ? "default" : "outline"}
                 onClick={() => setFilter(f)}
                 className={cn(
-                  "rounded-xl capitalize",
+                  "rounded-lg capitalize",
                   filter === f
-                    ? "bg-white text-[#2EA3F2] hover:bg-white/90"
-                    : "bg-white/15 text-white border-white/30 hover:bg-white/25 hover:text-white",
+                    ? "bg-[#2EA3F2] text-slate-950 hover:bg-[#48b3f6]"
+                    : "border-border",
                 )}
               >
                 {f}

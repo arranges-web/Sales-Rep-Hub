@@ -37,7 +37,7 @@ export function PointsDelta({ value }: { value: number }) {
       {items.map((it) => (
         <span
           key={it.id}
-          className="jt-pop rounded-full bg-[#FFBF00] px-2 py-0.5 text-xs font-extrabold text-slate-900 shadow"
+          className="jt-pop font-stat rounded-md border border-[#FFBF00]/40 bg-[#FFBF00]/15 px-2 py-0.5 text-xs font-bold text-[#FFBF00] shadow"
         >
           +{it.amount.toLocaleString()}
         </span>

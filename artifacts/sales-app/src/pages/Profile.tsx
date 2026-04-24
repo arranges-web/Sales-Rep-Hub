@@ -16,20 +16,14 @@ import { Label } from "@/components/ui/label";
 import { PhotoUpload } from "@/components/PhotoUpload";
 import { AvatarRing } from "@/components/AvatarRing";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Palette, UserCircle } from "lucide-react";
+import { Save, Palette, UserCircle, Target } from "lucide-react";
 import { BrandHeader } from "@/components/BrandHeader";
 import { cn } from "@/lib/utils";
 
 const PALETTE = [
-  "#2EA3F2", // JT blue
-  "#2C8214", // JT green
-  "#FFBF00", // JT gold
-  "#E11D48", // rose
-  "#7C3AED", // violet
-  "#0EA5E9", // sky
-  "#059669", // emerald
-  "#F97316", // orange
-  "#0F172A", // slate
+  "#2EA3F2", "#2C8214", "#FFBF00",
+  "#E11D48", "#7C3AED", "#0EA5E9",
+  "#059669", "#F97316", "#475569",
 ];
 
 const SERVICE_OPTIONS = [
@@ -92,41 +86,55 @@ export default function ProfilePage() {
         return typeof k === "string" && k.startsWith("/api/feed/") && k.endsWith("/comments");
       },
     });
-    toast({ title: "Profile saved", description: "Your touches are live across the app." });
+    toast({ title: "Profile saved" });
   };
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="mx-auto max-w-3xl space-y-5 p-4 sm:p-6 lg:p-8">
       <BrandHeader
         title="My Profile"
-        subtitle="Make this account yours — your team will see these touches everywhere."
-        icon={<UserCircle className="h-6 w-6" />}
+        subtitle="Make this account yours — your team sees these touches everywhere."
+        icon={<UserCircle className="h-6 w-6" strokeWidth={1.5} />}
+        accent={form.accentColor}
       />
 
+      {/* Live preview card — flat dark with thin accent */}
       <Card
-        className="overflow-hidden border-0 p-6 text-white shadow-lg"
-        style={{
-          background: `linear-gradient(135deg, ${form.accentColor}, #2C8214)`,
-        }}
+        className="relative overflow-hidden border-border bg-card p-5"
       >
-        <div className="flex items-center gap-4">
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 h-px"
+          style={{
+            background: `linear-gradient(90deg, transparent, ${form.accentColor}, transparent)`,
+          }}
+        />
+        <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full opacity-20 blur-3xl"
+          style={{ background: form.accentColor }} />
+        <div className="relative flex items-center gap-4">
           <AvatarRing
             src={form.avatarUrl ?? me?.avatarUrl}
             name={form.name || "R"}
-            accentColor="#ffffff"
-            size={72}
+            accentColor={form.accentColor}
+            size={64}
           />
           <div className="min-w-0">
-            <div className="text-xl font-extrabold">{form.name || "Your name"}</div>
-            <div className="text-sm opacity-90">{form.hometown || "Add your hometown"}</div>
+            <div className="text-xl font-bold text-foreground">
+              {form.name || "Your name"}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {form.hometown || "Add your hometown"}
+            </div>
             {form.hawaiiGoal && (
-              <div className="mt-1 text-sm">🌺 {form.hawaiiGoal}</div>
+              <div className="mt-1 inline-flex items-center gap-1.5 text-sm text-foreground/80">
+                <Target className="h-3.5 w-3.5 text-[#FFBF00]" strokeWidth={1.75} />
+                {form.hawaiiGoal}
+              </div>
             )}
           </div>
         </div>
       </Card>
 
-      <Card className="space-y-5 p-5">
+      <Card className="space-y-5 border-border bg-card p-5">
         <div>
           <Label>Avatar photo</Label>
           <div className="mt-2">
@@ -143,8 +151,8 @@ export default function ProfilePage() {
           <Input
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className="mt-1 rounded-xl"
-            placeholder="Jane Rep"
+            className="mt-1 rounded-lg"
+            placeholder="Jordan Rep"
           />
         </div>
 
@@ -160,10 +168,10 @@ export default function ProfilePage() {
                 aria-label={`Pick color ${c}`}
                 onClick={() => setForm({ ...form, accentColor: c })}
                 className={cn(
-                  "h-9 w-9 rounded-full border-2 transition-transform",
+                  "h-9 w-9 rounded-md border-2 transition-transform",
                   form.accentColor === c
-                    ? "scale-110 border-slate-900 shadow-md"
-                    : "border-white shadow-sm hover:scale-105",
+                    ? "scale-105 border-foreground/80"
+                    : "border-border hover:scale-105 hover:border-foreground/30",
                 )}
                 style={{ background: c }}
               />
@@ -178,7 +186,7 @@ export default function ProfilePage() {
               value={form.hometown}
               onChange={(e) => setForm({ ...form, hometown: e.target.value })}
               placeholder="Fort Myers, FL"
-              className="mt-1 rounded-xl"
+              className="mt-1 rounded-lg"
             />
           </div>
           <div>
@@ -186,7 +194,7 @@ export default function ProfilePage() {
             <select
               value={form.favoriteService}
               onChange={(e) => setForm({ ...form, favoriteService: e.target.value })}
-              className="mt-1 h-10 w-full rounded-xl border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#2EA3F2]/30"
+              className="mt-1 h-10 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#2EA3F2]/30"
             >
               <option value="">—</option>
               {SERVICE_OPTIONS.map((s) => (
@@ -199,16 +207,16 @@ export default function ProfilePage() {
         </div>
 
         <div>
-          <Label>Hawaii goal</Label>
+          <Label>Big-trip goal</Label>
           <Input
             value={form.hawaiiGoal}
             onChange={(e) => setForm({ ...form, hawaiiGoal: e.target.value })}
-            placeholder="Surfing Waikiki with the family in December"
+            placeholder="Surfing the North Shore in December"
             maxLength={140}
-            className="mt-1 rounded-xl"
+            className="mt-1 rounded-lg"
           />
           <p className="mt-1 text-xs text-muted-foreground">
-            Why you're chasing Points to Paradise.
+            What you're chasing for the top-tier trip prize.
           </p>
         </div>
 
@@ -219,7 +227,7 @@ export default function ProfilePage() {
             onChange={(e) => setForm({ ...form, bio: e.target.value })}
             placeholder="Born and raised in SWFL. Climber turned closer."
             maxLength={280}
-            className="mt-1 min-h-[88px] rounded-xl"
+            className="mt-1 min-h-[88px] rounded-lg"
           />
         </div>
 
@@ -227,7 +235,7 @@ export default function ProfilePage() {
           <Button
             onClick={save}
             disabled={update.isPending}
-            className="rounded-xl bg-[#2EA3F2] hover:bg-[#1d8fd8]"
+            className="rounded-lg bg-[#2EA3F2] text-slate-950 hover:bg-[#48b3f6]"
           >
             <Save className="mr-2 h-4 w-4" />
             {update.isPending ? "Saving…" : "Save profile"}

@@ -63,45 +63,45 @@ const clerkAppearance = {
   },
   variables: {
     colorPrimary: "#2EA3F2",
-    colorForeground: "#1f2937",
-    colorMutedForeground: "#6b7280",
-    colorDanger: "#ef4444",
-    colorBackground: "#ffffff",
-    colorInput: "#ffffff",
-    colorInputForeground: "#1f2937",
-    colorNeutral: "#e5e7eb",
-    colorModalBackdrop: "rgba(15, 23, 42, 0.55)",
-    fontFamily: "'Open Sans', system-ui, sans-serif",
-    borderRadius: "0.75rem",
+    colorForeground: "#f3f4f6",
+    colorMutedForeground: "#9ca3af",
+    colorDanger: "#f87171",
+    colorBackground: "#0c1219",
+    colorInput: "#141a23",
+    colorInputForeground: "#f3f4f6",
+    colorNeutral: "#1f2630",
+    colorModalBackdrop: "rgba(0, 0, 0, 0.75)",
+    fontFamily: "'Inter', system-ui, sans-serif",
+    borderRadius: "0.625rem",
   },
   elements: {
     rootBox: "w-full",
     cardBox:
-      "bg-white rounded-2xl w-[440px] max-w-full overflow-hidden shadow-xl",
+      "bg-[#0c1219] border border-[#1f2630] rounded-2xl w-[440px] max-w-full overflow-hidden shadow-2xl",
     card: "!shadow-none !border-0 !bg-transparent !rounded-none",
-    footer: "!shadow-none !border-0 !bg-transparent !rounded-none",
-    headerTitle: "text-slate-900 font-bold text-2xl",
-    headerSubtitle: "text-slate-600",
-    socialButtonsBlockButtonText: "text-slate-800 font-medium",
-    formFieldLabel: "text-slate-700 font-medium",
+    footer: "!shadow-none !border-0 !bg-[#0a0f15] !rounded-none border-t border-[#1f2630]",
+    headerTitle: "text-slate-50 font-bold text-2xl tracking-tight",
+    headerSubtitle: "text-slate-400",
+    socialButtonsBlockButtonText: "text-slate-100 font-medium",
+    formFieldLabel: "text-slate-300 font-medium",
     footerActionLink: "text-[#2EA3F2] font-semibold hover:underline",
-    footerActionText: "text-slate-600",
+    footerActionText: "text-slate-400",
     dividerText: "text-slate-500",
     identityPreviewEditButton: "text-[#2EA3F2]",
-    formFieldSuccessText: "text-emerald-600",
-    alertText: "text-slate-800",
+    formFieldSuccessText: "text-emerald-400",
+    alertText: "text-slate-200",
     logoBox: "justify-center mb-4",
-    logoImage: "h-14 w-auto",
+    logoImage: "h-12 w-auto",
     socialButtonsBlockButton:
-      "border border-slate-200 hover:bg-slate-50 rounded-lg",
+      "border border-[#1f2630] bg-[#141a23] hover:bg-[#1a2230] text-slate-100 rounded-lg",
     formButtonPrimary:
-      "bg-[#2EA3F2] hover:bg-[#1d8fd8] text-white font-semibold rounded-lg",
+      "bg-[#2EA3F2] hover:bg-[#48b3f6] text-slate-950 font-semibold rounded-lg shadow-lg shadow-[#2EA3F2]/20",
     formFieldInput:
-      "border border-slate-200 rounded-lg focus:border-[#2EA3F2] focus:ring-2 focus:ring-[#2EA3F2]/20",
+      "border border-[#1f2630] bg-[#141a23] text-slate-100 rounded-lg focus:border-[#2EA3F2] focus:ring-2 focus:ring-[#2EA3F2]/25",
     footerAction: "text-center",
-    dividerLine: "bg-slate-200",
-    alert: "rounded-lg",
-    otpCodeFieldInput: "border-slate-200",
+    dividerLine: "bg-[#1f2630]",
+    alert: "rounded-lg bg-[#141a23] border border-[#1f2630]",
+    otpCodeFieldInput: "border-[#1f2630] bg-[#141a23] text-slate-100",
     formFieldRow: "",
     main: "",
   },
@@ -111,12 +111,16 @@ function SignInPage() {
   // To update login providers, app branding, or OAuth settings use the Auth
   // pane in the workspace toolbar. More information can be found in the Replit docs.
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-gradient-to-br from-sky-50 via-white to-emerald-50 px-4">
-      <SignIn
-        routing="path"
-        path={`${basePath}/sign-in`}
-        signUpUrl={`${basePath}/sign-up`}
-      />
+    <div className="relative flex min-h-[100dvh] items-center justify-center bg-background px-4">
+      <div className="pointer-events-none absolute inset-0 jt-grid-bg opacity-50" />
+      <div className="pointer-events-none absolute -left-40 top-10 -z-0 h-[28rem] w-[28rem] rounded-full bg-[#2EA3F2]/15 blur-[120px]" />
+      <div className="relative">
+        <SignIn
+          routing="path"
+          path={`${basePath}/sign-in`}
+          signUpUrl={`${basePath}/sign-up`}
+        />
+      </div>
     </div>
   );
 }
@@ -125,12 +129,16 @@ function SignUpPage() {
   // To update login providers, app branding, or OAuth settings use the Auth
   // pane in the workspace toolbar. More information can be found in the Replit docs.
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-gradient-to-br from-sky-50 via-white to-emerald-50 px-4">
-      <SignUp
-        routing="path"
-        path={`${basePath}/sign-up`}
-        signInUrl={`${basePath}/sign-in`}
-      />
+    <div className="relative flex min-h-[100dvh] items-center justify-center bg-background px-4">
+      <div className="pointer-events-none absolute inset-0 jt-grid-bg opacity-50" />
+      <div className="pointer-events-none absolute -right-40 top-10 -z-0 h-[28rem] w-[28rem] rounded-full bg-[#2C8214]/12 blur-[120px]" />
+      <div className="relative">
+        <SignUp
+          routing="path"
+          path={`${basePath}/sign-up`}
+          signInUrl={`${basePath}/sign-in`}
+        />
+      </div>
     </div>
   );
 }

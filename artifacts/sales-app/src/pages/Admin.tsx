@@ -69,8 +69,9 @@ export default function AdminPage() {
     <div className="mx-auto max-w-6xl space-y-5 p-4 sm:p-6 lg:p-8">
       <BrandHeader
         title="Admin Panel"
-        subtitle="Manage your team, points, rewards, and content."
-        icon={<Settings className="h-6 w-6" />}
+        subtitle="Reps, points, rewards, training, territories."
+        icon={<Settings className="h-6 w-6" strokeWidth={1.5} />}
+        accent="#FFBF00"
       />
       <Tabs defaultValue="users" className="space-y-4">
         <TabsList className="rounded-xl flex-wrap h-auto">
@@ -256,7 +257,7 @@ function UsersTab() {
             </div>
             <div className="text-xs text-muted-foreground">{u.email}</div>
             {u.hawaiiGoal && (
-              <div className="mt-0.5 text-xs text-muted-foreground">🌺 {u.hawaiiGoal}</div>
+              <div className="mt-0.5 text-xs text-muted-foreground">Goal: {u.hawaiiGoal}</div>
             )}
           </div>
           <Badge className={u.role === "admin" ? "bg-[#FFBF00] text-slate-900" : "bg-[#2EA3F2] text-white"}>

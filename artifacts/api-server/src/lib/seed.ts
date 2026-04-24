@@ -188,10 +188,10 @@ async function seedPointConfigs() {
 async function seedIncentiveTiers() {
   if (!(await isEmpty(incentiveTiersTable))) return;
   await db.insert(incentiveTiersTable).values([
-    { name: "Bronze",  pointThreshold: 500,  color: "#a16a3b", description: "Getting started",     rewardDescription: "JT branded gear pack",         displayOrder: 1 },
-    { name: "Silver",  pointThreshold: 1500, color: "#94a3b8", description: "Solid contributor",   rewardDescription: "Bonus PTO day + gift card",    displayOrder: 2 },
-    { name: "Gold",    pointThreshold: 3500, color: "#FFBF00", description: "Top performer",       rewardDescription: "Weekend at Sanibel + cash",    displayOrder: 3 },
-    { name: "Hawaii",  pointThreshold: 7500, color: "#2C8214", description: "Points to Paradise",  rewardDescription: "All-expenses Hawaii trip 🌺",  displayOrder: 4 },
+    { name: "Bronze",  pointThreshold: 500,  color: "#a16a3b", description: "Getting started",       rewardDescription: "JT gear pack + Yeti tumbler",        displayOrder: 1 },
+    { name: "Silver",  pointThreshold: 1500, color: "#94a3b8", description: "Solid contributor",     rewardDescription: "Bonus PTO day + $250 gift card",     displayOrder: 2 },
+    { name: "Gold",    pointThreshold: 3500, color: "#FFBF00", description: "Top performer",        rewardDescription: "Bucs/Lightning tix + cash bonus",    displayOrder: 3 },
+    { name: "Apex",    pointThreshold: 7500, color: "#2C8214", description: "Crew leader",          rewardDescription: "All-expenses Hawaii trip for two",   displayOrder: 4 },
   ]);
   logger.info("Seeded incentive tiers");
 }
@@ -199,16 +199,20 @@ async function seedIncentiveTiers() {
 async function seedRewards() {
   if (!(await isEmpty(rewardsTable))) return;
   await db.insert(rewardsTable).values([
-    { name: "Custom Logo Polo",      description: "Sharp golf polo with the Joshua Tree mark.",                pointCost: 250,  category: "gear",  imageUrl: "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=600", available: true },
-    { name: "JT Logo Hoodie",        description: "Premium pullover hoodie with embroidered JT logo.",        pointCost: 350,  category: "gear",  imageUrl: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=600", available: true },
-    { name: "Yeti Tumbler (30oz)",   description: "Stainless tumbler — keeps your iced coffee cold all day.", pointCost: 450,  category: "gear",  imageUrl: "https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=600", available: true },
-    { name: "Concert Tickets",       description: "Two tickets to a show in Fort Myers or Naples.",            pointCost: 900,  category: "other", imageUrl: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600", available: true },
-    { name: "Bonus PTO Day",         description: "An extra paid day off — use it any time.",                  pointCost: 1200, category: "pto",   imageUrl: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600", available: true },
-    { name: "AirPods Pro",           description: "For focused canvassing days and call prep.",                pointCost: 1500, category: "gear",  imageUrl: "https://images.unsplash.com/photo-1606220838315-056192d5e927?w=600", available: true },
-    { name: "$250 Visa Gift Card",   description: "Spend it however you want.",                                pointCost: 1800, category: "cash",  imageUrl: "https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?w=600", available: true },
-    { name: "Apple Watch SE",        description: "Track your daily canvass miles in style.",                  pointCost: 2400, category: "gear",  imageUrl: "https://images.unsplash.com/photo-1551816230-ef5deaed4a26?w=600", available: true },
-    { name: "Sanibel Weekend Stay",  description: "Two-night beachfront stay for two on Sanibel Island.",      pointCost: 4000, category: "trip",  imageUrl: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600", available: true },
-    { name: "Hawaii Trip for Two",   description: "All-expenses paid 5-night Hawaii vacation.",                pointCost: 7500, category: "trip",  imageUrl: "https://images.unsplash.com/photo-1542259009477-d625272157b7?w=600", available: true },
+    { name: "JT Logo Hoodie",            description: "Premium pullover hoodie with embroidered JT mark.",                pointCost: 300,  category: "gear",  imageUrl: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=600", available: true },
+    { name: "Yeti Tumbler (30oz)",       description: "Stainless tumbler. Keeps coffee hot, beer cold.",                  pointCost: 450,  category: "gear",  imageUrl: "https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=600", available: true },
+    { name: "JBL Charge 5 Speaker",      description: "Rugged Bluetooth speaker for the truck or the tailgate.",           pointCost: 800,  category: "gear",  imageUrl: "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=600", available: true },
+    { name: "Nike Footwear Voucher",     description: "$200 to spend on Nike kicks or training gear.",                    pointCost: 900,  category: "gear",  imageUrl: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600", available: true },
+    { name: "DeWalt 20V Drill Combo",    description: "Cordless drill + impact driver kit. Tool truck favorite.",          pointCost: 1100, category: "gear",  imageUrl: "https://images.unsplash.com/photo-1572981779307-38b8cabb2407?w=600", available: true },
+    { name: "Bucs / Lightning Tickets",  description: "Two lower-bowl seats to a Bucs or Lightning home game.",            pointCost: 1300, category: "other", imageUrl: "https://images.unsplash.com/photo-1521412644187-c49fa049e84d?w=600", available: true },
+    { name: "Bonus PTO Day",             description: "An extra paid day off. Burn it whenever.",                          pointCost: 1500, category: "pto",   imageUrl: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600", available: true },
+    { name: "Traeger Pro 575 Grill",     description: "Wi-Fi-controlled pellet grill. Sunday brisket sorted.",             pointCost: 2200, category: "gear",  imageUrl: "https://images.unsplash.com/photo-1544025162-d76694265947?w=600", available: true },
+    { name: "PlayStation 5 Bundle",      description: "PS5 console with one game of your choice.",                         pointCost: 2400, category: "gear",  imageUrl: "https://images.unsplash.com/photo-1606318313846-f8e8b6c4aef9?w=600", available: true },
+    { name: "Inshore Fishing Charter",   description: "Half-day for two with a guide out of Pine Island Sound.",           pointCost: 2600, category: "trip",  imageUrl: "https://images.unsplash.com/photo-1545566239-0ee5b1b06ba0?w=600", available: true },
+    { name: "Top-Golf Bay (4 Hours)",    description: "Reserved bay for you and the boys. Food and drinks on the house.",  pointCost: 1800, category: "other", imageUrl: "https://images.unsplash.com/photo-1500932334442-8761ee4810a7?w=600", available: true },
+    { name: "$500 Visa Gift Card",       description: "Cold cash on a card. Spend it however.",                            pointCost: 3000, category: "cash",  imageUrl: "https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?w=600", available: true },
+    { name: "Ford F-150 Lease (3 mo)",   description: "Three months on a JT-branded F-150. Daily driver dialed.",          pointCost: 5500, category: "other", imageUrl: "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=600", available: true },
+    { name: "Hawaii Trip for Two",       description: "All-expenses-paid 5-night trip to Maui or Oahu. The big one.",      pointCost: 7500, category: "trip",  imageUrl: "https://images.unsplash.com/photo-1542259009477-d625272157b7?w=600", available: true },
   ]);
   logger.info("Seeded rewards");
 }
@@ -459,7 +463,7 @@ async function seedMockRepsAndActivity() {
   // Seed feed posts: a mix of bot wins, rep posts, and milestones over ~3 weeks.
   const feedSeed: Array<{ author: typeof inserted[number] | null; content: string; isBot: boolean; daysAgo: number; image?: string }> = [
     // Today
-    { author: null,         isBot: true,  daysAgo: 0, content: `🌳 ${top[0]!.name} just closed a $9,400 deal with the Garcia Family — earned 1,128 points!` },
+    { author: null,         isBot: true,  daysAgo: 0, content: `${top[0]!.name} just closed a $9,400 deal with the Garcia Family — earned 1,128 points!` },
     { author: top[0]!,      isBot: false, daysAgo: 0, content: "Big oak removal on Hibiscus Ln this morning. Crew was dialed. 🪓", image: "https://images.unsplash.com/photo-1444392061186-9fc38f84f726?w=800" },
     { author: inserted[6]!, isBot: false, daysAgo: 0, content: "Two signs of life on the Cape route — quoting both this afternoon." },
     // Day 1
@@ -467,36 +471,36 @@ async function seedMockRepsAndActivity() {
     { author: top[2]!,      isBot: false, daysAgo: 1, content: "Anyone have the updated pricing sheet for stump grinding? Got a 4-stump job tomorrow." },
     { author: inserted[10]!,isBot: false, daysAgo: 1, content: "Closed my first Naples HOA job today. Process is no joke but the ticket size is real.", image: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800" },
     // Day 2
-    { author: null,         isBot: true,  daysAgo: 2, content: `🌳 ${top[1]!.name} just closed a $4,200 deal with the Patel Family — earned 504 points!` },
+    { author: null,         isBot: true,  daysAgo: 2, content: `${top[1]!.name} just closed a $4,200 deal with the Patel Family — earned 504 points!` },
     { author: top[3]!,      isBot: false, daysAgo: 2, content: "Shoutout to the Bonita crew for backing me up on the Sanibel job — clean cleanup, happy customer." },
     { author: inserted[12]!,isBot: false, daysAgo: 2, content: "Rough day of no's. Resetting tomorrow with the storm-prep opener." },
     // Day 3
     { author: null,         isBot: true,  daysAgo: 3, content: `${top[0]!.name} just earned the Hot Streak badge! Closed 5 deals in a single week.` },
     { author: inserted[5]!, isBot: false, daysAgo: 3, content: "First door knock turned into a $3,800 quote on the spot. The new opener works.", image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800" },
-    { author: null,         isBot: true,  daysAgo: 3, content: `🌳 ${top[2]!.name} just closed a $2,150 trimming deal — earned 172 points!` },
+    { author: null,         isBot: true,  daysAgo: 3, content: `${top[2]!.name} just closed a $2,150 trimming deal — earned 172 points!` },
     // Day 4
-    { author: null,         isBot: true,  daysAgo: 4, content: `🌳 ${inserted[4]!.name} just closed a $1,800 trimming deal — earned 144 points!` },
+    { author: null,         isBot: true,  daysAgo: 4, content: `${inserted[4]!.name} just closed a $1,800 trimming deal — earned 144 points!` },
     { author: inserted[8]!, isBot: false, daysAgo: 4, content: "Reminder: always photograph the ganoderma rot before quoting. Customers get it instantly when they see it." },
     // Day 5
     { author: inserted[7]!, isBot: false, daysAgo: 5, content: "Heading to Naples for the Pelican Bay route today. Anyone want to swap leads?" },
-    { author: null,         isBot: true,  daysAgo: 5, content: `🌳 ${inserted[9]!.name} just closed a $5,600 deal with the Murphy Family — earned 672 points!` },
+    { author: null,         isBot: true,  daysAgo: 5, content: `${inserted[9]!.name} just closed a $5,600 deal with the Murphy Family — earned 672 points!` },
     // Day 6
     { author: null,         isBot: true,  daysAgo: 6, content: `Reminder: hurricane-prep season starts soon. Lead with safety in every conversation.` },
     { author: top[1]!,      isBot: false, daysAgo: 6, content: "Closed back-to-back today. Pacing for Hat Trick tomorrow. 🎩", image: "https://images.unsplash.com/photo-1502082553048-f009c37129b9?w=800" },
     // Day 7
-    { author: top[1]!,      isBot: false, daysAgo: 7, content: "Hit 1,500 points this week. Hawaii, here I come. 🌺" },
+    { author: top[1]!,      isBot: false, daysAgo: 7, content: "Hit 1,500 points this week. Hawaii, here I come." },
     { author: null,         isBot: true,  daysAgo: 7, content: `${inserted[3]!.name} just earned the First Deal badge! Closed your first deal — welcome to the team!` },
     // Days 8–14
     { author: inserted[11]!,isBot: false, daysAgo: 8,  content: "Shadowing Marcus today on a $11k royal palm cluster. Learning so much." },
-    { author: null,         isBot: true,  daysAgo: 9,  content: `🌳 ${top[3]!.name} just closed a $3,400 deal with the Brown Family — earned 408 points!` },
+    { author: null,         isBot: true,  daysAgo: 9,  content: `${top[3]!.name} just closed a $3,400 deal with the Brown Family — earned 408 points!` },
     { author: inserted[14]!,isBot: false, daysAgo: 10, content: "Pro tip: walk the back yard FIRST. The real money trees are usually behind the house." },
     { author: inserted[2]!, isBot: false, daysAgo: 11, content: "Updated my hometown to Cape Coral — accent color too. Checking out the new profile page!" },
-    { author: null,         isBot: true,  daysAgo: 12, content: `🌳 ${inserted[6]!.name} just closed a $7,800 large removal — earned 936 points!` },
+    { author: null,         isBot: true,  daysAgo: 12, content: `${inserted[6]!.name} just closed a $7,800 large removal — earned 936 points!` },
     { author: top[0]!,      isBot: false, daysAgo: 13, content: "Storm cell coming through tonight. Tomorrow's going to be hot — get out early.", image: "https://images.unsplash.com/photo-1527482797697-8795b05a13fe?w=800" },
     { author: null,         isBot: true,  daysAgo: 14, content: `${top[2]!.name} just earned the Rep of the Month badge! Topped the leaderboard last month.` },
     // Days 15–21
     { author: inserted[1]!, isBot: false, daysAgo: 15, content: "Anyone running the Estero route this week? Want to coordinate." },
-    { author: null,         isBot: true,  daysAgo: 16, content: `🌳 ${inserted[8]!.name} just closed a $1,950 stump deal — earned 156 points!` },
+    { author: null,         isBot: true,  daysAgo: 16, content: `${inserted[8]!.name} just closed a $1,950 stump deal — earned 156 points!` },
     { author: inserted[16]!,isBot: false, daysAgo: 18, content: "First $5k+ deal in the books. The summary close from training is gold.", image: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=800" },
     { author: null,         isBot: true,  daysAgo: 20, content: `🎉 The team is 62% of the way to the Hawaii goal. Keep stacking those points!` },
   ];
@@ -586,7 +590,7 @@ export async function seedDataForNewRep(opts: {
       authorId: null,
       authorName: "Joshua Tree Bot",
       authorAvatarUrl: null,
-      content: `🌴 Welcome to the team, ${opts.userName}! Crushing it already with $4,800 closed.`,
+      content: `Welcome to the team, ${opts.userName}. Crushing it already with $4,800 closed.`,
       isBot: true,
     });
     logger.info({ userId: opts.userId }, "Seeded data for new rep");

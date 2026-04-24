@@ -29,14 +29,16 @@ export default function DashboardPage() {
         (nextTier.pointThreshold - (currentTier?.pointThreshold ?? 0))) * 100)
     : 100;
 
+  const firstName = me?.name?.split(" ")[0] ?? "Rep";
+
   return (
-    <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="mx-auto max-w-6xl space-y-5 p-4 sm:p-6 lg:p-8">
       <BrandHeader
-        title={`Welcome back, ${me?.name?.split(" ")[0] ?? "Rep"} 🌳`}
+        title={`Crush your week, ${firstName}.`}
         subtitle={
           me?.hawaiiGoal
-            ? `🌺 ${me.hawaiiGoal}`
-            : "Here's how the SWFL crew is crushing it today."
+            ? me.hawaiiGoal
+            : "Live numbers from the SWFL crew."
         }
         icon={
           <AvatarRing
@@ -50,108 +52,117 @@ export default function DashboardPage() {
         actions={
           <div className="flex flex-wrap gap-2">
             {me?.level != null && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-3 py-1 text-xs font-bold backdrop-blur">
-                <TrendingUp className="h-3 w-3" /> Level {me.level}
+              <span className="font-stat inline-flex items-center gap-1 rounded-md border border-border bg-background/60 px-2.5 py-1 text-xs font-bold text-foreground">
+                <TrendingUp className="h-3 w-3 text-[#2EA3F2]" /> L{me.level}
               </span>
             )}
             {me?.currentStreak ? (
               <span
-                className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold backdrop-blur ${
+                className={`font-stat inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-bold ${
                   me.streakAtRisk
-                    ? "bg-[#FFBF00] text-slate-900"
-                    : "bg-white/20 text-white"
+                    ? "border-[#FFBF00]/50 bg-[#FFBF00]/10 text-[#FFBF00]"
+                    : "border-[#2C8214]/40 bg-[#2C8214]/10 text-[#7ed85c]"
                 }`}
                 title={
                   me.streakAtRisk
-                    ? "Close one today to keep your streak alive!"
+                    ? "Close one today to keep your streak alive."
                     : `Best: ${me.bestStreak}`
                 }
               >
                 <Flame className="h-3 w-3" />
-                {me.currentStreak}-day streak
+                {me.currentStreak}d streak
               </span>
             ) : null}
           </div>
         }
       />
 
-      {/* Points to Paradise */}
-      <Card className="overflow-hidden border-0 bg-gradient-to-br from-[#2EA3F2] to-[#2C8214] p-6 text-white shadow-lg">
-        <div className="flex items-center justify-between">
+      {/* Points headline */}
+      <Card className="relative overflow-hidden border-border bg-card p-6">
+        <div className="pointer-events-none absolute inset-0 jt-grid-bg opacity-30" />
+        <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-[#2EA3F2]/15 blur-3xl" />
+        <div className="relative flex items-center justify-between">
           <div className="relative">
-            <div className="text-sm opacity-90">Your Points</div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              Your Points
+            </div>
             <div className="relative inline-block">
               <AnimatedNumber
                 value={myPoints}
-                className="mt-1 block text-4xl font-extrabold tabular-nums"
+                className="font-stat mt-1 block text-5xl font-extrabold text-foreground"
               />
               <PointsDelta value={myPoints} />
             </div>
             {me?.pointsPerLevel ? (
-              <div className="mt-1 text-xs opacity-80 tabular-nums">
-                Level {me.level} • {me.pointsThisLevel}/{me.pointsPerLevel} to L{me.level + 1}
+              <div className="font-stat mt-1 text-xs text-muted-foreground">
+                L{me.level} · {me.pointsThisLevel}/{me.pointsPerLevel} → L{me.level + 1}
               </div>
             ) : null}
           </div>
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 backdrop-blur">
-            <Trophy className="h-7 w-7" />
+          <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-border bg-background text-[#FFBF00]">
+            <Trophy className="h-7 w-7" strokeWidth={1.5} />
           </div>
         </div>
-        <div className="mt-5">
-          <div className="mb-2 flex items-center justify-between text-sm">
-            <span className="font-semibold">
-              {currentTier?.name ?? "Just getting started"}
+        <div className="relative mt-6">
+          <div className="mb-2 flex items-center justify-between text-xs">
+            <span
+              className="font-semibold uppercase tracking-[0.12em]"
+              style={{ color: currentTier?.color ?? "var(--color-muted-foreground)" }}
+            >
+              {currentTier?.name ?? "Unranked"}
             </span>
-            <span className="opacity-90">
+            <span className="font-stat text-muted-foreground">
               {nextTier
-                ? `${(nextTier.pointThreshold - myPoints).toLocaleString()} pts to ${nextTier.name}`
-                : "🏆 Top tier reached!"}
+                ? `${(nextTier.pointThreshold - myPoints).toLocaleString()} → ${nextTier.name}`
+                : "TOP TIER"}
             </span>
           </div>
-          <Progress value={progress} className="h-2.5 bg-white/25 [&>div]:bg-[#FFBF00]" />
-          <div className="mt-3 text-xs opacity-90">
-            🌺 Points to Paradise — Hawaii trip awaits the top earners.
-          </div>
+          <Progress value={progress} className="h-1.5 bg-muted [&>div]:bg-[#2EA3F2]" />
         </div>
       </Card>
 
       {summary == null ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <JTSkeletonCard key={i} rows={1} />
           ))}
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 jt-fade-in-stagger">
-          <StatCard icon={DollarSign} label="Revenue This Month" value={`$${(summary.revenueThisMonth ?? 0).toLocaleString()}`} color="#2C8214" />
-          <StatCard icon={Zap} label="Deals This Month" value={summary.dealsThisMonth ?? 0} color="#2EA3F2" />
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 jt-fade-in-stagger">
+          <StatCard icon={DollarSign} label="Revenue MTD" value={`$${(summary.revenueThisMonth ?? 0).toLocaleString()}`} color="#2C8214" />
+          <StatCard icon={Zap} label="Deals MTD" value={summary.dealsThisMonth ?? 0} color="#2EA3F2" />
           <StatCard icon={Trophy} label="Top Rep" value={summary.topRepName ?? "—"} color="#FFBF00" small />
           <StatCard icon={Award} label="My Badges" value={badges?.length ?? 0} color="#2C8214" />
         </div>
       )}
 
-      <Card className="p-5">
+      <Card className="border-border bg-card p-5">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-bold">Recent Badges</h2>
+          <h2 className="text-base font-bold tracking-tight">Recent Badges</h2>
+          {badges && badges.length > 0 && (
+            <span className="font-stat text-xs text-muted-foreground">
+              {badges.length} earned
+            </span>
+          )}
         </div>
         {badges == null ? (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 3 }).map((_, i) => (
               <JTSkeleton key={i} className="h-16 w-full" />
             ))}
           </div>
         ) : badges.length > 0 ? (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 jt-fade-in-stagger">
+          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3 jt-fade-in-stagger">
             {badges.slice(0, 6).map((b) => (
               <div
                 key={b.id}
-                className="jt-tilt flex items-center gap-3 rounded-xl border border-border p-3"
+                className="jt-card-hover flex items-center gap-3 rounded-lg border border-border bg-background/40 p-3"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#FFBF00]/20 text-[#7a5a00]">
-                  <Award className="h-5 w-5" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-md border border-[#FFBF00]/30 bg-[#FFBF00]/10 text-[#FFBF00]">
+                  <Award className="h-5 w-5" strokeWidth={1.75} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="font-semibold text-sm">{b.label}</div>
+                  <div className="text-sm font-semibold">{b.label}</div>
                   <div className="truncate text-xs text-muted-foreground">{b.description}</div>
                 </div>
               </div>
@@ -160,8 +171,8 @@ export default function DashboardPage() {
         ) : (
           <EmptyState
             title="No badges yet"
-            description="Close your first deal to unlock your first badge — Century Club, Hat Trick, and more await."
-            icon={<Award className="h-7 w-7" />}
+            description="Close your first deal to start earning badges."
+            icon={<Award className="h-6 w-6" strokeWidth={1.5} />}
           />
         )}
       </Card>
@@ -176,23 +187,28 @@ function StatCard({
   color,
   small,
 }: {
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
   label: string;
   value: string | number;
   color: string;
   small?: boolean;
 }) {
   return (
-    <Card className="p-4">
+    <Card className="jt-card-hover border-border bg-card p-4">
       <div className="flex items-start justify-between">
         <div className="min-w-0 flex-1">
-          <div className="text-xs font-medium text-muted-foreground">{label}</div>
-          <div className={`mt-1 font-extrabold tabular-nums ${small ? "text-lg" : "text-2xl"}`}>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            {label}
+          </div>
+          <div className={`font-stat mt-1.5 font-extrabold text-foreground ${small ? "text-base" : "text-2xl"}`}>
             {value}
           </div>
         </div>
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg" style={{ backgroundColor: `${color}20`, color }}>
-          <Icon className="h-4 w-4" />
+        <div
+          className="flex h-9 w-9 items-center justify-center rounded-md border border-border"
+          style={{ backgroundColor: `${color}14`, color }}
+        >
+          <Icon className="h-4 w-4" strokeWidth={1.75} />
         </div>
       </div>
     </Card>

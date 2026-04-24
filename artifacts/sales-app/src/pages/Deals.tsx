@@ -116,28 +116,28 @@ export default function DealsPage() {
       <Dialog open={open} onOpenChange={setOpen}>
         <BrandHeader
           title="My Deals"
-          subtitle="Log every job. Closing a deal awards points and badges."
-          icon={<Briefcase className="h-6 w-6" />}
+          subtitle="Log every job. Close a deal to lock in points and badges."
+          icon={<Briefcase className="h-6 w-6" strokeWidth={1.5} />}
           actions={
             <DialogTrigger asChild>
-              <Button className="rounded-xl bg-white text-[#2EA3F2] hover:bg-white/90">
+              <Button className="rounded-lg bg-[#2EA3F2] text-slate-950 hover:bg-[#48b3f6]">
                 <Plus className="mr-1 h-4 w-4" /> New Deal
               </Button>
             </DialogTrigger>
           }
         />
-          <DialogContent className="rounded-2xl">
+          <DialogContent className="rounded-xl">
             <DialogHeader>
               <DialogTitle>New deal</DialogTitle>
             </DialogHeader>
             <div className="space-y-3">
               <div>
                 <Label>Customer name</Label>
-                <Input value={form.customerName} onChange={(e) => setForm({ ...form, customerName: e.target.value })} />
+                <Input value={form.customerName} onChange={(e) => setForm({ ...form, customerName: e.target.value })} className="rounded-lg" />
               </div>
               <div>
                 <Label>Address</Label>
-                <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+                <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} className="rounded-lg" />
               </div>
               <div>
                 <Label>Service type</Label>
@@ -145,7 +145,7 @@ export default function DealsPage() {
                   value={form.serviceType}
                   onValueChange={(v) => setForm({ ...form, serviceType: v as CreateDealBodyServiceType })}
                 >
-                  <SelectTrigger className="rounded-xl">
+                  <SelectTrigger className="rounded-lg">
                     <SelectValue placeholder="Select service" />
                   </SelectTrigger>
                   <SelectContent>
@@ -164,6 +164,7 @@ export default function DealsPage() {
                   step="0.01"
                   value={form.amount}
                   onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })}
+                  className="rounded-lg font-stat"
                 />
               </div>
               <div>
@@ -175,7 +176,7 @@ export default function DealsPage() {
                       type="button"
                       variant={form.status === s ? "default" : "outline"}
                       onClick={() => setForm({ ...form, status: s })}
-                      className="rounded-xl capitalize"
+                      className="rounded-lg capitalize"
                     >
                       {s === "lead" ? "Open" : "Closed"}
                     </Button>
@@ -183,7 +184,7 @@ export default function DealsPage() {
                 </div>
               </div>
               <Button
-                className="w-full rounded-xl bg-[#2EA3F2] hover:bg-[#1d8fd8]"
+                className="w-full rounded-lg bg-[#2EA3F2] text-slate-950 hover:bg-[#48b3f6]"
                 onClick={async () => {
                   if (!form.customerName || !form.serviceType || form.amount <= 0) {
                     toast({ title: "Missing info", description: "Customer, service, and amount are required.", variant: "destructive" });
@@ -215,47 +216,52 @@ export default function DealsPage() {
           </DialogContent>
       </Dialog>
 
-      <div className="space-y-3 jt-fade-in-stagger">
+      <div className="space-y-2.5 jt-fade-in-stagger">
         {deals == null &&
           Array.from({ length: 4 }).map((_, i) => <JTSkeletonRow key={i} />)}
         {(deals ?? []).map((d) => {
           const isClosed: boolean = d.status === ("closed" as DealStatus) || d.status === ("paid" as DealStatus);
+          const accentColor = isClosed ? "#2C8214" : "#2EA3F2";
           return (
-            <Card key={d.id} className="p-4 jt-fade-in jt-row-transition">
+            <Card key={d.id} className="jt-card-hover border-border bg-card p-4 jt-fade-in">
               <div className="flex items-start gap-4">
                 <div
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border"
                   style={{
-                    backgroundColor: isClosed ? "#2C821420" : "#2EA3F220",
-                    color: isClosed ? "#2C8214" : "#2EA3F2",
+                    backgroundColor: `${accentColor}14`,
+                    color: accentColor,
                   }}
                 >
-                  <Briefcase className="h-5 w-5" />
+                  <Briefcase className="h-5 w-5" strokeWidth={1.75} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold">{d.customerName}</span>
-                    <Badge
-                      className="text-white capitalize"
-                      style={{ backgroundColor: isClosed ? "#2C8214" : "#2EA3F2" }}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="font-semibold text-foreground">{d.customerName}</span>
+                    <span
+                      className="font-stat rounded border px-1.5 text-[10px] font-bold uppercase tracking-wide"
+                      style={{
+                        color: accentColor,
+                        borderColor: `${accentColor}66`,
+                        background: `${accentColor}14`,
+                      }}
                     >
-                      {d.status === "lead" ? "Open" : d.status}
-                    </Badge>
+                      {d.status === "lead" ? "OPEN" : d.status}
+                    </span>
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {labelFor(d.serviceType)}{d.address ? ` • ${d.address}` : ""}
+                    {labelFor(d.serviceType)}{d.address ? ` · ${d.address}` : ""}
                   </div>
                   <div className="mt-1 text-sm">
-                    <span className="font-semibold tabular-nums">${d.amount.toLocaleString()}</span>
-                    {" • "}
-                    <span className="font-semibold text-[#2EA3F2] tabular-nums">{d.pointsAwarded} pts</span>
+                    <span className="font-stat font-semibold text-foreground">${d.amount.toLocaleString()}</span>
+                    {" · "}
+                    <span className="font-stat font-semibold text-[#2EA3F2]">{d.pointsAwarded} pts</span>
                   </div>
                 </div>
                 <div className="flex flex-col gap-1 sm:flex-row">
                   {!isClosed && (
                     <Button
                       size="sm"
-                      className="rounded-xl bg-[#2C8214] hover:bg-[#236812]"
+                      className="rounded-lg bg-[#2C8214] text-white hover:bg-[#34a019]"
                       onClick={async () => {
                         const res = await update.mutateAsync({
                           dealId: d.id,
@@ -272,7 +278,7 @@ export default function DealsPage() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="rounded-xl"
+                      className="rounded-lg"
                       onClick={async () => {
                         await remove.mutateAsync({ dealId: d.id });
                         invalidateAll();
@@ -289,8 +295,8 @@ export default function DealsPage() {
         {deals && deals.length === 0 && (
           <EmptyState
             title="No deals yet"
-            description="Tap “New Deal” to log your first job. Closed deals award points and badges instantly."
-            icon={<Briefcase className="h-7 w-7" />}
+            description="Hit New Deal to log your first job. Closed deals award points and badges instantly."
+            icon={<Briefcase className="h-6 w-6" strokeWidth={1.5} />}
           />
         )}
       </div>
