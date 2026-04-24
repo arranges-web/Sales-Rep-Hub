@@ -75,14 +75,20 @@ export function AuthSync() {
     })
       .then(() => {
         markSynced(user.id);
-        // Targeted invalidation only — avoids the "everything reloads" flash
-        // that comes from invalidating the entire cache. We invalidate both
-        // the legacy /api/badges family AND the new /api/badges/me key so
-        // whichever one Dashboard is consuming refetches with the freshly
-        // seeded badges.
+        // Targeted invalidation for the keys we KNOW changed (me/badges).
         qc.invalidateQueries({ queryKey: getGetMeQueryKey() });
         qc.invalidateQueries({ queryKey: getListBadgesQueryKey() });
         qc.invalidateQueries({ queryKey: BADGES_ME_QUERY_KEY });
+        // Plus: rescue any protected queries that fired BEFORE this create
+        // resolved and got a 401 "User not registered". Only refetches the
+        // ones currently in error state, so warm boots (no error queries)
+        // don't trigger a second-paint flash. This is the "first-login
+        // recovery path" — without it, the dashboard can sit in error/empty
+        // state until the user manually refreshes.
+        qc.refetchQueries({
+          type: "all",
+          predicate: (q) => q.state.status === "error",
+        });
       })
       .catch(() => {
         synced.current = null;
