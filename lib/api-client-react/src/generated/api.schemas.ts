@@ -460,8 +460,12 @@ export type RewardCategory =
 
 export const RewardCategory = {
   gear: "gear",
-  pto: "pto",
+  tools: "tools",
+  sports: "sports",
+  electronics: "electronics",
+  experiences: "experiences",
   trip: "trip",
+  pto: "pto",
   cash: "cash",
   other: "other",
 } as const;
@@ -484,8 +488,12 @@ export type CreateRewardBodyCategory =
 
 export const CreateRewardBodyCategory = {
   gear: "gear",
-  pto: "pto",
+  tools: "tools",
+  sports: "sports",
+  electronics: "electronics",
+  experiences: "experiences",
   trip: "trip",
+  pto: "pto",
   cash: "cash",
   other: "other",
 } as const;
@@ -507,8 +515,12 @@ export type UpdateRewardBodyCategory =
 
 export const UpdateRewardBodyCategory = {
   gear: "gear",
-  pto: "pto",
+  tools: "tools",
+  sports: "sports",
+  electronics: "electronics",
+  experiences: "experiences",
   trip: "trip",
+  pto: "pto",
   cash: "cash",
   other: "other",
 } as const;

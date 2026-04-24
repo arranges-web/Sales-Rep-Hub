@@ -12,7 +12,7 @@ function serR(r: typeof rewardsTable.$inferSelect) {
     name: r.name,
     description: r.description,
     pointCost: r.pointCost,
-    category: r.category as "gear" | "pto" | "trip" | "cash" | "other",
+    category: r.category as "gear" | "tools" | "sports" | "electronics" | "experiences" | "trip" | "pto" | "cash" | "other",
     imageUrl: r.imageUrl ?? null,
     available: r.available,
     stock: r.stock ?? null,

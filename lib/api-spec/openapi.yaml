@@ -1647,7 +1647,7 @@ components:
           type: integer
         category:
           type: string
-          enum: [gear, pto, trip, cash, other]
+          enum: [gear, tools, sports, electronics, experiences, trip, pto, cash, other]
         imageUrl:
           type: ["string", "null"]
         available:
@@ -1673,7 +1673,7 @@ components:
           type: integer
         category:
           type: string
-          enum: [gear, pto, trip, cash, other]
+          enum: [gear, tools, sports, electronics, experiences, trip, pto, cash, other]
         imageUrl:
           type: ["string", "null"]
         available:
@@ -1698,7 +1698,7 @@ components:
           type: integer
         category:
           type: string
-          enum: [gear, pto, trip, cash, other]
+          enum: [gear, tools, sports, electronics, experiences, trip, pto, cash, other]
         imageUrl:
           type: ["string", "null"]
         available:

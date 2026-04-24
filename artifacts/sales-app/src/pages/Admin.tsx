@@ -59,7 +59,7 @@ import { TerritoryDrawMap } from "@/components/TerritoryDrawMap";
 const SERVICE_TYPES: CreatePointConfigBodyServiceType[] = [
   "large_removal", "trimming_pruning", "stump_grinding", "other",
 ];
-const REWARD_CATEGORIES: CreateRewardBodyCategory[] = ["gear", "pto", "trip", "cash", "other"];
+const REWARD_CATEGORIES: CreateRewardBodyCategory[] = ["gear", "tools", "sports", "electronics", "experiences", "trip", "pto", "cash", "other"];
 const TRAINING_CATEGORIES: CreateTrainingResourceBodyCategory[] = [
   "sales_script", "tree_identification", "product_knowledge", "objection_handling", "other",
 ];

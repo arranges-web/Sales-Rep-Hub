@@ -58,7 +58,7 @@ export function useCelebrate() {
         scalar: 0.8,
       });
       toast({
-        title: `🏆 Badge unlocked: ${opts.label}`,
+        title: `Badge unlocked — ${opts.label}`,
         description: opts.description,
       });
     },
@@ -83,7 +83,7 @@ export function useCelebrate() {
       burst(0.8);
       setTimeout(() => burst(0.5), 250);
       toast({
-        title: `🎉 Level ${opts.levelAfter}!`,
+        title: `Level ${opts.levelAfter} unlocked.`,
         description: "You leveled up. Keep the streak going.",
       });
     },
