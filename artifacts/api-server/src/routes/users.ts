@@ -5,6 +5,7 @@ import { requireAuth, requireAdmin } from "../middlewares/auth";
 import { getAuth } from "@clerk/express";
 import { seedDataForNewRep } from "../lib/seed";
 import { computeStreaks, computeStreaksForAll, levelInfo } from "../lib/streaks";
+import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
@@ -93,6 +94,16 @@ router.post("/users", async (req, res, next) => {
         .where(eq(usersTable.email, email))
         .limit(1);
       if (byEmail) {
+        logger.warn(
+          {
+            event: "clerkId_migrated",
+            userId: byEmail.id,
+            oldClerkId: byEmail.clerkId,
+            newClerkId: clerkId,
+            email,
+          },
+          "User re-linked to a new Clerk account via email match",
+        );
         const [updated] = await db
           .update(usersTable)
           .set({ clerkId, name, avatarUrl: avatarUrl ?? null })
