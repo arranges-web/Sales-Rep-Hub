@@ -188,7 +188,7 @@ function EditRepDialog({ user }: { user: { id: number; name: string; accentColor
             </div>
           </div>
           <div>
-            <Label>Hawaii goal</Label>
+            <Label>Personal goal</Label>
             <Input
               value={form.hawaiiGoal}
               onChange={(e) => setForm({ ...form, hawaiiGoal: e.target.value })}
@@ -299,13 +299,13 @@ function TiersTab() {
       <Card className="p-4">
         <h3 className="mb-3 font-bold">Add tier</h3>
         <div className="grid gap-3 sm:grid-cols-3">
-          <Input placeholder="Name (Bronze, Hawaii…)" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          <Input placeholder="Name (Bronze, Apex…)" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           <Input type="number" placeholder="Point threshold" value={form.pointThreshold} onChange={(e) => setForm({ ...form, pointThreshold: Number(e.target.value) })} />
           <Input type="color" value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} />
         </div>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <Textarea className="rounded-xl" placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-          <Textarea className="rounded-xl" placeholder="Reward description (e.g. Hawaii trip for two)" value={form.rewardDescription} onChange={(e) => setForm({ ...form, rewardDescription: e.target.value })} />
+          <Textarea className="rounded-xl" placeholder="Reward description (e.g. F-150 lease for one quarter)" value={form.rewardDescription} onChange={(e) => setForm({ ...form, rewardDescription: e.target.value })} />
         </div>
         <Input className="mt-3" type="number" placeholder="Display order" value={form.displayOrder} onChange={(e) => setForm({ ...form, displayOrder: Number(e.target.value) })} />
         <Button

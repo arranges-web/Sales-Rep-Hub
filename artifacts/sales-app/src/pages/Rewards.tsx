@@ -148,7 +148,7 @@ export default function RewardsPage() {
           <div className="col-span-full">
             <EmptyState
               title="The vault is empty"
-              description="Ask your admin to stock prizes — gear, tickets, the Hawaii trip."
+              description="Ask your admin to stock prizes — gear, tickets, the top-tier trip."
               icon={<Gift className="h-6 w-6" strokeWidth={1.5} />}
             />
           </div>
