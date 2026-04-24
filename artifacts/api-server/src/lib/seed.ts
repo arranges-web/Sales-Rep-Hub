@@ -1107,13 +1107,16 @@ export async function seedDataForNewRep(opts: {
 
     const now = Date.now();
     const day = 24 * 60 * 60 * 1000;
+    // Mix: enough closed deals to feel motivating + a healthy pipeline of
+    // in-progress leads so the rep lands on an active-looking dashboard
+    // (not a "you've already won everything, now what?" wall).
     const personal: Array<{ service: ServiceType; amount: number; customer: string; address: string; daysAgo: number; status: "closed" | "lead" }> = [
       { service: "large_removal",    amount: 4800, customer: "Hernandez Family", address: "1432 Coral Ridge Dr, Cape Coral FL", daysAgo: 1,  status: "closed" },
       { service: "trimming_pruning", amount: 1200, customer: "Whitaker Family",  address: "784 Hibiscus Ln, Fort Myers FL",     daysAgo: 4,  status: "closed" },
       { service: "stump_grinding",   amount: 450,  customer: "Reed Family",       address: "55 Pine Island Rd, Cape Coral FL",   daysAgo: 8,  status: "closed" },
-      { service: "large_removal",    amount: 6200, customer: "Owens Family",      address: "999 Bayfront Pkwy, Naples FL",       daysAgo: 12, status: "closed" },
-      { service: "trimming_pruning", amount: 1800, customer: "Park Family",       address: "1003 Riverside Dr, Fort Myers FL",   daysAgo: 18, status: "closed" },
       { service: "trimming_pruning", amount: 950,  customer: "Sanders Family",    address: "411 Manatee Ln, Cape Coral FL",      daysAgo: 0,  status: "lead" },
+      { service: "large_removal",    amount: 5400, customer: "Park Family",       address: "1003 Riverside Dr, Fort Myers FL",   daysAgo: 1,  status: "lead" },
+      { service: "trimming_pruning", amount: 1600, customer: "Owens Family",      address: "999 Bayfront Pkwy, Naples FL",       daysAgo: 2,  status: "lead" },
     ];
 
     for (const d of personal) {
