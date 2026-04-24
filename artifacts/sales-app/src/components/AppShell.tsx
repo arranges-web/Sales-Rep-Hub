@@ -126,11 +126,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   };
 
   // Pre-warm the cache for the most likely first hop (Dashboard's badges).
+  // Uses the same /badges/me key Dashboard consumes — no redundant fetch.
   useEffect(() => {
     if (!me?.id) return;
     qc.prefetchQuery({
-      queryKey: getListBadgesQueryKey({ userId: me.id }),
-      queryFn: () => listBadges({ userId: me.id }),
+      queryKey: BADGES_ME_QUERY_KEY,
+      queryFn: fetchBadgesMe,
       staleTime: 60_000,
     }).catch(() => {});
   }, [me?.id, qc]);

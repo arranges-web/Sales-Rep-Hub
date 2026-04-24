@@ -99,24 +99,24 @@ export default function LandingPage() {
             board, and trade points for gear, tickets, and trips.
           </p>
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-            <Link href="/sign-in">
-              <Button
-                size="lg"
-                className="rounded-lg bg-[#2EA3F2] px-6 font-semibold text-slate-950 shadow-lg shadow-[#2EA3F2]/20 hover:bg-[#48b3f6]"
-              >
+            <Button
+              asChild
+              size="lg"
+              className="rounded-lg bg-[#2EA3F2] px-6 font-semibold text-slate-950 shadow-lg shadow-[#2EA3F2]/20 hover:bg-[#48b3f6]"
+            >
+              <Link href="/sign-in">
                 Sign in
                 <ArrowRight className="ml-1.5 h-4 w-4" />
-              </Button>
-            </Link>
-            <Link href="/sign-up">
-              <Button
-                size="lg"
-                variant="outline"
-                className="rounded-lg border-border px-6 font-semibold"
-              >
-                Create account
-              </Button>
-            </Link>
+              </Link>
+            </Button>
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="rounded-lg border-border px-6 font-semibold"
+            >
+              <Link href="/sign-up">Create account</Link>
+            </Button>
           </div>
 
           {/* Live pulse strip */}
