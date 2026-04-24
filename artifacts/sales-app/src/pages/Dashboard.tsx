@@ -1,10 +1,11 @@
 import {
-  useGetMe,
-  useGetLeaderboardSummary,
-  useListIncentiveTiers,
+  getGetMeQueryOptions,
+  getGetLeaderboardSummaryQueryOptions,
+  getListIncentiveTiersQueryOptions,
   type Badge,
 } from "@workspace/api-client-react";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@clerk/react";
 import { BADGES_ME_QUERY_KEY, fetchBadgesMe } from "@/lib/badgesMe";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -17,16 +18,28 @@ import { JTSkeleton, JTSkeletonCard } from "@/components/Skeleton";
 import { EmptyState } from "@/components/EmptyState";
 
 export default function DashboardPage() {
-  const { data: me } = useGetMe();
-  const { data: summary } = useGetLeaderboardSummary();
+  // Gate all protected queries on Clerk being loaded + the user being signed in.
+  // Without this guard, queries fire unauthenticated, get 401s, enter error state,
+  // and stay as skeletons until AuthSync rescues them — a 1–2 s visible delay.
+  // With the guard, they stay "pending" for the ~300 ms Clerk init window and
+  // then resolve in one shot with a valid token.
+  const { isLoaded, isSignedIn } = useAuth();
+  const enabled = isLoaded && !!isSignedIn;
+
+  // Use the generated query-options helpers so we can spread `enabled` on top
+  // without fighting the generated hook type (which requires a full
+  // UseQueryOptions including queryKey when overriding via the `query` prop).
+  const { data: me } = useQuery({ ...getGetMeQueryOptions(), enabled });
+  const { data: summary } = useQuery({ ...getGetLeaderboardSummaryQueryOptions(), enabled });
   // Fetch badges via /badges/me — auth context resolves the rep, so this can
   // fire in parallel with getMe instead of waiting on me?.id to land.
   const { data: badges } = useQuery<Badge[]>({
     queryKey: BADGES_ME_QUERY_KEY,
     queryFn: fetchBadgesMe,
     staleTime: 60_000,
+    enabled,
   });
-  const { data: tiers } = useListIncentiveTiers();
+  const { data: tiers } = useQuery({ ...getListIncentiveTiersQueryOptions(), enabled });
 
   const myPoints = me?.totalPoints ?? 0;
   const sortedTiers = (tiers ?? []).slice().sort((a, b) => a.pointThreshold - b.pointThreshold);

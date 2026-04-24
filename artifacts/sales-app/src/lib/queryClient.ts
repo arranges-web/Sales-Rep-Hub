@@ -1,4 +1,4 @@
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, keepPreviousData } from "@tanstack/react-query";
 import {
   getListRewardsQueryKey,
   getListIncentiveTiersQueryKey,
@@ -13,6 +13,10 @@ export const queryClient = new QueryClient({
       // doesn't trigger a flash of skeleton + refetch on every hop.
       staleTime: 60_000,
       gcTime: 5 * 60_000,
+      // Show stale cached data instantly while a background refetch runs.
+      // Eliminates skeleton flashes when navigating away and back to a page
+      // whose data is already in the cache but just past its staleTime.
+      placeholderData: keepPreviousData,
     },
   },
 });

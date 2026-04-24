@@ -1,7 +1,7 @@
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { useUser, useClerk } from "@clerk/react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useUser, useClerk, useAuth } from "@clerk/react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   LayoutDashboard,
   Trophy,
@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { isSoundEnabled, onSoundChanged, setSoundEnabled } from "@/lib/sound";
 import {
-  useGetMe,
+  getGetMeQueryOptions,
   getGetMeQueryKey,
   getGetLeaderboardQueryKey,
   getGetLeaderboardSummaryQueryKey,
@@ -104,8 +104,14 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const { user } = useUser();
   const { signOut } = useClerk();
+  const { isLoaded, isSignedIn } = useAuth();
+  const authReady = isLoaded && !!isSignedIn;
   const qc = useQueryClient();
-  const { data: me } = useGetMe();
+  // Gate on auth-ready so AppShell doesn't fire unauthenticated requests that
+  // immediately 401 and force a re-fetch once Clerk resolves.
+  // Use the generated query-options helper so we can spread `enabled` directly
+  // without fighting the generated hook type (which requires full UseQueryOptions).
+  const { data: me } = useQuery({ ...getGetMeQueryOptions(), enabled: authReady });
   const [mobileOpen, setMobileOpen] = useState(false);
   const [soundOn, setSoundOn] = useState(isSoundEnabled());
   useEffect(() => onSoundChanged(setSoundOn), []);
@@ -127,14 +133,16 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   // Pre-warm the cache for the most likely first hop (Dashboard's badges).
   // Uses the same /badges/me key Dashboard consumes — no redundant fetch.
+  // Guard on authReady so we don't fire an unauthenticated prefetch that would
+  // 401 and write an error into the cache before me?.id even resolves.
   useEffect(() => {
-    if (!me?.id) return;
+    if (!authReady || !me?.id) return;
     qc.prefetchQuery({
       queryKey: BADGES_ME_QUERY_KEY,
       queryFn: fetchBadgesMe,
       staleTime: 60_000,
     }).catch(() => {});
-  }, [me?.id, qc]);
+  }, [authReady, me?.id, qc]);
 
   const NavItem = ({
     href,
