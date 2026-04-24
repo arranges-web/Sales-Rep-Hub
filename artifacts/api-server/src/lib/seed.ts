@@ -948,23 +948,30 @@ async function seedDemoRedemptions(): Promise<void> {
   const rewards = await db.select().from(rewardsTable);
   if (rewards.length === 0) return;
 
-  // Idempotent: count ALL mock-rep redemptions (not just the current
-  // top-6 — the leaderboard ordering can shift between runs as deals
-  // accrue, so scoping to today's top-6 would miss prior demo
-  // redemptions and seed duplicates). Real-user redemptions are never
-  // counted or touched.
-  const DEMO_REDEMPTION_BASELINE = 6;
+  // Idempotent per status: count ALL mock-rep redemptions broken out by
+  // status, and only insert what's missing to hit the targets. Scoped
+  // to mock reps so real-user redemptions are never counted or touched.
+  // Top-rep ordering can shift between runs (as deals accrue), so we
+  // scope on the full mock cohort rather than today's top-6 to avoid
+  // missing previously-seeded demo redemptions and double-seeding.
+  const TARGET_APPROVED = 6;
+  const TARGET_PENDING = 2;
   const allMockReps = await db
     .select({ id: usersTable.id })
     .from(usersTable)
     .where(sql`${usersTable.clerkId} LIKE ${SEED_CLERK_PREFIX + "%"}`);
   if (allMockReps.length === 0) return;
   const allMockIds = allMockReps.map((r) => r.id);
-  const existingMock = await db
-    .select({ c: sql<number>`COUNT(*)` })
+  const byStatus = await db
+    .select({ status: redemptionsTable.status, c: sql<number>`COUNT(*)` })
     .from(redemptionsTable)
-    .where(inArray(redemptionsTable.userId, allMockIds));
-  if (Number(existingMock[0]?.c ?? 0) >= DEMO_REDEMPTION_BASELINE) return;
+    .where(inArray(redemptionsTable.userId, allMockIds))
+    .groupBy(redemptionsTable.status);
+  const have = { approved: 0, pending: 0 } as Record<string, number>;
+  for (const row of byStatus) have[row.status] = Number(row.c ?? 0);
+  const needApproved = Math.max(0, TARGET_APPROVED - (have.approved ?? 0));
+  const needPending = Math.max(0, TARGET_PENDING - (have.pending ?? 0));
+  if (needApproved === 0 && needPending === 0) return;
 
   // Top 6 mock reps by points = the redeemers (they have enough to spend).
   const topReps = await db
@@ -995,19 +1002,11 @@ async function seedDemoRedemptions(): Promise<void> {
     { rep: topReps[5 % topReps.length]!, reward: cheap[Math.min(2, cheap.length - 1)]!, status: "pending", daysAgo: 0 },
   ];
 
-  // Top up only what's needed to hit the demo baseline — never overshoot
-  // when a partial demo set already exists (e.g., 3 redemptions from a
-  // prior partial seed → insert 3, not 8).
-  const have = Number(existingMock[0]?.c ?? 0);
-  const needed = Math.max(0, DEMO_REDEMPTION_BASELINE - have);
-  if (needed === 0) return;
-  // Prefer to insert pending items LAST so the admin queue stays
-  // populated when only a few inserts happen.
-  const ordered = [
-    ...plan.filter((p) => p.status === "approved"),
-    ...plan.filter((p) => p.status === "pending"),
-  ];
-  const slice = ordered.slice(0, Math.min(needed, plan.length));
+  // Top up per status so a partial demo set still converges to the
+  // 6-approved + 2-pending mix without overshooting either bucket.
+  const approvedSlice = plan.filter((p) => p.status === "approved").slice(0, needApproved);
+  const pendingSlice = plan.filter((p) => p.status === "pending").slice(0, needPending);
+  const slice = [...approvedSlice, ...pendingSlice];
 
   const touched = new Set<number>();
   let inserted = 0;
@@ -1029,7 +1028,16 @@ async function seedDemoRedemptions(): Promise<void> {
     await recomputeUserPoints(id);
   }
 
-  logger.info({ inserted, reps: touched.size, alreadyHad: have }, "Seeded demo redemptions");
+  logger.info(
+    {
+      insertedApproved: approvedSlice.length,
+      insertedPending: pendingSlice.length,
+      reps: touched.size,
+      alreadyHadApproved: have.approved ?? 0,
+      alreadyHadPending: have.pending ?? 0,
+    },
+    "Seeded demo redemptions",
+  );
 }
 
 // Seed minimal personal data for a freshly-registered real rep so the dashboard
