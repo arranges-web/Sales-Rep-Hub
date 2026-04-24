@@ -1,9 +1,10 @@
 import {
   useGetMe,
   useGetLeaderboardSummary,
-  useListBadges,
   useListIncentiveTiers,
+  type Badge,
 } from "@workspace/api-client-react";
+import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Trophy, DollarSign, Zap, Award, Flame, TrendingUp } from "lucide-react";
@@ -17,7 +18,17 @@ import { EmptyState } from "@/components/EmptyState";
 export default function DashboardPage() {
   const { data: me } = useGetMe();
   const { data: summary } = useGetLeaderboardSummary();
-  const { data: badges } = useListBadges({ userId: me?.id });
+  // Fetch badges via /badges/me — auth context resolves the rep, so this can
+  // fire in parallel with getMe instead of waiting on me?.id to land.
+  const { data: badges } = useQuery<Badge[]>({
+    queryKey: ["/api/badges/me"],
+    queryFn: async () => {
+      const res = await fetch("/api/badges/me", { credentials: "include" });
+      if (!res.ok) throw new Error(`badges/me ${res.status}`);
+      return res.json();
+    },
+    staleTime: 60_000,
+  });
   const { data: tiers } = useListIncentiveTiers();
 
   const myPoints = me?.totalPoints ?? 0;

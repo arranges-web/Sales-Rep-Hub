@@ -224,6 +224,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Link
           href="/profile"
           onClick={() => setMobileOpen(false)}
+          onMouseEnter={() => prefetchRoute("/profile")}
+          onFocus={() => prefetchRoute("/profile")}
+          onTouchStart={() => prefetchRoute("/profile")}
           className="flex items-center gap-2.5 rounded-lg p-2 transition-colors hover:bg-sidebar-accent"
         >
           <div
