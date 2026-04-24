@@ -981,19 +981,37 @@ async function seedDemoRedemptions(): Promise<void> {
   const mid = rewards.filter((r) => r.pointCost > 1500 && r.pointCost <= 2600);
   if (cheap.length === 0) return;
 
-  const plan: Array<{ rep: typeof topReps[number]; reward: typeof rewards[number]; status: "approved" | "pending" | "rejected"; daysAgo: number }> = [
+  // Plan matches the acceptance criteria: "mostly approved, a couple
+  // pending". 6 approved across the top reps over the last ~3 weeks +
+  // 2 pending in the last 2 days.
+  const plan: Array<{ rep: typeof topReps[number]; reward: typeof rewards[number]; status: "approved" | "pending"; daysAgo: number }> = [
     { rep: topReps[0]!, reward: cheap[0]!,                              status: "approved", daysAgo: 18 },
     { rep: topReps[1]!, reward: cheap[Math.min(1, cheap.length - 1)]!, status: "approved", daysAgo: 14 },
     { rep: topReps[2]!, reward: cheap[Math.min(2, cheap.length - 1)]!, status: "approved", daysAgo: 9 },
     { rep: topReps[0]!, reward: mid[0] ?? cheap[cheap.length - 1]!,    status: "approved", daysAgo: 5 },
     { rep: topReps[3]!, reward: cheap[Math.min(1, cheap.length - 1)]!, status: "approved", daysAgo: 3 },
-    { rep: topReps[4]!, reward: cheap[0]!,                              status: "rejected", daysAgo: 6 },
+    { rep: topReps[4]!, reward: cheap[0]!,                              status: "approved", daysAgo: 6 },
     { rep: topReps[1]!, reward: mid[1] ?? mid[0] ?? cheap[cheap.length - 1]!, status: "pending", daysAgo: 1 },
     { rep: topReps[5 % topReps.length]!, reward: cheap[Math.min(2, cheap.length - 1)]!, status: "pending", daysAgo: 0 },
   ];
 
+  // Top up only what's needed to hit the demo baseline — never overshoot
+  // when a partial demo set already exists (e.g., 3 redemptions from a
+  // prior partial seed → insert 3, not 8).
+  const have = Number(existingMock[0]?.c ?? 0);
+  const needed = Math.max(0, DEMO_REDEMPTION_BASELINE - have);
+  if (needed === 0) return;
+  // Prefer to insert pending items LAST so the admin queue stays
+  // populated when only a few inserts happen.
+  const ordered = [
+    ...plan.filter((p) => p.status === "approved"),
+    ...plan.filter((p) => p.status === "pending"),
+  ];
+  const slice = ordered.slice(0, Math.min(needed, plan.length));
+
   const touched = new Set<number>();
-  for (const p of plan) {
+  let inserted = 0;
+  for (const p of slice) {
     if (p.rep.totalPoints < p.reward.pointCost) continue;
     await db.insert(redemptionsTable).values({
       userId: p.rep.id,
@@ -1003,6 +1021,7 @@ async function seedDemoRedemptions(): Promise<void> {
       createdAt: new Date(now - p.daysAgo * day),
     });
     touched.add(p.rep.id);
+    inserted += 1;
   }
 
   // Recompute balances so the deduction shows on each rep's dashboard.
@@ -1010,7 +1029,7 @@ async function seedDemoRedemptions(): Promise<void> {
     await recomputeUserPoints(id);
   }
 
-  logger.info({ count: plan.length, reps: touched.size }, "Seeded demo redemptions");
+  logger.info({ inserted, reps: touched.size, alreadyHad: have }, "Seeded demo redemptions");
 }
 
 // Seed minimal personal data for a freshly-registered real rep so the dashboard
