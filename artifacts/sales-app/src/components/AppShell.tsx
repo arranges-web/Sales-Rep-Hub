@@ -44,6 +44,7 @@ import {
   listDeals,
 } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
+import { BADGES_ME_QUERY_KEY, fetchBadgesMe } from "@/lib/badgesMe";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { photoServingUrl } from "@/components/PhotoUpload";
 import { Button } from "@/components/ui/button";
@@ -67,6 +68,7 @@ const PREFETCHERS: Record<string, Prefetcher> = {
     { queryKey: getGetMeQueryKey(), queryFn: () => getMe() },
     { queryKey: getGetLeaderboardSummaryQueryKey(), queryFn: () => getLeaderboardSummary() },
     { queryKey: getListIncentiveTiersQueryKey(), queryFn: () => listIncentiveTiers() },
+    { queryKey: BADGES_ME_QUERY_KEY, queryFn: fetchBadgesMe },
   ],
   "/leaderboard": () => [
     { queryKey: getGetLeaderboardQueryKey(), queryFn: () => getLeaderboard() },

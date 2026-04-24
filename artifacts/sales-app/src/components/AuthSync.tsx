@@ -7,6 +7,7 @@ import {
   getMe,
 } from "@workspace/api-client-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { BADGES_ME_QUERY_KEY } from "@/lib/badgesMe";
 
 const SYNC_KEY_PREFIX = "jt:user-synced:";
 
@@ -70,9 +71,13 @@ export function AuthSync() {
       .then(() => {
         markSynced(user.id);
         // Targeted invalidation only — avoids the "everything reloads" flash
-        // that comes from invalidating the entire cache.
+        // that comes from invalidating the entire cache. We invalidate both
+        // the legacy /api/badges family AND the new /api/badges/me key so
+        // whichever one Dashboard is consuming refetches with the freshly
+        // seeded badges.
         qc.invalidateQueries({ queryKey: getGetMeQueryKey() });
         qc.invalidateQueries({ queryKey: getListBadgesQueryKey() });
+        qc.invalidateQueries({ queryKey: BADGES_ME_QUERY_KEY });
       })
       .catch(() => {
         synced.current = null;
