@@ -40,37 +40,16 @@ export function AuthSync() {
   const qc = useQueryClient();
   const synced = useRef<string | null>(null);
 
-  // Probe getMe so we can self-heal a stale sessionStorage flag (e.g. backend
-  // was reset, DB reseeded, or sessionStorage outlived the server's record).
-  // If the probe fails with "not registered", we clear the flag and force
-  // the create flow to run again below.
-  const probe = useQuery({
-    queryKey: getGetMeQueryKey(),
-    queryFn: getMe,
-    enabled: !!isSignedIn && !!user,
-    retry: false,
-    staleTime: 60_000,
-  });
-
+  // Fire POST /users immediately on first sign-in, in parallel with whatever
+  // queries the rest of the app is firing (notably getMe in AppShell). On
+  // warm boots we skip entirely so there's nothing to flash on second paint.
   useEffect(() => {
     if (!isLoaded || !isSignedIn || !user) return;
     if (synced.current === user.id) return;
-
-    // If a previous session said we synced, but the server now says we are
-    // not registered (probe error), drop the flag so we re-create below.
-    if (alreadySynced(user.id) && probe.isError) {
-      clearSynced(user.id);
-    }
-
     if (alreadySynced(user.id)) {
       synced.current = user.id;
       return;
     }
-
-    // Don't fire create until we have a definitive probe answer (success or
-    // error). This prevents racing against the first getMe roundtrip.
-    if (probe.isLoading) return;
-
     synced.current = user.id;
     mutateAsync({
       data: {
@@ -90,25 +69,36 @@ export function AuthSync() {
     })
       .then(() => {
         markSynced(user.id);
-        // Only invalidate user-derived queries instead of nuking the entire
-        // cache. This avoids the "everything reloads after first paint" flash.
+        // Targeted invalidation only — avoids the "everything reloads" flash
+        // that comes from invalidating the entire cache.
         qc.invalidateQueries({ queryKey: getGetMeQueryKey() });
         qc.invalidateQueries({ queryKey: getListBadgesQueryKey() });
       })
       .catch(() => {
-        // Allow another attempt on the next render; useQuery's probe will
-        // re-run on focus/remount and trigger this effect again.
         synced.current = null;
       });
-  }, [
-    isLoaded,
-    isSignedIn,
-    user,
-    mutateAsync,
-    qc,
-    probe.isLoading,
-    probe.isError,
-  ]);
+  }, [isLoaded, isSignedIn, user, mutateAsync, qc]);
+
+  // Separately, observe the existing getMe query (deduped — does not fire a
+  // second request). If it errors AND we previously thought we'd synced this
+  // session, clear the flag so the next render can re-create the user. This
+  // keeps recovery logic OFF the critical path of first-login.
+  const probe = useQuery({
+    queryKey: getGetMeQueryKey(),
+    queryFn: getMe,
+    enabled: !!isSignedIn && !!user,
+    retry: false,
+    staleTime: 60_000,
+  });
+
+  useEffect(() => {
+    if (!user) return;
+    if (!probe.isError) return;
+    if (alreadySynced(user.id)) {
+      clearSynced(user.id);
+      synced.current = null;
+    }
+  }, [user, probe.isError]);
 
   return null;
 }

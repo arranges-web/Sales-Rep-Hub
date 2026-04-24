@@ -87,6 +87,15 @@ const PREFETCHERS: Record<string, Prefetcher> = {
   "/training": () => [
     { queryKey: ["/api/training"] as const, queryFn: () => listTrainingResources() },
   ],
+  "/profile": () => [
+    // Profile mostly reuses cached data (getMe, leaderboard, feed, pins)
+    // populated by other tabs. Pre-warming again here makes a cold profile
+    // hop instant when those caches haven't been touched yet.
+    { queryKey: getGetMeQueryKey(), queryFn: () => getMe() },
+    { queryKey: getGetLeaderboardQueryKey(), queryFn: () => getLeaderboard() },
+    { queryKey: getListFeedPostsQueryKey(), queryFn: () => listFeedPosts() },
+    { queryKey: getListPinsQueryKey(), queryFn: () => listPins() },
+  ],
 };
 
 export function AppShell({ children }: { children: ReactNode }) {

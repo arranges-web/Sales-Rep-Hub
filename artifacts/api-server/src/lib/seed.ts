@@ -1081,12 +1081,29 @@ export async function seedDataForNewRep(opts: {
   userAvatarUrl: string | null;
 }): Promise<void> {
   try {
-    const existing = await db
+    // Stronger idempotency: short-circuit if the rep already has ANY deals,
+    // pins, or authored posts. Prevents partial re-seeding if a previous
+    // run failed midway, or if the rep has already started using the app.
+    const [existingDeal] = await db
       .select({ id: dealsTable.id })
       .from(dealsTable)
       .where(eq(dealsTable.repId, opts.userId))
       .limit(1);
-    if (existing.length > 0) return;
+    if (existingDeal) return;
+
+    const [existingPin] = await db
+      .select({ id: pinsTable.id })
+      .from(pinsTable)
+      .where(eq(pinsTable.repId, opts.userId))
+      .limit(1);
+    if (existingPin) return;
+
+    const [existingPost] = await db
+      .select({ id: feedPostsTable.id })
+      .from(feedPostsTable)
+      .where(eq(feedPostsTable.authorId, opts.userId))
+      .limit(1);
+    if (existingPost) return;
 
     const now = Date.now();
     const day = 24 * 60 * 60 * 1000;
