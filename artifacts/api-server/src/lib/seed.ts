@@ -179,6 +179,7 @@ async function isEmpty(table: PgTable): Promise<boolean> {
 
 export async function seedBaselineData(): Promise<void> {
   try {
+    const t0 = Date.now();
     await seedTerritories();
     await backfillTerritoryBounds();
     await seedPointConfigs();
@@ -188,6 +189,29 @@ export async function seedBaselineData(): Promise<void> {
     await healMockRepsIfStale();
     await seedFeedSocialSignals();
     await seedDemoRedemptions();
+    // Snapshot of current populated state for easy verification on dev
+    // and in CI logs. Each branch above also logs only when it actually
+    // mutates, so absence of branch-specific log lines = idempotent boot.
+    const [snap] = await db
+      .select({
+        mockReps: sql<number>`(SELECT COUNT(*) FROM ${usersTable} WHERE ${usersTable.clerkId} LIKE ${SEED_CLERK_PREFIX + "%"})`,
+        realUsers: sql<number>`(SELECT COUNT(*) FROM ${usersTable} WHERE ${usersTable.clerkId} NOT LIKE ${SEED_CLERK_PREFIX + "%"})`,
+        feedPosts: sql<number>`(SELECT COUNT(*) FROM ${feedPostsTable})`,
+        comments: sql<number>`(SELECT COUNT(*) FROM ${commentsTable})`,
+        highFives: sql<number>`(SELECT COUNT(*) FROM ${highFivesTable})`,
+        rewards: sql<number>`(SELECT COUNT(*) FROM ${rewardsTable})`,
+        training: sql<number>`(SELECT COUNT(*) FROM ${trainingResourcesTable})`,
+        redemptions: sql<number>`(SELECT COUNT(*) FROM ${redemptionsTable})`,
+        territories: sql<number>`(SELECT COUNT(*) FROM ${territoriesTable})`,
+      })
+      .from(sql`(SELECT 1) AS dummy`);
+    logger.info(
+      {
+        ...snap,
+        elapsedMs: Date.now() - t0,
+      },
+      "Seed baseline ready",
+    );
   } catch (err) {
     logger.error({ err }, "Seed failed");
   }
