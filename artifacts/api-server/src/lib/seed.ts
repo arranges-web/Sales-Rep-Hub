@@ -1134,17 +1134,96 @@ export async function seedDataForNewRep(opts: {
       });
     }
 
-    // Welcome badges + welcome bot post.
+    // Personalize the rep's profile so the dashboard isn't a sea of defaults.
+    // Random territory, accent color, and a Hawaii-trip goal pinned at the top.
+    try {
+      const territories = await db.select({ id: territoriesTable.id }).from(territoriesTable);
+      const accent = ACCENTS[opts.userId % ACCENTS.length];
+      const territoryId = territories.length
+        ? territories[opts.userId % territories.length].id
+        : null;
+      const hawaiiGoals = [
+        "Punch the Hawaii ticket by Q3.",
+        "5 closes a week — Maui by summer.",
+        "Stack points → trade for Kona sunrise.",
+        "Hit Diamond tier and book the Hawaii flight.",
+      ];
+      await db
+        .update(usersTable)
+        .set({
+          accentColor: accent,
+          territoryId,
+          hawaiiGoal: hawaiiGoals[opts.userId % hawaiiGoals.length],
+        })
+        .where(eq(usersTable.id, opts.userId));
+    } catch (err) {
+      logger.warn({ err }, "Could not personalize new rep profile");
+    }
+
+    // Welcome badges — a starter and a streak so the badge shelf isn't lonely.
     await db.insert(badgesTable).values([
       { userId: opts.userId, type: "first_deal", label: "First Deal", description: "Closed your first deal — welcome to the team!" },
+      { userId: opts.userId, type: "hot_streak", label: "Hot Streak", description: "5 closes in your first month — keep the heat on." },
     ]);
-    await db.insert(feedPostsTable).values({
-      authorId: null,
-      authorName: "Joshua Tree Bot",
-      authorAvatarUrl: null,
-      content: `Welcome to the team, ${opts.userName}. Crushing it already with $4,800 closed.`,
-      isBot: true,
-    });
+
+    // Personalized welcome post from a top mock rep, with high-fives from the
+    // crew so the feed feels lived-in the moment a new rep lands.
+    const mockReps = await db
+      .select({ id: usersTable.id, name: usersTable.name, avatarUrl: usersTable.avatarUrl })
+      .from(usersTable)
+      .where(sql`${usersTable.clerkId} LIKE ${SEED_CLERK_PREFIX + "%"}`)
+      .orderBy(desc(usersTable.totalPoints))
+      .limit(8);
+
+    if (mockReps.length > 0) {
+      const author = mockReps[0];
+      const firstName = (opts.userName || "there").split(/\s+/)[0];
+      const welcomeLines = [
+        `Welcome to the crew, ${firstName}! Saw the $4,800 close on Coral Ridge — that's how we open a week. 🌳`,
+        `Yo ${firstName} — hit the ground running! $4,800 day-one close is no joke. Stack 'em.`,
+        `${firstName} just punched in with a $4,800 large removal. Welcome to the board.`,
+      ];
+      const [welcomePost] = await db
+        .insert(feedPostsTable)
+        .values({
+          authorId: author.id,
+          authorName: author.name,
+          authorAvatarUrl: author.avatarUrl ?? null,
+          content: welcomeLines[opts.userId % welcomeLines.length],
+          isBot: false,
+        })
+        .returning({ id: feedPostsTable.id });
+
+      if (welcomePost) {
+        const fivers = mockReps.slice(1, 4);
+        if (fivers.length > 0) {
+          await db
+            .insert(highFivesTable)
+            .values(fivers.map((r) => ({ postId: welcomePost.id, userId: r.id })))
+            .onConflictDoNothing();
+        }
+        const cheers = ["Welcome aboard! 🔥", "Let's gooo 💪", "Killer first week!"];
+        const commenters = mockReps.slice(1, 1 + Math.min(2, mockReps.length - 1));
+        if (commenters.length > 0) {
+          await db.insert(commentsTable).values(
+            commenters.map((r, i) => ({
+              postId: welcomePost.id,
+              authorId: r.id,
+              content: cheers[i % cheers.length],
+            })),
+          );
+        }
+      }
+    } else {
+      // Fallback if no mock reps exist (shouldn't happen in normal boot).
+      await db.insert(feedPostsTable).values({
+        authorId: null,
+        authorName: "Joshua Tree Bot",
+        authorAvatarUrl: null,
+        content: `Welcome to the team, ${opts.userName}. Crushing it already with $4,800 closed.`,
+        isBot: true,
+      });
+    }
     logger.info({ userId: opts.userId }, "Seeded data for new rep");
   } catch (err) {
     logger.error({ err }, "Failed to seed data for new rep");

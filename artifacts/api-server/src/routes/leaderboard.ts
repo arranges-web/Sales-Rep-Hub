@@ -6,6 +6,46 @@ import { computeStreaksForAll, levelInfo } from "../lib/streaks";
 
 const router: IRouter = Router();
 
+router.get("/public/pulse", async (_req, res, next) => {
+  try {
+    res.setHeader("Cache-Control", "public, max-age=30");
+    const startOfWeek = new Date();
+    const day = startOfWeek.getDay();
+    const diff = (day + 6) % 7;
+    startOfWeek.setDate(startOfWeek.getDate() - diff);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const [topRep] = await db
+      .select({ name: usersTable.name, totalPoints: usersTable.totalPoints })
+      .from(usersTable)
+      .where(eq(usersTable.role, "rep"))
+      .orderBy(desc(usersTable.totalPoints))
+      .limit(1);
+    const [reps] = await db
+      .select({ c: sql<number>`COUNT(*)` })
+      .from(usersTable)
+      .where(eq(usersTable.role, "rep"));
+    const [weekDeals] = await db
+      .select({ c: sql<number>`COUNT(*)` })
+      .from(dealsTable)
+      .where(and(sql`${dealsTable.status} IN ('closed','paid')`, gte(dealsTable.closedAt, startOfWeek)));
+    const [pool] = await db
+      .select({ pts: sql<number>`COALESCE(SUM(${dealsTable.pointsAwarded}), 0)` })
+      .from(dealsTable)
+      .where(sql`${dealsTable.status} IN ('closed','paid')`);
+
+    res.json({
+      topRepFirstName: topRep?.name?.split(" ")[0] ?? null,
+      topRepPoints: topRep?.totalPoints ?? 0,
+      dealsThisWeek: Number(weekDeals?.c ?? 0),
+      totalPointsPool: Number(pool?.pts ?? 0),
+      activeReps: Number(reps?.c ?? 0),
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
 router.get("/leaderboard", requireAuth, async (req, res, next) => {
   try {
     const me = req.currentUser!;

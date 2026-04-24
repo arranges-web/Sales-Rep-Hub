@@ -1,9 +1,66 @@
-import { SignInButton, SignUpButton } from "@clerk/react";
+import { useEffect, useState } from "react";
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Trophy, MapPin, Gift, Zap, ArrowRight } from "lucide-react";
 import { Logo } from "@/components/Logo";
 
+interface Pulse {
+  topRepFirstName: string | null;
+  topRepPoints: number;
+  dealsThisWeek: number;
+  totalPointsPool: number;
+  activeReps: number;
+}
+
+function compact(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(n >= 10_000 ? 0 : 1)}k`;
+  return String(n);
+}
+
 export default function LandingPage() {
+  const [pulse, setPulse] = useState<Pulse | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/public/pulse")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data) setPulse(data);
+      })
+      .catch(() => {
+        /* fall back to static stats */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const stats = pulse
+    ? [
+        {
+          k: pulse.activeReps > 0 ? `${pulse.activeReps}` : "Live",
+          v: "Reps on the board",
+        },
+        {
+          k: pulse.dealsThisWeek > 0 ? `${pulse.dealsThisWeek}` : "Live",
+          v: "Deals closed this week",
+        },
+        {
+          k: pulse.topRepFirstName
+            ? `${pulse.topRepFirstName.slice(0, 10)}`
+            : compact(pulse.totalPointsPool),
+          v: pulse.topRepFirstName
+            ? `Top rep • ${compact(pulse.topRepPoints)} pts`
+            : "Points in the pool",
+        },
+      ]
+    : [
+        { k: "Live", v: "Leaderboard" },
+        { k: "$10k+", v: "Top tier prize" },
+        { k: "24/7", v: "Pin to win" },
+      ];
+
   return (
     <div className="relative min-h-[100dvh] overflow-hidden bg-background text-foreground">
       <div className="pointer-events-none absolute inset-0 -z-10 jt-grid-bg opacity-60" />
@@ -16,16 +73,12 @@ export default function LandingPage() {
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
         <Logo className="h-9" />
         <div className="flex items-center gap-2">
-          <SignInButton mode="modal">
-            <Button variant="ghost" className="rounded-lg text-foreground hover:bg-muted">
-              Sign in
-            </Button>
-          </SignInButton>
-          <SignUpButton mode="modal">
-            <Button className="rounded-lg bg-[#2EA3F2] text-slate-950 hover:bg-[#48b3f6]">
-              Join the team
-            </Button>
-          </SignUpButton>
+          <Button asChild variant="ghost" className="rounded-lg text-foreground hover:bg-muted">
+            <Link href="/sign-in">Sign in</Link>
+          </Button>
+          <Button asChild className="rounded-lg bg-[#2EA3F2] text-slate-950 hover:bg-[#48b3f6]">
+            <Link href="/sign-up">Join the team</Link>
+          </Button>
         </div>
       </header>
 
@@ -46,7 +99,7 @@ export default function LandingPage() {
             board, and trade points for gear, tickets, and trips.
           </p>
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-            <SignInButton mode="modal">
+            <Link href="/sign-in">
               <Button
                 size="lg"
                 className="rounded-lg bg-[#2EA3F2] px-6 font-semibold text-slate-950 shadow-lg shadow-[#2EA3F2]/20 hover:bg-[#48b3f6]"
@@ -54,8 +107,8 @@ export default function LandingPage() {
                 Sign in
                 <ArrowRight className="ml-1.5 h-4 w-4" />
               </Button>
-            </SignInButton>
-            <SignUpButton mode="modal">
+            </Link>
+            <Link href="/sign-up">
               <Button
                 size="lg"
                 variant="outline"
@@ -63,16 +116,12 @@ export default function LandingPage() {
               >
                 Create account
               </Button>
-            </SignUpButton>
+            </Link>
           </div>
 
-          {/* Stat strip */}
+          {/* Live pulse strip */}
           <div className="mx-auto mt-14 grid max-w-3xl grid-cols-3 gap-px overflow-hidden rounded-xl border border-border bg-border">
-            {[
-              { k: "Live", v: "Leaderboard" },
-              { k: "$10k+", v: "Top tier prize" },
-              { k: "24/7", v: "Pin to win" },
-            ].map((s) => (
+            {stats.map((s) => (
               <div key={s.v} className="bg-card px-4 py-5">
                 <div className="font-stat text-2xl font-bold text-foreground">
                   {s.k}
@@ -83,6 +132,15 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
+          {pulse && (
+            <div className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#2C8214] opacity-75" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#2C8214]" />
+              </span>
+              Live from the SWFL board
+            </div>
+          )}
         </div>
 
         <div className="mt-20 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

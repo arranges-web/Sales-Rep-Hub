@@ -1,6 +1,7 @@
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useUser, useClerk } from "@clerk/react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   LayoutDashboard,
   Trophy,
@@ -19,7 +20,29 @@ import {
   Flame,
 } from "lucide-react";
 import { isSoundEnabled, onSoundChanged, setSoundEnabled } from "@/lib/sound";
-import { useGetMe } from "@workspace/api-client-react";
+import {
+  useGetMe,
+  getGetMeQueryKey,
+  getGetLeaderboardQueryKey,
+  getGetLeaderboardSummaryQueryKey,
+  getListFeedPostsQueryKey,
+  getListPinsQueryKey,
+  getListTerritoriesQueryKey,
+  getListRewardsQueryKey,
+  getListBadgesQueryKey,
+  getListIncentiveTiersQueryKey,
+  getMe,
+  getLeaderboard,
+  getLeaderboardSummary,
+  listFeedPosts,
+  listPins,
+  listTerritories,
+  listRewards,
+  listBadges,
+  listIncentiveTiers,
+  listTrainingResources,
+  listDeals,
+} from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { photoServingUrl } from "@/components/PhotoUpload";
@@ -36,16 +59,70 @@ const NAV_ITEMS = [
   { href: "/training", label: "Training Vault", icon: GraduationCap },
 ];
 
+// Map of route → query prefetchers. Fired on hover so navigating to a tab
+// renders with cached data instead of an empty skeleton.
+type Prefetcher = () => Array<{ queryKey: readonly unknown[]; queryFn: () => Promise<unknown> }>;
+const PREFETCHERS: Record<string, Prefetcher> = {
+  "/dashboard": () => [
+    { queryKey: getGetMeQueryKey(), queryFn: () => getMe() },
+    { queryKey: getGetLeaderboardSummaryQueryKey(), queryFn: () => getLeaderboardSummary() },
+    { queryKey: getListIncentiveTiersQueryKey(), queryFn: () => listIncentiveTiers() },
+  ],
+  "/leaderboard": () => [
+    { queryKey: getGetLeaderboardQueryKey(), queryFn: () => getLeaderboard() },
+  ],
+  "/feed": () => [
+    { queryKey: getListFeedPostsQueryKey(), queryFn: () => listFeedPosts() },
+  ],
+  "/map": () => [
+    { queryKey: getListPinsQueryKey(), queryFn: () => listPins() },
+    { queryKey: getListTerritoriesQueryKey(), queryFn: () => listTerritories() },
+  ],
+  "/deals": () => [
+    { queryKey: ["/api/deals"] as const, queryFn: () => listDeals() },
+  ],
+  "/rewards": () => [
+    { queryKey: getListRewardsQueryKey(), queryFn: () => listRewards() },
+  ],
+  "/training": () => [
+    { queryKey: ["/api/training"] as const, queryFn: () => listTrainingResources() },
+  ],
+};
+
 export function AppShell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const { user } = useUser();
   const { signOut } = useClerk();
+  const qc = useQueryClient();
   const { data: me } = useGetMe();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [soundOn, setSoundOn] = useState(isSoundEnabled());
   useEffect(() => onSoundChanged(setSoundOn), []);
 
   const isAdmin = me?.role === "admin";
+
+  const prefetchedRef = useMemo(() => new Set<string>(), []);
+  const prefetchRoute = (href: string) => {
+    if (prefetchedRef.has(href)) return;
+    const make = PREFETCHERS[href];
+    if (!make) return;
+    prefetchedRef.add(href);
+    for (const { queryKey, queryFn } of make()) {
+      qc.prefetchQuery({ queryKey, queryFn, staleTime: 60_000 }).catch(() => {
+        prefetchedRef.delete(href);
+      });
+    }
+  };
+
+  // Pre-warm the cache for the most likely first hop (Dashboard's badges).
+  useEffect(() => {
+    if (!me?.id) return;
+    qc.prefetchQuery({
+      queryKey: getListBadgesQueryKey({ userId: me.id }),
+      queryFn: () => listBadges({ userId: me.id }),
+      staleTime: 60_000,
+    }).catch(() => {});
+  }, [me?.id, qc]);
 
   const NavItem = ({
     href,
@@ -63,6 +140,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     <Link
       href={href}
       onClick={() => setMobileOpen(false)}
+      onMouseEnter={() => prefetchRoute(href)}
+      onFocus={() => prefetchRoute(href)}
+      onTouchStart={() => prefetchRoute(href)}
       className={cn(
         "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
         active
