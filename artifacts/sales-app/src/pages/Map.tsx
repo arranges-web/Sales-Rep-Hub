@@ -21,10 +21,9 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Plus, Trash2, CheckCircle2 } from "lucide-react";
+import { MapPin, Trash2, CheckCircle2 } from "lucide-react";
 import { AvatarRing } from "@/components/AvatarRing";
 import { BrandHeader } from "@/components/BrandHeader";
 import { cn } from "@/lib/utils";
@@ -314,27 +313,8 @@ export default function MapPage() {
           </div>
         }
       />
-      {/* legacy filter row removed (now in header) */}
-      <div className="hidden" aria-hidden>
-        <div className="flex gap-2">
-          {(["all", "lead", "sold"] as const).map((f) => (
-            <Button
-              key={f}
-              size="sm"
-              variant={filter === f ? "default" : "outline"}
-              onClick={() => setFilter(f)}
-              className="rounded-xl capitalize"
-            >
-              {f}
-            </Button>
-          ))}
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button className="rounded-xl bg-[#2EA3F2] hover:bg-[#1d8fd8]">
-                <Plus className="mr-1 h-4 w-4" /> Drop Pin
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="rounded-2xl max-h-[90vh] overflow-y-auto">
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="rounded-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Drop a pin</DialogTitle>
               </DialogHeader>
@@ -436,10 +416,8 @@ export default function MapPage() {
                   Drop Pin
                 </Button>
               </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
+        </DialogContent>
+      </Dialog>
 
       <Card className="overflow-hidden">
         <div ref={containerRef} className="h-[480px] w-full" />
