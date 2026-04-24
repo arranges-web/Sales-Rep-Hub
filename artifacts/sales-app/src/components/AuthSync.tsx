@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useUser } from "@clerk/react";
 import {
   useCreateUser,
@@ -40,6 +40,11 @@ export function AuthSync() {
   const { mutateAsync } = useCreateUser();
   const qc = useQueryClient();
   const synced = useRef<string | null>(null);
+  // Bumped by the recovery effect after we clear a stale sessionStorage
+  // flag. Adding it to the deps of the create effect guarantees that
+  // recovery deterministically retriggers a sync attempt on the next
+  // render, instead of waiting for some other prop to change.
+  const [retryTick, setRetryTick] = useState(0);
 
   // Fire POST /users immediately on first sign-in, in parallel with whatever
   // queries the rest of the app is firing (notably getMe in AppShell). On
@@ -82,7 +87,7 @@ export function AuthSync() {
       .catch(() => {
         synced.current = null;
       });
-  }, [isLoaded, isSignedIn, user, mutateAsync, qc]);
+  }, [isLoaded, isSignedIn, user, mutateAsync, qc, retryTick]);
 
   // Separately, observe the existing getMe query (deduped — does not fire a
   // second request). If it errors AND we previously thought we'd synced this
@@ -102,6 +107,9 @@ export function AuthSync() {
     if (alreadySynced(user.id)) {
       clearSynced(user.id);
       synced.current = null;
+      // Force the create effect to re-run on the next render so recovery
+      // is deterministic, not a "wait for some other prop to change."
+      setRetryTick((t) => t + 1);
     }
   }, [user, probe.isError]);
 

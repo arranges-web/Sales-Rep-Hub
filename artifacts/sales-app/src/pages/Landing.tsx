@@ -39,26 +39,26 @@ export default function LandingPage() {
   const stats = pulse
     ? [
         {
-          k: pulse.activeReps > 0 ? `${pulse.activeReps}` : "Live",
-          v: "Reps on the board",
+          k: pulse.topRepFirstName
+            ? pulse.topRepFirstName.slice(0, 10)
+            : "—",
+          v: pulse.topRepFirstName
+            ? `Top rep • ${compact(pulse.topRepPoints)} pts`
+            : "Top rep",
         },
         {
-          k: pulse.dealsThisWeek > 0 ? `${pulse.dealsThisWeek}` : "Live",
+          k: pulse.dealsThisWeek > 0 ? `${pulse.dealsThisWeek}` : "0",
           v: "Deals closed this week",
         },
         {
-          k: pulse.topRepFirstName
-            ? `${pulse.topRepFirstName.slice(0, 10)}`
-            : compact(pulse.totalPointsPool),
-          v: pulse.topRepFirstName
-            ? `Top rep • ${compact(pulse.topRepPoints)} pts`
-            : "Points in the pool",
+          k: compact(pulse.totalPointsPool),
+          v: "Points in the pool",
         },
       ]
     : [
-        { k: "Live", v: "Leaderboard" },
-        { k: "$10k+", v: "Top tier prize" },
-        { k: "24/7", v: "Pin to win" },
+        { k: "Live", v: "Top rep" },
+        { k: "Live", v: "Deals closed this week" },
+        { k: "$10k+", v: "Points in the pool" },
       ];
 
   return (
