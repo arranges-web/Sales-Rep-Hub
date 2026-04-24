@@ -14,7 +14,7 @@ import {
   highFivesTable,
   redemptionsTable,
 } from "@workspace/db";
-import { sql, eq, and, inArray, desc, or, isNull } from "drizzle-orm";
+import { sql, eq, and, inArray, notInArray, desc, or, isNull } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
 import { logger } from "./logger";
 import { pointsForDeal, recomputeUserPoints } from "./points";
@@ -237,6 +237,18 @@ async function restockRewardsIfStale(): Promise<void> {
   const hasRedemptions = Number(redemptionRow?.c ?? 0) > 0;
   if (hasRedemptions || (await hasRealUsers())) {
     await insertMissingCurrentRewards();
+    // Mark non-canonical rewards as unavailable so the vault stops
+    // surfacing stale legacy items, while preserving the rows (and
+    // their FK references from redemption history).
+    const canonical = Array.from(CURRENT_REWARD_NAMES);
+    const stale = await db
+      .update(rewardsTable)
+      .set({ available: false })
+      .where(and(notInArray(rewardsTable.name, canonical), eq(rewardsTable.available, true)))
+      .returning({ id: rewardsTable.id });
+    if (stale.length > 0) {
+      logger.info({ count: stale.length }, "Marked stale legacy rewards unavailable");
+    }
     return;
   }
 
