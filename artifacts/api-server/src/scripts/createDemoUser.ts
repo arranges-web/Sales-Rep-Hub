@@ -40,6 +40,10 @@ async function main() {
   if (existing.data.length > 0) {
     clerkId = existing.data[0].id;
     console.log(`Clerk user already exists: ${clerkId}`);
+    // Always reset the password on re-runs so the printed credentials are
+    // guaranteed to work even if someone changed the password in Clerk.
+    await clerk.users.updateUser(clerkId, { password: PASSWORD });
+    console.log(`Password reset to the known demo password.`);
   } else {
     const created = await clerk.users.createUser({
       emailAddress: [EMAIL],
@@ -95,7 +99,10 @@ async function main() {
       `   Password: ${PASSWORD}`,
       "",
       "The account is fully seeded with deals, badges, and leaderboard activity.",
-      "Run this script again at any time to reset if the data gets modified.",
+      "Re-running this script will always reset the password to the value above,",
+      "keeping the login credentials valid. Existing activity data is preserved",
+      "(not wiped) on re-runs; delete the user's deals/pins/posts from the DB",
+      "if you need to trigger a full re-seed.",
     ].join("\n"),
   );
 }
