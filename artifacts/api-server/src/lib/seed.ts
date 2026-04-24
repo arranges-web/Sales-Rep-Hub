@@ -264,11 +264,14 @@ async function restockTrainingIfStale(): Promise<void> {
 }
 
 // If we're missing mock reps (fresh install OR an older partial seed),
-// wipe the existing mock-rep footprint and reseed everything that depends
-// on them. Skipped entirely once any real Clerk user has signed up so we
-// never touch real-user feed/badge/comment data. When we DO wipe, we
-// scope deletions to mock authors only and cascade orphan
-// comments/high-fives by postId so no stragglers are left.
+// wipe the seed_mock_* cohort and the demo activity attached to it, then
+// reseed. Real users and any data they own/touched are preserved:
+//  - Mock posts (mock-authored, bot, or NULL-author) that have ANY real
+//    user dependency (comment or high-five from a non-mock user) are
+//    kept intact. Everything else mock-owned is dropped.
+//  - Mock-authored comments/high-fives on real-user posts are dropped
+//    (those are demo activity attached to mock reps).
+//  - Real users' deals/pins/badges/redemptions are never touched.
 async function healMockRepsIfStale(): Promise<void> {
   const mocks = await db
     .select({ id: usersTable.id })
@@ -276,23 +279,15 @@ async function healMockRepsIfStale(): Promise<void> {
     .where(sql`${usersTable.clerkId} LIKE ${SEED_CLERK_PREFIX + "%"}`);
   if (mocks.length >= EXPECTED_MOCK_REPS) return;
 
-  if (await hasRealUsers()) {
-    logger.info(
-      { mocks: mocks.length, expected: EXPECTED_MOCK_REPS },
-      "Skipping mock-rep self-heal because real users exist",
-    );
-    return;
-  }
-
   if (mocks.length > 0) {
     const mockIds = mocks.map((m) => m.id);
     logger.info(
       { existing: mocks.length, expected: EXPECTED_MOCK_REPS },
       "Mock rep cohort is incomplete — wiping and reseeding",
     );
-    // Identify all posts owned by mock reps OR posts authored by the bot
-    // (NULL author OR isBot true). In a no-real-users environment these
-    // are guaranteed seed-owned.
+
+    // All posts that are demo content: mock-rep-authored OR bot OR
+    // NULL-author. Real-user-authored posts are excluded.
     const mockPostRows = await db
       .select({ id: feedPostsTable.id })
       .from(feedPostsTable)
@@ -305,18 +300,58 @@ async function healMockRepsIfStale(): Promise<void> {
       );
     const mockPostIds = mockPostRows.map((r) => r.id);
 
+    // Of those demo posts, find the ones that have at least one real-user
+    // (non-mock) interaction — those we must preserve so we never delete
+    // a real user's comment/high-five.
+    const protectedPostIds = new Set<number>();
     if (mockPostIds.length > 0) {
-      await db.delete(commentsTable).where(inArray(commentsTable.postId, mockPostIds));
-      await db.delete(highFivesTable).where(inArray(highFivesTable.postId, mockPostIds));
+      const protectedFromComments = await db
+        .selectDistinct({ postId: commentsTable.postId })
+        .from(commentsTable)
+        .innerJoin(usersTable, eq(commentsTable.authorId, usersTable.id))
+        .where(
+          and(
+            inArray(commentsTable.postId, mockPostIds),
+            sql`${usersTable.clerkId} NOT LIKE ${SEED_CLERK_PREFIX + "%"}`,
+          ),
+        );
+      for (const r of protectedFromComments) protectedPostIds.add(r.postId);
+      const protectedFromHighFives = await db
+        .selectDistinct({ postId: highFivesTable.postId })
+        .from(highFivesTable)
+        .innerJoin(usersTable, eq(highFivesTable.userId, usersTable.id))
+        .where(
+          and(
+            inArray(highFivesTable.postId, mockPostIds),
+            sql`${usersTable.clerkId} NOT LIKE ${SEED_CLERK_PREFIX + "%"}`,
+          ),
+        );
+      for (const r of protectedFromHighFives) protectedPostIds.add(r.postId);
     }
+    const wipeablePostIds = mockPostIds.filter((id) => !protectedPostIds.has(id));
+
+    // Drop dependents on the wipeable demo posts (these dependents are
+    // guaranteed to be mock-owned by definition of "wipeable").
+    if (wipeablePostIds.length > 0) {
+      await db.delete(commentsTable).where(inArray(commentsTable.postId, wipeablePostIds));
+      await db.delete(highFivesTable).where(inArray(highFivesTable.postId, wipeablePostIds));
+    }
+    // Drop mock-rep activity that lives on real-user (or protected demo)
+    // posts — these are explicitly "demo activity attached to mock reps".
     await db.delete(commentsTable).where(inArray(commentsTable.authorId, mockIds));
     await db.delete(highFivesTable).where(inArray(highFivesTable.userId, mockIds));
     await db.delete(redemptionsTable).where(inArray(redemptionsTable.userId, mockIds));
     await db.delete(badgesTable).where(inArray(badgesTable.userId, mockIds));
     await db.delete(pinsTable).where(inArray(pinsTable.repId, mockIds));
     await db.delete(dealsTable).where(inArray(dealsTable.repId, mockIds));
-    if (mockPostIds.length > 0) {
-      await db.delete(feedPostsTable).where(inArray(feedPostsTable.id, mockPostIds));
+    if (wipeablePostIds.length > 0) {
+      await db.delete(feedPostsTable).where(inArray(feedPostsTable.id, wipeablePostIds));
+    }
+    if (protectedPostIds.size > 0) {
+      logger.info(
+        { preserved: protectedPostIds.size },
+        "Preserved demo posts that have real-user interactions",
+      );
     }
     await db
       .delete(usersTable)
@@ -796,25 +831,27 @@ const MOCK_COMMENTS = [
 // Hype Feed never looks empty. Idempotent: only runs when the feed has
 // posts and existing comments/high-fives are below the demo threshold.
 async function seedFeedSocialSignals(): Promise<void> {
-  // Demo-only: never touch live interaction history once any real Clerk
-  // user has signed up.
-  if (await hasRealUsers()) return;
-
-  // Only reach into mock/bot posts so we never alter interactions on
-  // real-user-authored content (defence-in-depth alongside the
-  // hasRealUsers gate above).
-  const posts = await db
-    .select({ id: feedPostsTable.id, isBot: feedPostsTable.isBot })
-    .from(feedPostsTable)
-    .where(or(isNull(feedPostsTable.authorId), eq(feedPostsTable.isBot, true)))
-    .orderBy(desc(feedPostsTable.createdAt));
-  if (posts.length === 0) return;
-
   const reps = await db
     .select({ id: usersTable.id })
     .from(usersTable)
     .where(sql`${usersTable.clerkId} LIKE ${SEED_CLERK_PREFIX + "%"}`);
   if (reps.length === 0) return;
+  const repIds = reps.map((r) => r.id);
+
+  // Demo posts = mock-rep-authored OR bot OR NULL-author. Real-user
+  // posts are excluded so we never mutate real-user content.
+  const posts = await db
+    .select({ id: feedPostsTable.id, isBot: feedPostsTable.isBot })
+    .from(feedPostsTable)
+    .where(
+      or(
+        isNull(feedPostsTable.authorId),
+        eq(feedPostsTable.isBot, true),
+        inArray(feedPostsTable.authorId, repIds),
+      ),
+    )
+    .orderBy(desc(feedPostsTable.createdAt));
+  if (posts.length === 0) return;
 
   const existingComments = await db
     .select({ c: sql<number>`COUNT(*)` })
@@ -831,9 +868,10 @@ async function seedFeedSocialSignals(): Promise<void> {
     return;
   }
 
-  // Wipe the sparse signals tied to mock reps on demo-only posts and
-  // rebuild a richer set so counts on every demo post are deterministic.
-  const repIds = reps.map((r) => r.id);
+  // Wipe the sparse mock signals on demo posts so we can rebuild
+  // deterministic richer counts. Scoped on both axes so we never delete:
+  //   - real-user comments/high-fives (authorId/userId scope)
+  //   - interactions on real-user-authored posts (postId scope)
   const postIds = posts.map((p) => p.id);
   await db
     .delete(commentsTable)
@@ -890,9 +928,9 @@ async function seedFeedSocialSignals(): Promise<void> {
 // admin queue, and "spending points" loop all look operational on launch.
 // Idempotent: skips if any redemption already exists.
 async function seedDemoRedemptions(): Promise<void> {
-  // Demo-only: never seed mock redemptions once any real Clerk user has
-  // signed up.
-  if (await hasRealUsers()) return;
+  // Idempotent: if any redemption already exists (demo or real), leave
+  // history alone. Insertions below only target mock reps, so real-user
+  // redemption history is never touched.
   const existing = await db.select({ id: redemptionsTable.id }).from(redemptionsTable).limit(1);
   if (existing.length > 0) return;
 
