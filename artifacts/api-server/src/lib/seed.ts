@@ -853,14 +853,19 @@ async function seedFeedSocialSignals(): Promise<void> {
     .orderBy(desc(feedPostsTable.createdAt));
   if (posts.length === 0) return;
 
+  // Count engagement scoped to demo posts only — high engagement on
+  // real-user posts must NOT short-circuit demo signal seeding.
+  const postIdsForCheck = posts.map((p) => p.id);
   const existingComments = await db
     .select({ c: sql<number>`COUNT(*)` })
-    .from(commentsTable);
+    .from(commentsTable)
+    .where(inArray(commentsTable.postId, postIdsForCheck));
   const existingHighFives = await db
     .select({ c: sql<number>`COUNT(*)` })
-    .from(highFivesTable);
+    .from(highFivesTable)
+    .where(inArray(highFivesTable.postId, postIdsForCheck));
 
-  // If the feed already feels alive, leave it alone.
+  // If the demo feed already feels alive, leave it alone.
   if (
     Number(existingComments[0]?.c ?? 0) >= posts.length &&
     Number(existingHighFives[0]?.c ?? 0) >= posts.length * 3
@@ -928,14 +933,26 @@ async function seedFeedSocialSignals(): Promise<void> {
 // admin queue, and "spending points" loop all look operational on launch.
 // Idempotent: skips if any redemption already exists.
 async function seedDemoRedemptions(): Promise<void> {
-  // Idempotent: if any redemption already exists (demo or real), leave
-  // history alone. Insertions below only target mock reps, so real-user
-  // redemption history is never touched.
-  const existing = await db.select({ id: redemptionsTable.id }).from(redemptionsTable).limit(1);
-  if (existing.length > 0) return;
-
   const rewards = await db.select().from(rewardsTable);
   if (rewards.length === 0) return;
+
+  // Idempotent: count ALL mock-rep redemptions (not just the current
+  // top-6 — the leaderboard ordering can shift between runs as deals
+  // accrue, so scoping to today's top-6 would miss prior demo
+  // redemptions and seed duplicates). Real-user redemptions are never
+  // counted or touched.
+  const DEMO_REDEMPTION_BASELINE = 6;
+  const allMockReps = await db
+    .select({ id: usersTable.id })
+    .from(usersTable)
+    .where(sql`${usersTable.clerkId} LIKE ${SEED_CLERK_PREFIX + "%"}`);
+  if (allMockReps.length === 0) return;
+  const allMockIds = allMockReps.map((r) => r.id);
+  const existingMock = await db
+    .select({ c: sql<number>`COUNT(*)` })
+    .from(redemptionsTable)
+    .where(inArray(redemptionsTable.userId, allMockIds));
+  if (Number(existingMock[0]?.c ?? 0) >= DEMO_REDEMPTION_BASELINE) return;
 
   // Top 6 mock reps by points = the redeemers (they have enough to spend).
   const topReps = await db
