@@ -79,6 +79,30 @@ router.post("/users", async (req, res, next) => {
       res.json(serializeUser(updated!));
       return;
     }
+
+    // No row found by clerkId — check by email. This handles users who
+    // previously signed in with one Clerk provider (e.g. email/password)
+    // and now sign in with a different one (e.g. Google OAuth) that issues
+    // a new Clerk user ID for the same email address. Without this fallback,
+    // the INSERT below would crash with a unique-constraint violation on
+    // users_email_idx, locking the user out of the entire app.
+    if (email) {
+      const [byEmail] = await db
+        .select()
+        .from(usersTable)
+        .where(eq(usersTable.email, email))
+        .limit(1);
+      if (byEmail) {
+        const [updated] = await db
+          .update(usersTable)
+          .set({ clerkId, name, avatarUrl: avatarUrl ?? null })
+          .where(eq(usersTable.id, byEmail.id))
+          .returning();
+        res.json(serializeUser(updated!));
+        return;
+      }
+    }
+
     // First user becomes admin
     const all = await db.select({ id: usersTable.id }).from(usersTable).limit(1);
     const role = all.length === 0 ? "admin" : "rep";
