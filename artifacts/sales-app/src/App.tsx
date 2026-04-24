@@ -58,7 +58,7 @@ const clerkAppearance = {
     logoLinkUrl: basePath || "/",
     logoImageUrl:
       typeof window !== "undefined"
-        ? `${window.location.origin}${basePath}/logo.png`
+        ? `${window.location.origin}${basePath}/logo.svg`
         : "",
   },
   variables: {

@@ -73,7 +73,8 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* DARK by default. Light variables retained under .light for future toggle. */
+/* DARK by default. No light theme is shipped in this pass — a future light
+   toggle would add a `.light` token block alongside `:root`. */
 :root {
   --button-outline: rgba(255,255,255, .10);
   --badge-outline: rgba(255,255,255, .06);
