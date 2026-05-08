@@ -18,6 +18,7 @@ import {
   Volume2,
   VolumeX,
   Flame,
+  Bot,
 } from "lucide-react";
 import { isSoundEnabled, onSoundChanged, setSoundEnabled } from "@/lib/sound";
 import {
@@ -58,6 +59,7 @@ const NAV_ITEMS = [
   { href: "/deals", label: "My Deals", icon: Briefcase },
   { href: "/rewards", label: "Incentive Vault", icon: Gift },
   { href: "/training", label: "Training Vault", icon: GraduationCap },
+  { href: "/coach", label: "Sales Coach", icon: Bot },
 ];
 
 // Map of route → query prefetchers. Fired on hover so navigating to a tab

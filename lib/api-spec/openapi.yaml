@@ -26,6 +26,8 @@ tags:
     description: Closer badges
   - name: admin
     description: Admin operations
+  - name: coach
+    description: AI sales-practice chat
   - name: Storage
     description: Object storage upload and serving endpoints.
 
@@ -617,6 +619,62 @@ paths:
       responses:
         "204":
           description: Deleted
+
+  /pins/{pinId}/skip-trace:
+    post:
+      operationId: skipTracePin
+      tags: [map]
+      summary: Look up resident name & phone for a pin's address and cache on the pin
+      parameters:
+        - name: pinId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Skip-trace result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SkipTraceResult"
+        "404":
+          description: Pin not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Skip-trace provider not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /coach/chat:
+    post:
+      operationId: coachChat
+      tags: [coach]
+      summary: AI sales-practice chat. Reply role-plays a homeowner; "coaching" is an optional rep tip.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CoachChatRequest"
+      responses:
+        "200":
+          description: Coach reply
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoachChatResponse"
+        "503":
+          description: Coach AI provider not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
 
   /territories:
     get:
@@ -1527,6 +1585,16 @@ components:
           type: ["string", "null"]
         dealId:
           type: ["integer", "null"]
+        residentName:
+          type: ["string", "null"]
+        residentPhone:
+          type: ["string", "null"]
+        residentSource:
+          type: ["string", "null"]
+          description: 'How resident info was obtained — rep (manual), skiptrace (lookup), or null.'
+        lastKnockedAt:
+          type: ["string", "null"]
+          format: date-time
         createdAt:
           type: string
           format: date-time
@@ -1558,6 +1626,10 @@ components:
           type: ["string", "null"]
         dealId:
           type: ["integer", "null"]
+        residentName:
+          type: ["string", "null"]
+        residentPhone:
+          type: ["string", "null"]
       required:
         - latitude
         - longitude
@@ -1576,6 +1648,66 @@ components:
           type: ["string", "null"]
         dealId:
           type: ["integer", "null"]
+        residentName:
+          type: ["string", "null"]
+        residentPhone:
+          type: ["string", "null"]
+        markKnocked:
+          type: ["boolean", "null"]
+          description: When true, sets lastKnockedAt to now.
+
+    SkipTraceResult:
+      type: object
+      properties:
+        residentName:
+          type: ["string", "null"]
+        residentPhone:
+          type: ["string", "null"]
+        source:
+          type: string
+          description: 'skiptrace when an external provider returned a hit, none when no match.'
+        cached:
+          type: boolean
+          description: True if the result came from a previously stored lookup.
+      required:
+        - source
+        - cached
+
+    CoachChatMessage:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+      required:
+        - role
+        - content
+
+    CoachChatRequest:
+      type: object
+      properties:
+        scenario:
+          type: string
+          description: Practice scenario (e.g., "cold-door-pest", "objection-price", "rebuttal-spouse").
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/CoachChatMessage"
+      required:
+        - messages
+
+    CoachChatResponse:
+      type: object
+      properties:
+        reply:
+          type: string
+        coaching:
+          type: ["string", "null"]
+          description: Optional short coaching note from the assistant on what the rep did well or could improve.
+      required:
+        - reply
 
     Territory:
       type: object
