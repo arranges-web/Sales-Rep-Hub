@@ -376,6 +376,17 @@ export interface MapPin {
   photoUrl?: string | null;
   /** @nullable */
   dealId?: number | null;
+  /** @nullable */
+  residentName?: string | null;
+  /** @nullable */
+  residentPhone?: string | null;
+  /**
+   * How resident info was obtained — rep (manual), skiptrace (lookup), or null.
+   * @nullable
+   */
+  residentSource?: string | null;
+  /** @nullable */
+  lastKnockedAt?: string | null;
   createdAt: string;
 }
 
@@ -398,6 +409,10 @@ export interface CreatePinBody {
   photoUrl?: string | null;
   /** @nullable */
   dealId?: number | null;
+  /** @nullable */
+  residentName?: string | null;
+  /** @nullable */
+  residentPhone?: string | null;
 }
 
 export type UpdatePinBodyStatus =
@@ -416,6 +431,54 @@ export interface UpdatePinBody {
   photoUrl?: string | null;
   /** @nullable */
   dealId?: number | null;
+  /** @nullable */
+  residentName?: string | null;
+  /** @nullable */
+  residentPhone?: string | null;
+  /**
+   * When true, sets lastKnockedAt to now.
+   * @nullable
+   */
+  markKnocked?: boolean | null;
+}
+
+export interface SkipTraceResult {
+  /** @nullable */
+  residentName?: string | null;
+  /** @nullable */
+  residentPhone?: string | null;
+  /** skiptrace when an external provider returned a hit, none when no match. */
+  source: string;
+  /** True if the result came from a previously stored lookup. */
+  cached: boolean;
+}
+
+export type CoachChatMessageRole =
+  (typeof CoachChatMessageRole)[keyof typeof CoachChatMessageRole];
+
+export const CoachChatMessageRole = {
+  user: "user",
+  assistant: "assistant",
+} as const;
+
+export interface CoachChatMessage {
+  role: CoachChatMessageRole;
+  content: string;
+}
+
+export interface CoachChatRequest {
+  /** Practice scenario (e.g., "cold-door-pest", "objection-price", "rebuttal-spouse"). */
+  scenario?: string;
+  messages: CoachChatMessage[];
+}
+
+export interface CoachChatResponse {
+  reply: string;
+  /**
+   * Optional short coaching note from the assistant on what the rep did well or could improve.
+   * @nullable
+   */
+  coaching?: string | null;
 }
 
 export interface Territory {

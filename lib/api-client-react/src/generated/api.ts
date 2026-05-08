@@ -18,6 +18,8 @@ import type {
 
 import type {
   Badge,
+  CoachChatRequest,
+  CoachChatResponse,
   Comment,
   CreateCommentBody,
   CreateDealBody,
@@ -47,6 +49,7 @@ import type {
   PointConfig,
   Redemption,
   Reward,
+  SkipTraceResult,
   Territory,
   TrainingResource,
   UpdateDealBody,
@@ -2654,6 +2657,176 @@ export const useDeletePin = <
   TContext
 > => {
   return useMutation(getDeletePinMutationOptions(options));
+};
+
+/**
+ * @summary Look up resident name & phone for a pin's address and cache on the pin
+ */
+export const getSkipTracePinUrl = (pinId: number) => {
+  return `/api/pins/${pinId}/skip-trace`;
+};
+
+export const skipTracePin = async (
+  pinId: number,
+  options?: RequestInit,
+): Promise<SkipTraceResult> => {
+  return customFetch<SkipTraceResult>(getSkipTracePinUrl(pinId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getSkipTracePinMutationOptions = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof skipTracePin>>,
+    TError,
+    { pinId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof skipTracePin>>,
+  TError,
+  { pinId: number },
+  TContext
+> => {
+  const mutationKey = ["skipTracePin"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof skipTracePin>>,
+    { pinId: number }
+  > = (props) => {
+    const { pinId } = props ?? {};
+
+    return skipTracePin(pinId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SkipTracePinMutationResult = NonNullable<
+  Awaited<ReturnType<typeof skipTracePin>>
+>;
+
+export type SkipTracePinMutationError = ErrorType<ErrorEnvelope>;
+
+/**
+ * @summary Look up resident name & phone for a pin's address and cache on the pin
+ */
+export const useSkipTracePin = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof skipTracePin>>,
+    TError,
+    { pinId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof skipTracePin>>,
+  TError,
+  { pinId: number },
+  TContext
+> => {
+  return useMutation(getSkipTracePinMutationOptions(options));
+};
+
+/**
+ * @summary AI sales-practice chat. Reply role-plays a homeowner; "coaching" is an optional rep tip.
+ */
+export const getCoachChatUrl = () => {
+  return `/api/coach/chat`;
+};
+
+export const coachChat = async (
+  coachChatRequest: CoachChatRequest,
+  options?: RequestInit,
+): Promise<CoachChatResponse> => {
+  return customFetch<CoachChatResponse>(getCoachChatUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(coachChatRequest),
+  });
+};
+
+export const getCoachChatMutationOptions = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof coachChat>>,
+    TError,
+    { data: BodyType<CoachChatRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof coachChat>>,
+  TError,
+  { data: BodyType<CoachChatRequest> },
+  TContext
+> => {
+  const mutationKey = ["coachChat"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof coachChat>>,
+    { data: BodyType<CoachChatRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return coachChat(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CoachChatMutationResult = NonNullable<
+  Awaited<ReturnType<typeof coachChat>>
+>;
+export type CoachChatMutationBody = BodyType<CoachChatRequest>;
+export type CoachChatMutationError = ErrorType<ErrorEnvelope>;
+
+/**
+ * @summary AI sales-practice chat. Reply role-plays a homeowner; "coaching" is an optional rep tip.
+ */
+export const useCoachChat = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof coachChat>>,
+    TError,
+    { data: BodyType<CoachChatRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof coachChat>>,
+  TError,
+  { data: BodyType<CoachChatRequest> },
+  TContext
+> => {
+  return useMutation(getCoachChatMutationOptions(options));
 };
 
 /**

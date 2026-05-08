@@ -123,6 +123,10 @@ export const pinsTable = pgTable(
     notes: text("notes"),
     photoUrl: text("photo_url"),
     dealId: integer("deal_id"),
+    residentName: text("resident_name"),
+    residentPhone: text("resident_phone"),
+    residentSource: text("resident_source"),
+    lastKnockedAt: timestamp("last_knocked_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({

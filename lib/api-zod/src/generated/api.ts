@@ -656,6 +656,15 @@ export const ListPinsResponseItem = zod.object({
   notes: zod.string().nullish(),
   photoUrl: zod.string().nullish(),
   dealId: zod.number().nullish(),
+  residentName: zod.string().nullish(),
+  residentPhone: zod.string().nullish(),
+  residentSource: zod
+    .string()
+    .nullish()
+    .describe(
+      "How resident info was obtained — rep (manual), skiptrace (lookup), or null.",
+    ),
+  lastKnockedAt: zod.coerce.date().nullish(),
   createdAt: zod.coerce.date(),
 });
 export const ListPinsResponse = zod.array(ListPinsResponseItem);
@@ -671,6 +680,8 @@ export const CreatePinBody = zod.object({
   notes: zod.string().nullish(),
   photoUrl: zod.string().nullish(),
   dealId: zod.number().nullish(),
+  residentName: zod.string().nullish(),
+  residentPhone: zod.string().nullish(),
 });
 
 /**
@@ -693,6 +704,15 @@ export const GetPinResponse = zod.object({
   notes: zod.string().nullish(),
   photoUrl: zod.string().nullish(),
   dealId: zod.number().nullish(),
+  residentName: zod.string().nullish(),
+  residentPhone: zod.string().nullish(),
+  residentSource: zod
+    .string()
+    .nullish()
+    .describe(
+      "How resident info was obtained — rep (manual), skiptrace (lookup), or null.",
+    ),
+  lastKnockedAt: zod.coerce.date().nullish(),
   createdAt: zod.coerce.date(),
 });
 
@@ -708,6 +728,12 @@ export const UpdatePinBody = zod.object({
   notes: zod.string().nullish(),
   photoUrl: zod.string().nullish(),
   dealId: zod.number().nullish(),
+  residentName: zod.string().nullish(),
+  residentPhone: zod.string().nullish(),
+  markKnocked: zod
+    .boolean()
+    .nullish()
+    .describe("When true, sets lastKnockedAt to now."),
 });
 
 export const UpdatePinResponse = zod.object({
@@ -723,6 +749,15 @@ export const UpdatePinResponse = zod.object({
   notes: zod.string().nullish(),
   photoUrl: zod.string().nullish(),
   dealId: zod.number().nullish(),
+  residentName: zod.string().nullish(),
+  residentPhone: zod.string().nullish(),
+  residentSource: zod
+    .string()
+    .nullish()
+    .describe(
+      "How resident info was obtained — rep (manual), skiptrace (lookup), or null.",
+    ),
+  lastKnockedAt: zod.coerce.date().nullish(),
   createdAt: zod.coerce.date(),
 });
 
@@ -731,6 +766,54 @@ export const UpdatePinResponse = zod.object({
  */
 export const DeletePinParams = zod.object({
   pinId: zod.coerce.number(),
+});
+
+/**
+ * @summary Look up resident name & phone for a pin's address and cache on the pin
+ */
+export const SkipTracePinParams = zod.object({
+  pinId: zod.coerce.number(),
+});
+
+export const SkipTracePinResponse = zod.object({
+  residentName: zod.string().nullish(),
+  residentPhone: zod.string().nullish(),
+  source: zod
+    .string()
+    .describe(
+      "skiptrace when an external provider returned a hit, none when no match.",
+    ),
+  cached: zod
+    .boolean()
+    .describe("True if the result came from a previously stored lookup."),
+});
+
+/**
+ * @summary AI sales-practice chat. Reply role-plays a homeowner; "coaching" is an optional rep tip.
+ */
+export const CoachChatBody = zod.object({
+  scenario: zod
+    .string()
+    .optional()
+    .describe(
+      'Practice scenario (e.g., \"cold-door-pest\", \"objection-price\", \"rebuttal-spouse\").',
+    ),
+  messages: zod.array(
+    zod.object({
+      role: zod.enum(["user", "assistant"]),
+      content: zod.string(),
+    }),
+  ),
+});
+
+export const CoachChatResponse = zod.object({
+  reply: zod.string(),
+  coaching: zod
+    .string()
+    .nullish()
+    .describe(
+      "Optional short coaching note from the assistant on what the rep did well or could improve.",
+    ),
 });
 
 /**
