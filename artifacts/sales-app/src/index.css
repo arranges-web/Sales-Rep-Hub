@@ -237,10 +237,19 @@
   .jt-pop { animation: jt-pop-up 1.6s ease-out forwards; }
 
   @keyframes jt-route-fade {
-    from { opacity: 0; transform: translateY(4px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; transform: translateY(6px) scale(.997); }
+    to   { opacity: 1; transform: translateY(0)   scale(1); }
   }
-  .jt-route-fade { animation: jt-route-fade .25s ease-out both; }
+  .jt-route-fade { animation: jt-route-fade .28s cubic-bezier(.2,.8,.2,1) both; }
+
+  /* Frosted-glass surface used by overlays sitting on top of the map. */
+  .jt-glass {
+    background: rgba(15, 22, 32, 0.62);
+    backdrop-filter: saturate(1.4) blur(12px);
+    -webkit-backdrop-filter: saturate(1.4) blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 12px 40px -12px rgba(0, 0, 0, 0.6);
+  }
 
   .jt-skeleton {
     background: linear-gradient(

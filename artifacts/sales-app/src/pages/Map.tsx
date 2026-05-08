@@ -32,10 +32,12 @@ import {
   Phone,
   User,
   Search,
-  Layers,
   DoorOpen,
   Navigation,
   Loader2,
+  Hash,
+  Plus,
+  Crosshair,
 } from "lucide-react";
 import { AvatarRing } from "@/components/AvatarRing";
 import { BrandHeader } from "@/components/BrandHeader";
@@ -65,24 +67,37 @@ const STATUS_COLORS = {
 // to remind reps to either re-knock or move on.
 const STALE_DAYS = 14;
 
-function pinIcon(color: string, opts: { stale?: boolean; selected?: boolean } = {}) {
+// Zoom high enough that OSM standard tiles render house numbers / address tags.
+const HOUSE_ZOOM = 19;
+
+function pinIcon(
+  color: string,
+  opts: { stale?: boolean; selected?: boolean; status?: string } = {},
+) {
   const ring = opts.selected
-    ? "box-shadow:0 0 0 3px #FFBF00, 0 2px 8px rgba(0,0,0,.5);"
-    : "box-shadow:0 2px 6px rgba(0,0,0,.4);";
+    ? "box-shadow:0 0 0 3px #FFBF00, 0 4px 14px rgba(0,0,0,.55);"
+    : "box-shadow:0 4px 12px rgba(0,0,0,.45);";
   const opacity = opts.stale ? 0.55 : 1;
+  const inner =
+    opts.status === "sold"
+      ? `<svg viewBox="0 0 24 24" width="11" height="11" stroke="${color}" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>`
+      : `<div style="width:8px;height:8px;border-radius:50%;background:${color};"></div>`;
   return L.divIcon({
     className: "jt-pin",
-    html: `<div style="
-      width:30px;height:30px;border-radius:50% 50% 50% 0;
-      background:${color};transform:rotate(-45deg);
-      border:3px solid #fff;${ring}
-      opacity:${opacity};
-      display:flex;align-items:center;justify-content:center;">
-      <div style="width:10px;height:10px;border-radius:50%;background:#fff;transform:rotate(45deg);"></div>
+    html: `<div style="position:relative;width:32px;height:42px;">
+      <div style="
+        position:absolute;left:1px;top:0;width:30px;height:30px;
+        border-radius:50% 50% 50% 0;
+        background:${color};transform:rotate(-45deg);
+        border:2.5px solid #fff;${ring}
+        opacity:${opacity};
+        display:flex;align-items:center;justify-content:center;">
+        <div style="transform:rotate(45deg);display:flex;align-items:center;justify-content:center;background:#fff;width:14px;height:14px;border-radius:50%;">${inner}</div>
+      </div>
     </div>`,
-    iconSize: [30, 30],
-    iconAnchor: [15, 30],
-    popupAnchor: [0, -28],
+    iconSize: [32, 42],
+    iconAnchor: [16, 38],
+    popupAnchor: [0, -34],
   });
 }
 
@@ -174,20 +189,34 @@ function isStale(p: ApiPin): boolean {
   return ms > STALE_DAYS * 24 * 60 * 60 * 1000;
 }
 
-const TILE_LAYERS = {
-  street: {
-    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    attribution: "&copy; OpenStreetMap contributors",
-    maxZoom: 19,
-  },
-  satellite: {
-    // Esri World Imagery (free for non-commercial display use).
-    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-    attribution:
-      "Imagery &copy; Esri, Maxar, Earthstar Geographics, and the GIS User Community",
-    maxZoom: 19,
-  },
-} as const;
+type TileMode = "street" | "hybrid" | "satellite";
+
+const STREET_LAYER = {
+  url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+  attribution: "&copy; OpenStreetMap contributors",
+  maxZoom: 19,
+};
+
+const SAT_LAYER = {
+  url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  attribution:
+    "Imagery &copy; Esri, Maxar, Earthstar Geographics, and the GIS User Community",
+  maxZoom: 19,
+};
+
+// Transparent overlay layers — when stacked on satellite imagery they paint in
+// roads, place names, and (at high zoom) house numbers without blocking pixels.
+const SAT_TRANSPORT_OVERLAY = {
+  url: "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",
+  attribution: "Roads &copy; Esri",
+  maxZoom: 19,
+};
+
+const SAT_PLACES_OVERLAY = {
+  url: "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+  attribution: "Places &copy; Esri",
+  maxZoom: 19,
+};
 
 export default function MapPage() {
   const qc = useQueryClient();
@@ -199,7 +228,8 @@ export default function MapPage() {
   const skipTrace = useSkipTracePin();
 
   const [filter, setFilter] = useState<"all" | "lead" | "sold">("all");
-  const [tileMode, setTileMode] = useState<"street" | "satellite">("street");
+  const [tileMode, setTileMode] = useState<TileMode>("hybrid");
+  const [showHouseNumbers, setShowHouseNumbers] = useState(true);
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState<ApiPin | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -225,9 +255,20 @@ export default function MapPage() {
     [pins, filter],
   );
 
+  const counts = useMemo(() => {
+    const all = pins ?? [];
+    const leads = all.filter((p) => p.status === "lead").length;
+    const sold = all.filter((p) => p.status === "sold").length;
+    const stale = all.filter((p) => isStale(p)).length;
+    return { all: all.length, leads, sold, stale };
+  }, [pins]);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
-  const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const baseLayerRef = useRef<L.TileLayer | null>(null);
+  const transportOverlayRef = useRef<L.TileLayer | null>(null);
+  const placesOverlayRef = useRef<L.TileLayer | null>(null);
+  const houseNumOverlayRef = useRef<L.TileLayer | null>(null);
   const clusterRef = useRef<L.MarkerClusterGroup | null>(null);
   const territoryLayerRef = useRef<L.LayerGroup | null>(null);
 
@@ -238,16 +279,34 @@ export default function MapPage() {
       center: SWFL_CENTER,
       zoom: 11,
       scrollWheelZoom: true,
+      zoomControl: false,
     });
-    const tile = L.tileLayer(TILE_LAYERS.street.url, {
-      attribution: TILE_LAYERS.street.attribution,
-      maxZoom: TILE_LAYERS.street.maxZoom,
+    L.control.zoom({ position: "bottomright" }).addTo(map);
+
+    // Default base = street; we'll swap in the tile-mode effect below.
+    const base = L.tileLayer(STREET_LAYER.url, {
+      attribution: STREET_LAYER.attribution,
+      maxZoom: STREET_LAYER.maxZoom,
     }).addTo(map);
-    tileLayerRef.current = tile;
+    baseLayerRef.current = base;
 
     const cluster = L.markerClusterGroup({
       showCoverageOnHover: false,
       maxClusterRadius: 50,
+      iconCreateFunction: (c) => {
+        const n = c.getChildCount();
+        return L.divIcon({
+          className: "jt-cluster",
+          html: `<div style="
+            width:42px;height:42px;border-radius:50%;
+            background:linear-gradient(135deg,#2EA3F2,#1d8fd8);
+            color:white;font-weight:700;font-size:13px;
+            display:flex;align-items:center;justify-content:center;
+            border:3px solid rgba(255,255,255,.9);
+            box-shadow:0 4px 14px rgba(46,163,242,.5);">${n}</div>`,
+          iconSize: [42, 42],
+        });
+      },
     });
     map.addLayer(cluster);
     clusterRef.current = cluster;
@@ -275,25 +334,79 @@ export default function MapPage() {
     return () => {
       map.remove();
       mapRef.current = null;
-      tileLayerRef.current = null;
+      baseLayerRef.current = null;
+      transportOverlayRef.current = null;
+      placesOverlayRef.current = null;
+      houseNumOverlayRef.current = null;
       clusterRef.current = null;
       territoryLayerRef.current = null;
     };
   }, []);
 
-  // Swap base tile layer when user toggles
+  // Apply tile mode + overlays whenever they change. We tear down and rebuild
+  // the relevant layers so each mode is exactly what it should be.
   useEffect(() => {
     const map = mapRef.current;
-    const old = tileLayerRef.current;
-    if (!map || !old) return;
-    const next = L.tileLayer(TILE_LAYERS[tileMode].url, {
-      attribution: TILE_LAYERS[tileMode].attribution,
-      maxZoom: TILE_LAYERS[tileMode].maxZoom,
-    });
-    next.addTo(map);
-    map.removeLayer(old);
-    tileLayerRef.current = next;
-  }, [tileMode]);
+    if (!map) return;
+
+    // Remove old base
+    if (baseLayerRef.current) {
+      map.removeLayer(baseLayerRef.current);
+      baseLayerRef.current = null;
+    }
+    if (transportOverlayRef.current) {
+      map.removeLayer(transportOverlayRef.current);
+      transportOverlayRef.current = null;
+    }
+    if (placesOverlayRef.current) {
+      map.removeLayer(placesOverlayRef.current);
+      placesOverlayRef.current = null;
+    }
+    if (houseNumOverlayRef.current) {
+      map.removeLayer(houseNumOverlayRef.current);
+      houseNumOverlayRef.current = null;
+    }
+
+    // Choose base imagery
+    if (tileMode === "street") {
+      baseLayerRef.current = L.tileLayer(STREET_LAYER.url, {
+        attribution: STREET_LAYER.attribution,
+        maxZoom: STREET_LAYER.maxZoom,
+      }).addTo(map);
+    } else {
+      baseLayerRef.current = L.tileLayer(SAT_LAYER.url, {
+        attribution: SAT_LAYER.attribution,
+        maxZoom: SAT_LAYER.maxZoom,
+      }).addTo(map);
+
+      if (tileMode === "hybrid") {
+        transportOverlayRef.current = L.tileLayer(SAT_TRANSPORT_OVERLAY.url, {
+          attribution: SAT_TRANSPORT_OVERLAY.attribution,
+          maxZoom: SAT_TRANSPORT_OVERLAY.maxZoom,
+        }).addTo(map);
+        placesOverlayRef.current = L.tileLayer(SAT_PLACES_OVERLAY.url, {
+          attribution: SAT_PLACES_OVERLAY.attribution,
+          maxZoom: SAT_PLACES_OVERLAY.maxZoom,
+        }).addTo(map);
+      }
+    }
+
+    // House-number overlay: standard OSM tiles painted at low opacity over
+    // imagery. Esri's reference layer doesn't expose individual address
+    // numbers, but OSM standard tiles do at zoom ≥18 — overlaying them gives
+    // reps the address tags they need without losing the satellite pixels.
+    if (showHouseNumbers && tileMode !== "street") {
+      const houseNum = L.tileLayer(STREET_LAYER.url, {
+        attribution: STREET_LAYER.attribution,
+        maxZoom: STREET_LAYER.maxZoom,
+        opacity: 0.35,
+        // Only kick in at street-level zooms so we don't muddy the satellite
+        // view at city-wide scales.
+        minZoom: 17,
+      }).addTo(map);
+      houseNumOverlayRef.current = houseNum;
+    }
+  }, [tileMode, showHouseNumbers]);
 
   // Render territories
   useEffect(() => {
@@ -333,11 +446,15 @@ export default function MapPage() {
       const baseColor =
         STATUS_COLORS[p.status as keyof typeof STATUS_COLORS] ?? STATUS_COLORS.lead;
       const m = L.marker([p.latitude, p.longitude], {
-        icon: pinIcon(baseColor, { stale: isStale(p) }),
+        icon: pinIcon(baseColor, { stale: isStale(p), status: p.status }),
       });
       m.on("click", () => {
         setDetail(p);
         setTraceError(null);
+        // Slide the camera in close enough that house numbers render.
+        mapRef.current?.flyTo([p.latitude, p.longitude], HOUSE_ZOOM, {
+          duration: 0.5,
+        });
       });
       cluster.addLayer(m);
     });
@@ -388,72 +505,62 @@ export default function MapPage() {
     qc.invalidateQueries({ queryKey: getListPinsQueryKey() });
   };
 
+  const goToMyLocation = () => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        mapRef.current?.flyTo(
+          [pos.coords.latitude, pos.coords.longitude],
+          HOUSE_ZOOM,
+          { duration: 0.6 },
+        );
+      },
+      () => {},
+      { enableHighAccuracy: true, timeout: 8000 },
+    );
+  };
+
   return (
-    <div className="mx-auto max-w-6xl space-y-5 p-4 sm:p-6 lg:p-8">
+    <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6 lg:p-8">
       <BrandHeader
         title="Canvas Map"
-        subtitle="Tap the map to drop a pin. Tap any pin to see resident info, knock history, and more."
+        subtitle="Tap any house for resident info & phone. Switch to satellite to scout the property before you knock."
         icon={<MapPin className="h-6 w-6" strokeWidth={1.5} />}
         actions={
           <div className="flex flex-wrap items-center gap-1.5">
-            {(["all", "lead", "sold"] as const).map((f) => (
-              <Button
-                key={f}
-                size="sm"
-                variant={filter === f ? "default" : "outline"}
-                onClick={() => setFilter(f)}
-                className={cn(
-                  "rounded-lg capitalize",
-                  filter === f
-                    ? "bg-[#2EA3F2] text-slate-950 hover:bg-[#48b3f6]"
-                    : "border-border",
-                )}
-              >
-                {f}
-              </Button>
-            ))}
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() =>
-                setTileMode((m) => (m === "street" ? "satellite" : "street"))
-              }
-              className="rounded-lg"
-              title={
-                tileMode === "street"
-                  ? "Switch to satellite view"
-                  : "Switch to street view"
-              }
-            >
-              <Layers className="mr-1 h-3.5 w-3.5" />
-              {tileMode === "street" ? "Satellite" : "Street"}
-            </Button>
+            <CountChip label="Leads" value={counts.leads} color="#2EA3F2" />
+            <CountChip label="Sold" value={counts.sold} color="#2C8214" />
+            {counts.stale > 0 && (
+              <CountChip label="Stale" value={counts.stale} color="#FFBF00" />
+            )}
           </div>
         }
       />
 
       {/* Address search bar */}
-      <Card className="p-3">
+      <Card className="p-3 transition-colors duration-200 hover:border-[#2EA3F2]/40">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search any address — fly to it on the map"
-            className="pl-9 rounded-xl"
+            placeholder="Search any address — fly straight to it"
+            className="rounded-xl pl-9 pr-9"
           />
           {searching && (
             <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
           )}
         </div>
         {searchResults.length > 0 && (
-          <div className="mt-2 divide-y divide-border rounded-lg border border-border">
+          <div className="mt-2 divide-y divide-border overflow-hidden rounded-xl border border-border bg-card/80 backdrop-blur">
             {searchResults.map((r) => (
               <button
                 key={`${r.lat}-${r.lon}`}
-                className="flex w-full items-start gap-2 p-2.5 text-left text-sm hover:bg-muted"
+                className="flex w-full items-start gap-2 p-2.5 text-left text-sm transition-colors hover:bg-muted"
                 onClick={() => {
-                  mapRef.current?.flyTo([r.lat, r.lon], 18);
+                  mapRef.current?.flyTo([r.lat, r.lon], HOUSE_ZOOM, {
+                    duration: 0.6,
+                  });
                   setSearchResults([]);
                   setSearchQuery("");
                 }}
@@ -468,7 +575,7 @@ export default function MapPage() {
 
       {/* Drop-pin dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="rounded-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto rounded-2xl">
           <DialogHeader>
             <DialogTitle>Drop a pin</DialogTitle>
           </DialogHeader>
@@ -604,7 +711,7 @@ export default function MapPage() {
 
       {/* House-detail sheet — opens when a pin is tapped */}
       <Dialog open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
-        <DialogContent className="rounded-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto rounded-2xl">
           {detail && (
             <PinDetail
               pin={detail}
@@ -639,8 +746,112 @@ export default function MapPage() {
         </DialogContent>
       </Dialog>
 
-      <Card className="overflow-hidden">
-        <div ref={containerRef} className="h-[480px] w-full" />
+      {/* Map area with floating glass controls */}
+      <Card className="relative overflow-hidden border-border/80 shadow-lg">
+        <div
+          ref={containerRef}
+          className="h-[60vh] min-h-[420px] w-full sm:h-[68vh]"
+        />
+
+        {/* Top-left: tile mode + house numbers */}
+        <div className="pointer-events-none absolute left-3 top-3 z-[500] flex max-w-[calc(100%-1.5rem)] flex-col gap-2">
+          <div className="pointer-events-auto inline-flex rounded-full border border-white/10 bg-slate-950/70 p-1 text-xs font-medium text-slate-100 shadow-xl backdrop-blur-md">
+            {(
+              [
+                { k: "street", label: "Street" },
+                { k: "hybrid", label: "Hybrid" },
+                { k: "satellite", label: "Satellite" },
+              ] as Array<{ k: TileMode; label: string }>
+            ).map((m) => (
+              <button
+                key={m.k}
+                onClick={() => setTileMode(m.k)}
+                className={cn(
+                  "rounded-full px-3 py-1.5 transition-colors",
+                  tileMode === m.k
+                    ? "bg-[#2EA3F2] text-slate-950"
+                    : "text-slate-200 hover:text-white",
+                )}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+
+          {tileMode !== "street" && (
+            <button
+              onClick={() => setShowHouseNumbers((v) => !v)}
+              className={cn(
+                "pointer-events-auto inline-flex w-fit items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium shadow-xl backdrop-blur-md transition-colors",
+                showHouseNumbers
+                  ? "bg-[#2EA3F2] text-slate-950"
+                  : "bg-slate-950/70 text-slate-100 hover:bg-slate-900/80",
+              )}
+              title="Overlay OpenStreetMap address numbers on satellite imagery"
+            >
+              <Hash className="h-3.5 w-3.5" />
+              House numbers {showHouseNumbers ? "on" : "off"}
+            </button>
+          )}
+        </div>
+
+        {/* Top-right: filter chips */}
+        <div className="pointer-events-none absolute right-3 top-3 z-[500] flex flex-wrap justify-end gap-1.5">
+          {(["all", "lead", "sold"] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={cn(
+                "pointer-events-auto rounded-full border px-3 py-1.5 text-xs font-semibold capitalize shadow-xl backdrop-blur-md transition-colors",
+                filter === f
+                  ? "border-transparent bg-[#2EA3F2] text-slate-950"
+                  : "border-white/10 bg-slate-950/70 text-slate-100 hover:bg-slate-900/80",
+              )}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+
+        {/* Bottom-left: legend */}
+        <div className="pointer-events-none absolute bottom-3 left-3 z-[500] flex items-center gap-3 rounded-full border border-white/10 bg-slate-950/70 px-3 py-1.5 text-[11px] text-slate-200 shadow-xl backdrop-blur-md">
+          <Legend color="#2EA3F2" label="Lead" />
+          <Legend color="#2C8214" label="Sold" />
+          <Legend color="#FFBF00" label="Stale" muted />
+        </div>
+
+        {/* Bottom-right: floating action buttons */}
+        <div className="pointer-events-none absolute bottom-20 right-3 z-[500] flex flex-col gap-2">
+          <Button
+            size="icon"
+            className="pointer-events-auto h-11 w-11 rounded-full bg-slate-950/80 text-slate-100 shadow-xl backdrop-blur-md hover:bg-slate-900"
+            variant="ghost"
+            onClick={goToMyLocation}
+            title="Center on my location"
+          >
+            <Crosshair className="h-4 w-4" />
+          </Button>
+          <Button
+            size="icon"
+            className="pointer-events-auto h-12 w-12 rounded-full bg-[#2EA3F2] text-slate-950 shadow-2xl shadow-[#2EA3F2]/40 hover:bg-[#48b3f6]"
+            onClick={() => {
+              const c = mapRef.current?.getCenter() ?? {
+                lat: SWFL_CENTER[0],
+                lng: SWFL_CENTER[1],
+              };
+              setForm((f) => ({
+                ...f,
+                latitude: Number(c.lat.toFixed(6)),
+                longitude: Number(c.lng.toFixed(6)),
+                address: "",
+              }));
+              setOpen(true);
+            }}
+            title="Drop a pin at center"
+          >
+            <Plus className="h-5 w-5" strokeWidth={2.5} />
+          </Button>
+        </div>
       </Card>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -648,7 +859,13 @@ export default function MapPage() {
           const photo = photoServingUrl(p.photoUrl);
           const stale = isStale(p);
           return (
-            <Card key={p.id} className={cn("p-4", stale && "opacity-80")}>
+            <Card
+              key={p.id}
+              className={cn(
+                "p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#2EA3F2]/40 hover:shadow-lg",
+                stale && "opacity-80",
+              )}
+            >
               <div className="flex items-start gap-3">
                 <div
                   className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
@@ -723,7 +940,11 @@ export default function MapPage() {
                       variant="outline"
                       className="rounded-xl"
                       onClick={() => {
-                        mapRef.current?.flyTo([p.latitude, p.longitude], 18);
+                        mapRef.current?.flyTo(
+                          [p.latitude, p.longitude],
+                          HOUSE_ZOOM,
+                          { duration: 0.5 },
+                        );
                         setDetail(p);
                       }}
                     >
@@ -764,6 +985,54 @@ export default function MapPage() {
         })}
       </div>
     </div>
+  );
+}
+
+function CountChip({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: number;
+  color: string;
+}) {
+  return (
+    <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/60 px-2.5 py-1 text-xs">
+      <span
+        aria-hidden
+        className="inline-block h-2 w-2 rounded-full"
+        style={{ background: color }}
+      />
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-stat text-sm font-bold" style={{ color }}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function Legend({
+  color,
+  label,
+  muted = false,
+}: {
+  color: string;
+  label: string;
+  muted?: boolean;
+}) {
+  return (
+    <span className={cn("inline-flex items-center gap-1.5", muted && "opacity-90")}>
+      <span
+        aria-hidden
+        className="inline-block h-2 w-2 rounded-full"
+        style={{
+          background: color,
+          boxShadow: `0 0 0 1.5px rgba(255,255,255,.85)`,
+        }}
+      />
+      {label}
+    </span>
   );
 }
 
@@ -821,7 +1090,7 @@ function PinDetail({
       </div>
 
       {/* Resident / phone block */}
-      <div className="rounded-xl border border-border bg-card/50 p-3 space-y-2">
+      <div className="space-y-2 rounded-xl border border-border bg-card/50 p-3">
         <div className="flex items-center justify-between">
           <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Resident
@@ -884,7 +1153,7 @@ function PinDetail({
             {pin.residentPhone ? (
               <a
                 href={`tel:${pin.residentPhone}`}
-                className="flex items-center gap-2 rounded-lg bg-[#2EA3F2]/10 px-2 py-1.5 text-sm font-semibold text-[#2EA3F2] hover:bg-[#2EA3F2]/20"
+                className="flex items-center gap-2 rounded-lg bg-[#2EA3F2]/10 px-2 py-1.5 text-sm font-semibold text-[#2EA3F2] transition-colors hover:bg-[#2EA3F2]/20"
               >
                 <Phone className="h-4 w-4" />
                 <span>{pin.residentPhone}</span>
@@ -964,3 +1233,4 @@ function PinDetail({
     </div>
   );
 }
+
