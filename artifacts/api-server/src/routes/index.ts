@@ -11,6 +11,7 @@ import badgesRouter from "./badges";
 import adminRouter from "./admin";
 import storageRouter from "./storage";
 import coachRouter from "./coach";
+import messagesRouter from "./messages";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(rewardsRouter);
 router.use(badgesRouter);
 router.use(adminRouter);
 router.use(coachRouter);
+router.use(messagesRouter);
 
 export default router;

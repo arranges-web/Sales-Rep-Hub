@@ -817,6 +817,124 @@ export const CoachChatResponse = zod.object({
 });
 
 /**
+ * @summary List the current user's DMs and group chats, newest first.
+ */
+export const ListConversationsResponseItem = zod.object({
+  id: zod.number(),
+  type: zod.enum(["dm", "group"]),
+  name: zod.string().nullish(),
+  createdBy: zod.number(),
+  createdAt: zod.coerce.date(),
+  lastMessageAt: zod.coerce.date(),
+  members: zod.array(
+    zod.object({
+      userId: zod.number(),
+      name: zod.string(),
+      avatarUrl: zod.string().nullish(),
+      accentColor: zod.string().nullish(),
+    }),
+  ),
+  lastMessagePreview: zod.string().nullish(),
+  unreadCount: zod.number(),
+});
+export const ListConversationsResponse = zod.array(
+  ListConversationsResponseItem,
+);
+
+/**
+ * @summary Start a DM with one user or create a group with multiple members.
+ */
+export const CreateConversationBody = zod.object({
+  type: zod.enum(["dm", "group"]),
+  memberIds: zod
+    .array(zod.number())
+    .describe("Other users to include. Current user is added automatically."),
+  name: zod.string().nullish().describe("Group name (ignored for DMs)."),
+});
+
+export const CreateConversationResponse = zod.object({
+  id: zod.number(),
+  type: zod.enum(["dm", "group"]),
+  name: zod.string().nullish(),
+  createdBy: zod.number(),
+  createdAt: zod.coerce.date(),
+  lastMessageAt: zod.coerce.date(),
+  members: zod.array(
+    zod.object({
+      userId: zod.number(),
+      name: zod.string(),
+      avatarUrl: zod.string().nullish(),
+      accentColor: zod.string().nullish(),
+    }),
+  ),
+  lastMessagePreview: zod.string().nullish(),
+  unreadCount: zod.number(),
+});
+
+/**
+ * @summary Fetch a single conversation with its member list.
+ */
+export const GetConversationParams = zod.object({
+  conversationId: zod.coerce.number(),
+});
+
+export const GetConversationResponse = zod.object({
+  id: zod.number(),
+  type: zod.enum(["dm", "group"]),
+  name: zod.string().nullish(),
+  createdBy: zod.number(),
+  createdAt: zod.coerce.date(),
+  lastMessageAt: zod.coerce.date(),
+  members: zod.array(
+    zod.object({
+      userId: zod.number(),
+      name: zod.string(),
+      avatarUrl: zod.string().nullish(),
+      accentColor: zod.string().nullish(),
+    }),
+  ),
+  lastMessagePreview: zod.string().nullish(),
+  unreadCount: zod.number(),
+});
+
+/**
+ * @summary List messages in a conversation, oldest first.
+ */
+export const ListMessagesParams = zod.object({
+  conversationId: zod.coerce.number(),
+});
+
+export const ListMessagesResponseItem = zod.object({
+  id: zod.number(),
+  conversationId: zod.number(),
+  authorId: zod.number(),
+  authorName: zod.string(),
+  authorAvatarUrl: zod.string().nullish(),
+  authorAccentColor: zod.string().nullish(),
+  content: zod.string(),
+  createdAt: zod.coerce.date(),
+});
+export const ListMessagesResponse = zod.array(ListMessagesResponseItem);
+
+/**
+ * @summary Post a message in a conversation.
+ */
+export const SendMessageParams = zod.object({
+  conversationId: zod.coerce.number(),
+});
+
+export const SendMessageBody = zod.object({
+  content: zod.string(),
+});
+
+/**
+ * @summary Mark all messages up to now as read for the current user.
+ */
+export const MarkConversationReadParams = zod.object({
+  conversationId: zod.coerce.number(),
+});
+
+/**
  * @summary List all territories
  */
 export const ListTerritoriesResponseItem = zod.object({

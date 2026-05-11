@@ -19,6 +19,7 @@ import {
   VolumeX,
   Flame,
   Bot,
+  MessageCircle,
 } from "lucide-react";
 import { isSoundEnabled, onSoundChanged, setSoundEnabled } from "@/lib/sound";
 import {
@@ -32,6 +33,7 @@ import {
   getListRewardsQueryKey,
   getListBadgesQueryKey,
   getListIncentiveTiersQueryKey,
+  getListConversationsQueryKey,
   getMe,
   getLeaderboard,
   getLeaderboardSummary,
@@ -43,6 +45,8 @@ import {
   listIncentiveTiers,
   listTrainingResources,
   listDeals,
+  listConversations,
+  useListConversations,
 } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 import { BADGES_ME_QUERY_KEY, fetchBadgesMe } from "@/lib/badgesMe";
@@ -57,6 +61,7 @@ const NAV_ITEMS = [
   { href: "/feed", label: "Hype Feed", icon: MessageSquareHeart },
   { href: "/map", label: "Canvassing Map", icon: MapIcon },
   { href: "/deals", label: "My Deals", icon: Briefcase },
+  { href: "/messages", label: "Messages", icon: MessageCircle },
   { href: "/rewards", label: "Incentive Vault", icon: Gift },
   { href: "/training", label: "Training Vault", icon: GraduationCap },
   { href: "/coach", label: "Sales Coach", icon: Bot },
@@ -91,6 +96,9 @@ const PREFETCHERS: Record<string, Prefetcher> = {
   "/training": () => [
     { queryKey: ["/api/training"] as const, queryFn: () => listTrainingResources() },
   ],
+  "/messages": () => [
+    { queryKey: getListConversationsQueryKey(), queryFn: () => listConversations() },
+  ],
   "/profile": () => [
     // Profile mostly reuses cached data (getMe, leaderboard, feed, pins)
     // populated by other tabs. Pre-warming again here makes a cold profile
@@ -112,6 +120,19 @@ export function AppShell({ children }: { children: ReactNode }) {
   // Gate on auth-ready so AppShell doesn't fire unauthenticated requests that
   // immediately 401 and force a re-fetch once Clerk resolves.
   const { data: me } = useQuery({ ...getGetMeQueryOptions(), enabled: authReady });
+  // Poll conversations for the nav unread badge. The Messages page polls more
+  // aggressively when open; this is the always-on heartbeat for the side rail.
+  const { data: conversations } = useListConversations({
+    query: {
+      queryKey: getListConversationsQueryKey(),
+      enabled: authReady,
+      refetchInterval: 30_000,
+    },
+  });
+  const totalUnread = (conversations ?? []).reduce(
+    (sum, c) => sum + (c.unreadCount ?? 0),
+    0,
+  );
   const [mobileOpen, setMobileOpen] = useState(false);
   const [soundOn, setSoundOn] = useState(isSoundEnabled());
   useEffect(() => onSoundChanged(setSoundOn), []);
@@ -153,12 +174,14 @@ export function AppShell({ children }: { children: ReactNode }) {
     Icon,
     active,
     accentColor = "#2EA3F2",
+    badge,
   }: {
     href: string;
     label: string;
     Icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
     active: boolean;
     accentColor?: string;
+    badge?: number;
   }) => (
     <Link
       href={href}
@@ -167,10 +190,10 @@ export function AppShell({ children }: { children: ReactNode }) {
       onFocus={() => prefetchRoute(href)}
       onTouchStart={() => prefetchRoute(href)}
       className={cn(
-        "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+        "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
         active
-          ? "bg-sidebar-accent text-foreground"
-          : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-foreground",
+          ? "jt-nav-active text-foreground"
+          : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-foreground hover:translate-x-[1px]",
       )}
     >
       {active && (
@@ -185,25 +208,37 @@ export function AppShell({ children }: { children: ReactNode }) {
         strokeWidth={active ? 2.25 : 1.75}
       />
       <span className="truncate">{label}</span>
+      {badge != null && badge > 0 && (
+        <span className="ml-auto inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#2EA3F2] px-1.5 text-[10px] font-bold text-slate-950">
+          {badge > 9 ? "9+" : badge}
+        </span>
+      )}
     </Link>
   );
 
   const Sidebar = (
-    <aside className="flex h-full w-56 flex-col border-r border-sidebar-border bg-sidebar">
-      <div className="flex items-center gap-2 border-b border-sidebar-border px-4 py-4">
+    <aside className="relative flex h-full w-56 flex-col border-r border-sidebar-border bg-sidebar">
+      {/* Subtle accent glow behind the lockup */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-0 top-0 h-24 w-full bg-[radial-gradient(120%_60%_at_0%_0%,rgba(46,163,242,0.18),transparent_60%)]"
+      />
+      <div className="relative flex items-center gap-2 border-b border-sidebar-border px-4 py-4">
         <Logo className="h-8" />
         <div className="ml-auto flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
           <span
-            className="inline-block h-1.5 w-1.5 rounded-full bg-[#2EA3F2]"
+            className="inline-block h-1.5 w-1.5 rounded-full bg-[#2EA3F2] shadow-[0_0_8px_rgba(46,163,242,.7)]"
             aria-hidden
           />
           SWFL
         </div>
       </div>
 
-      <nav className="flex-1 space-y-0.5 overflow-y-auto p-2">
-        <div className="px-3 pb-1.5 pt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-          Workspace
+      <nav className="relative flex-1 space-y-0.5 overflow-y-auto p-2">
+        <div className="flex items-center gap-2 px-3 pb-1.5 pt-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          <span aria-hidden className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
+          <span>Workspace</span>
+          <span aria-hidden className="h-px flex-1 bg-gradient-to-l from-border to-transparent" />
         </div>
         {NAV_ITEMS.map((item) => {
           const active =
@@ -215,13 +250,16 @@ export function AppShell({ children }: { children: ReactNode }) {
               label={item.label}
               Icon={item.icon}
               active={active}
+              badge={item.href === "/messages" ? totalUnread : undefined}
             />
           );
         })}
         {isAdmin && (
           <>
-            <div className="px-3 pb-1.5 pt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-              Admin
+            <div className="mt-1 flex items-center gap-2 px-3 pb-1.5 pt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              <span aria-hidden className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
+              <span>Admin</span>
+              <span aria-hidden className="h-px flex-1 bg-gradient-to-l from-border to-transparent" />
             </div>
             <NavItem
               href="/admin"

@@ -251,6 +251,46 @@
     box-shadow: 0 12px 40px -12px rgba(0, 0, 0, 0.6);
   }
 
+  /* Brand-gradient text — use sparingly for page-defining numerals or
+     hero words. Falls back to plain foreground on browsers that can't
+     do background-clip:text. */
+  .jt-brand-gradient {
+    background-image: linear-gradient(135deg, #2EA3F2 0%, #6cc8ff 45%, #2C8214 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Animated background blob — paired with absolute positioning gives a
+     premium hero glow without leaning on extra DOM. */
+  @keyframes jt-orbit {
+    0%   { transform: translate3d(0, 0, 0) scale(1); }
+    50%  { transform: translate3d(6%, -4%, 0) scale(1.08); }
+    100% { transform: translate3d(0, 0, 0) scale(1); }
+  }
+  .jt-orbit {
+    animation: jt-orbit 14s ease-in-out infinite;
+    will-change: transform;
+  }
+
+  /* Polished focus ring used by anchors/buttons that opt-in. Keyboard-only
+     thanks to :focus-visible — won't fire on mouse clicks. */
+  .jt-focus:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px hsl(var(--background)),
+      0 0 0 4px rgba(46, 163, 242, 0.7);
+    border-radius: 0.5rem;
+  }
+
+  /* Premium nav-item active state: soft inner light + accent rail. */
+  .jt-nav-active {
+    background:
+      linear-gradient(90deg, rgba(46,163,242,0.14), rgba(46,163,242,0) 80%),
+      hsl(var(--sidebar-accent));
+    box-shadow: inset 0 0 0 1px rgba(46,163,242,0.18);
+  }
+
   .jt-skeleton {
     background: linear-gradient(
       90deg,

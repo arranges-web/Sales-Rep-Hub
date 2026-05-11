@@ -187,6 +187,51 @@ export const pointConfigsTable = pgTable("point_configs", {
   label: text("label").notNull(),
 });
 
+export const conversationsTable = pgTable(
+  "conversations",
+  {
+    id: serial("id").primaryKey(),
+    type: text("type").notNull(), // 'dm' | 'group'
+    name: text("name"), // group name (optional even for groups)
+    createdBy: integer("created_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    lastMessageAt: timestamp("last_message_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    typeIdx: index("conversations_type_idx").on(t.type),
+  }),
+);
+
+export const conversationMembersTable = pgTable(
+  "conversation_members",
+  {
+    id: serial("id").primaryKey(),
+    conversationId: integer("conversation_id").notNull(),
+    userId: integer("user_id").notNull(),
+    joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
+    lastReadAt: timestamp("last_read_at", { withTimezone: true }),
+  },
+  (t) => ({
+    convoIdx: index("conv_members_convo_idx").on(t.conversationId),
+    userIdx: index("conv_members_user_idx").on(t.userId),
+    uniq: uniqueIndex("conv_members_unique_idx").on(t.conversationId, t.userId),
+  }),
+);
+
+export const messagesTable = pgTable(
+  "messages",
+  {
+    id: serial("id").primaryKey(),
+    conversationId: integer("conversation_id").notNull(),
+    authorId: integer("author_id").notNull(),
+    content: text("content").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    convoIdx: index("messages_convo_idx").on(t.conversationId),
+  }),
+);
+
 export const trainingResourcesTable = pgTable("training_resources", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
@@ -212,3 +257,6 @@ export type Badge = typeof badgesTable.$inferSelect;
 export type IncentiveTier = typeof incentiveTiersTable.$inferSelect;
 export type PointConfig = typeof pointConfigsTable.$inferSelect;
 export type TrainingResource = typeof trainingResourcesTable.$inferSelect;
+export type Conversation = typeof conversationsTable.$inferSelect;
+export type ConversationMember = typeof conversationMembersTable.$inferSelect;
+export type Message = typeof messagesTable.$inferSelect;
