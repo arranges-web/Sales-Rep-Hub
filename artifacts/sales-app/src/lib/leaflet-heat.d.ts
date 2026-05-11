@@ -2,6 +2,9 @@
 declare module "leaflet.heat" {
   // Side-effect import: attaches L.heatLayer to the leaflet namespace.
 }
+declare module "leaflet.heat/dist/leaflet-heat.js" {
+  // Side-effect import alias for the same plugin.
+}
 
 import "leaflet";
 

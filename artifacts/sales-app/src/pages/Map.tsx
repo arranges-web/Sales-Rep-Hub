@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet.markercluster";
-import "leaflet.heat";
+// Pin the explicit file path — leaflet.heat ships no `exports` field, so
+// Vite's default resolution can fail in some module-graph configurations.
+import "leaflet.heat/dist/leaflet-heat.js";
 import type {} from "leaflet.markercluster";
 import { findHotspots, HOTSPOT_TYPE_META, type Hotspot } from "@/lib/opportunity";
 import {
