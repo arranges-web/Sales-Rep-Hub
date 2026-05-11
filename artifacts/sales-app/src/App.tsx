@@ -32,6 +32,7 @@ import RewardsPage from "@/pages/Rewards";
 import TrainingPage from "@/pages/Training";
 import SalesCoachPage from "@/pages/SalesCoach";
 import MessagesPage from "@/pages/Messages";
+import OpportunitiesPage from "@/pages/Opportunities";
 import DealsPage from "@/pages/Deals";
 import ProfilePage from "@/pages/Profile";
 import AdminPage from "@/pages/Admin";
@@ -227,6 +228,9 @@ function ClerkProviderWithRoutes() {
             </Route>
             <Route path="/map">
               <Protected><MapPage /></Protected>
+            </Route>
+            <Route path="/opportunities">
+              <Protected><OpportunitiesPage /></Protected>
             </Route>
             <Route path="/rewards">
               <Protected><RewardsPage /></Protected>
