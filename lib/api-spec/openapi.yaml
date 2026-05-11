@@ -28,6 +28,8 @@ tags:
     description: Admin operations
   - name: coach
     description: AI sales-practice chat
+  - name: messages
+    description: Private DMs and group chats
   - name: Storage
     description: Object storage upload and serving endpoints.
 
@@ -675,6 +677,122 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+
+  /conversations:
+    get:
+      operationId: listConversations
+      tags: [messages]
+      summary: List the current user's DMs and group chats, newest first.
+      responses:
+        "200":
+          description: Conversations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Conversation"
+    post:
+      operationId: createConversation
+      tags: [messages]
+      summary: Start a DM with one user or create a group with multiple members.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateConversationBody"
+      responses:
+        "200":
+          description: Conversation (either created or the existing DM).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+
+  /conversations/{conversationId}:
+    get:
+      operationId: getConversation
+      tags: [messages]
+      summary: Fetch a single conversation with its member list.
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Conversation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /conversations/{conversationId}/messages:
+    get:
+      operationId: listMessages
+      tags: [messages]
+      summary: List messages in a conversation, oldest first.
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChatMessage"
+    post:
+      operationId: sendMessage
+      tags: [messages]
+      summary: Post a message in a conversation.
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendMessageBody"
+      responses:
+        "201":
+          description: Created message
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatMessage"
+
+  /conversations/{conversationId}/read:
+    post:
+      operationId: markConversationRead
+      tags: [messages]
+      summary: Mark all messages up to now as read for the current user.
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Marked read
 
   /territories:
     get:
@@ -1708,6 +1826,110 @@ components:
           description: Optional short coaching note from the assistant on what the rep did well or could improve.
       required:
         - reply
+
+    ConversationMemberSummary:
+      type: object
+      properties:
+        userId:
+          type: integer
+        name:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+        accentColor:
+          type: ["string", "null"]
+      required:
+        - userId
+        - name
+
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [dm, group]
+        name:
+          type: ["string", "null"]
+        createdBy:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        lastMessageAt:
+          type: string
+          format: date-time
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConversationMemberSummary"
+        lastMessagePreview:
+          type: ["string", "null"]
+        unreadCount:
+          type: integer
+      required:
+        - id
+        - type
+        - createdBy
+        - createdAt
+        - lastMessageAt
+        - members
+        - unreadCount
+
+    CreateConversationBody:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [dm, group]
+        memberIds:
+          type: array
+          items:
+            type: integer
+          description: Other users to include. Current user is added automatically.
+        name:
+          type: ["string", "null"]
+          description: Group name (ignored for DMs).
+      required:
+        - type
+        - memberIds
+
+    ChatMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+        conversationId:
+          type: integer
+        authorId:
+          type: integer
+        authorName:
+          type: string
+        authorAvatarUrl:
+          type: ["string", "null"]
+        authorAccentColor:
+          type: ["string", "null"]
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - conversationId
+        - authorId
+        - authorName
+        - content
+        - createdAt
+
+    SendMessageBody:
+      type: object
+      properties:
+        content:
+          type: string
+      required:
+        - content
 
     Territory:
       type: object

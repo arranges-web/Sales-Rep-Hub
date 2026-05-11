@@ -481,6 +481,73 @@ export interface CoachChatResponse {
   coaching?: string | null;
 }
 
+export interface ConversationMemberSummary {
+  userId: number;
+  name: string;
+  /** @nullable */
+  avatarUrl?: string | null;
+  /** @nullable */
+  accentColor?: string | null;
+}
+
+export type ConversationType =
+  (typeof ConversationType)[keyof typeof ConversationType];
+
+export const ConversationType = {
+  dm: "dm",
+  group: "group",
+} as const;
+
+export interface Conversation {
+  id: number;
+  type: ConversationType;
+  /** @nullable */
+  name?: string | null;
+  createdBy: number;
+  createdAt: string;
+  lastMessageAt: string;
+  members: ConversationMemberSummary[];
+  /** @nullable */
+  lastMessagePreview?: string | null;
+  unreadCount: number;
+}
+
+export type CreateConversationBodyType =
+  (typeof CreateConversationBodyType)[keyof typeof CreateConversationBodyType];
+
+export const CreateConversationBodyType = {
+  dm: "dm",
+  group: "group",
+} as const;
+
+export interface CreateConversationBody {
+  type: CreateConversationBodyType;
+  /** Other users to include. Current user is added automatically. */
+  memberIds: number[];
+  /**
+   * Group name (ignored for DMs).
+   * @nullable
+   */
+  name?: string | null;
+}
+
+export interface ChatMessage {
+  id: number;
+  conversationId: number;
+  authorId: number;
+  authorName: string;
+  /** @nullable */
+  authorAvatarUrl?: string | null;
+  /** @nullable */
+  authorAccentColor?: string | null;
+  content: string;
+  createdAt: string;
+}
+
+export interface SendMessageBody {
+  content: string;
+}
+
 export interface Territory {
   id: number;
   name: string;
