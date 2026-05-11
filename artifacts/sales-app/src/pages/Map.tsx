@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet.markercluster";
+import "leaflet.heat";
 import type {} from "leaflet.markercluster";
+import { findHotspots, HOTSPOT_TYPE_META, type Hotspot } from "@/lib/opportunity";
 import {
   useListPins,
   useCreatePin,
@@ -38,6 +40,9 @@ import {
   Hash,
   Plus,
   Crosshair,
+  Flame,
+  Target,
+  TrendingUp,
 } from "lucide-react";
 import { AvatarRing } from "@/components/AvatarRing";
 import { BrandHeader } from "@/components/BrandHeader";
@@ -230,6 +235,10 @@ export default function MapPage() {
   const [filter, setFilter] = useState<"all" | "lead" | "sold">("all");
   const [tileMode, setTileMode] = useState<TileMode>("hybrid");
   const [showHouseNumbers, setShowHouseNumbers] = useState(true);
+  const [showHeatmap, setShowHeatmap] = useState(false);
+  const [showHotspots, setShowHotspots] = useState(true);
+  const [hotspotsOpen, setHotspotsOpen] = useState(false);
+  const [activeHotspot, setActiveHotspot] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState<ApiPin | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -271,6 +280,10 @@ export default function MapPage() {
   const houseNumOverlayRef = useRef<L.TileLayer | null>(null);
   const clusterRef = useRef<L.MarkerClusterGroup | null>(null);
   const territoryLayerRef = useRef<L.LayerGroup | null>(null);
+  const heatLayerRef = useRef<L.HeatLayer | null>(null);
+  const hotspotsLayerRef = useRef<L.LayerGroup | null>(null);
+
+  const hotspots = useMemo(() => findHotspots(pins).slice(0, 10), [pins]);
 
   // Init map once
   useEffect(() => {
@@ -314,6 +327,10 @@ export default function MapPage() {
     const territoryLayer = L.layerGroup().addTo(map);
     territoryLayerRef.current = territoryLayer;
 
+    // Hotspot rectangles live below pins so taps still fall through to markers.
+    const hotspotsLayer = L.layerGroup().addTo(map);
+    hotspotsLayerRef.current = hotspotsLayer;
+
     map.on("click", async (e) => {
       const { lat, lng } = e.latlng;
       const address = await reverseGeocode(lat, lng);
@@ -340,8 +357,99 @@ export default function MapPage() {
       houseNumOverlayRef.current = null;
       clusterRef.current = null;
       territoryLayerRef.current = null;
+      hotspotsLayerRef.current = null;
+      heatLayerRef.current = null;
     };
   }, []);
+
+  // Heatmap layer — rebuild whenever pins change or visibility toggles.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (heatLayerRef.current) {
+      map.removeLayer(heatLayerRef.current);
+      heatLayerRef.current = null;
+    }
+    if (!showHeatmap || !pins || pins.length === 0) return;
+    // Weight sold pins heavier so the heat reveals proven blocks.
+    const points: Array<[number, number, number]> = pins.map((p) => [
+      p.latitude,
+      p.longitude,
+      p.status === "sold" ? 1.0 : 0.55,
+    ]);
+    const layer = L.heatLayer(points, {
+      radius: 28,
+      blur: 22,
+      maxZoom: 17,
+      minOpacity: 0.35,
+      gradient: {
+        0.2: "#2EA3F2",
+        0.45: "#48b3f6",
+        0.7: "#FFBF00",
+        0.9: "#ff7a2d",
+        1.0: "#ef4444",
+      },
+    });
+    layer.addTo(map);
+    heatLayerRef.current = layer;
+  }, [showHeatmap, pins]);
+
+  // Hotspot rectangles — render the top opportunity cells over the map.
+  useEffect(() => {
+    const layer = hotspotsLayerRef.current;
+    if (!layer) return;
+    layer.clearLayers();
+    if (!showHotspots) return;
+    hotspots.forEach((h, i) => {
+      const meta = HOTSPOT_TYPE_META[h.type];
+      const isActive = activeHotspot === h.key;
+      const rank = i + 1;
+      L.rectangle(
+        [
+          [h.south, h.west],
+          [h.north, h.east],
+        ],
+        {
+          color: meta.color,
+          weight: isActive ? 3 : 1.5,
+          opacity: isActive ? 0.95 : 0.65,
+          fillColor: meta.color,
+          fillOpacity: isActive ? 0.22 : 0.1,
+          interactive: false,
+        },
+      ).addTo(layer);
+
+      // Rank tag at the cell centroid — make the top hotspots scannable
+      // even when zoomed out.
+      const tag = L.divIcon({
+        className: "jt-hotspot-tag",
+        html: `<div style="
+            display:flex;align-items:center;gap:4px;
+            padding:2px 8px;border-radius:999px;
+            background:${meta.color};color:#0c1219;
+            font-weight:800;font-size:11px;letter-spacing:.02em;
+            box-shadow:0 4px 14px rgba(0,0,0,.45);
+            border:1.5px solid rgba(255,255,255,.85);
+            white-space:nowrap;">
+            <span>#${rank}</span>
+            <span style="opacity:.75;font-weight:700">${meta.label}</span>
+          </div>`,
+        iconSize: [80, 22],
+        iconAnchor: [40, 11],
+      });
+      L.marker([h.centerLat, h.centerLng], {
+        icon: tag,
+        interactive: true,
+        keyboard: false,
+        bubblingMouseEvents: false,
+      })
+        .on("click", () => {
+          setActiveHotspot(h.key);
+          setHotspotsOpen(true);
+        })
+        .addTo(layer);
+    });
+  }, [hotspots, showHotspots, activeHotspot]);
 
   // Apply tile mode + overlays whenever they change. We tear down and rebuild
   // the relevant layers so each mode is exactly what it should be.
@@ -503,6 +611,19 @@ export default function MapPage() {
   const handleMarkKnocked = async (pinId: number) => {
     await update.mutateAsync({ pinId, data: { markKnocked: true } });
     qc.invalidateQueries({ queryKey: getListPinsQueryKey() });
+  };
+
+  const flyToHotspot = (h: Hotspot) => {
+    const map = mapRef.current;
+    if (!map) return;
+    setActiveHotspot(h.key);
+    map.fitBounds(
+      [
+        [h.south, h.west],
+        [h.north, h.east],
+      ],
+      { padding: [40, 40], maxZoom: 18, duration: 0.6, animate: true },
+    );
   };
 
   const goToMyLocation = () => {
@@ -793,6 +914,32 @@ export default function MapPage() {
               House numbers {showHouseNumbers ? "on" : "off"}
             </button>
           )}
+          <button
+            onClick={() => setShowHeatmap((v) => !v)}
+            className={cn(
+              "pointer-events-auto inline-flex w-fit items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium shadow-xl backdrop-blur-md transition-colors",
+              showHeatmap
+                ? "bg-[#ff7a2d] text-slate-950"
+                : "bg-slate-950/70 text-slate-100 hover:bg-slate-900/80",
+            )}
+            title="Show density heatmap of pins"
+          >
+            <Flame className="h-3.5 w-3.5" />
+            Heatmap {showHeatmap ? "on" : "off"}
+          </button>
+          <button
+            onClick={() => setShowHotspots((v) => !v)}
+            className={cn(
+              "pointer-events-auto inline-flex w-fit items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium shadow-xl backdrop-blur-md transition-colors",
+              showHotspots
+                ? "bg-[#FFBF00] text-slate-950"
+                : "bg-slate-950/70 text-slate-100 hover:bg-slate-900/80",
+            )}
+            title="Highlight the top opportunity blocks"
+          >
+            <Target className="h-3.5 w-3.5" />
+            Hotspots {showHotspots ? "on" : "off"}
+          </button>
         </div>
 
         {/* Top-right: filter chips */}
@@ -822,6 +969,19 @@ export default function MapPage() {
 
         {/* Bottom-right: floating action buttons */}
         <div className="pointer-events-none absolute bottom-20 right-3 z-[500] flex flex-col gap-2">
+          {hotspots.length > 0 && (
+            <Button
+              size="icon"
+              className="pointer-events-auto h-11 w-11 rounded-full bg-[#FFBF00] text-slate-950 shadow-xl shadow-[#FFBF00]/40 hover:bg-[#ffcd33]"
+              onClick={() => {
+                flyToHotspot(hotspots[0]!);
+                setHotspotsOpen(true);
+              }}
+              title={`Fly to top hotspot — ${hotspots[0]!.label}`}
+            >
+              <Flame className="h-4 w-4" />
+            </Button>
+          )}
           <Button
             size="icon"
             className="pointer-events-auto h-11 w-11 rounded-full bg-slate-950/80 text-slate-100 shadow-xl backdrop-blur-md hover:bg-slate-900"
@@ -852,6 +1012,95 @@ export default function MapPage() {
             <Plus className="h-5 w-5" strokeWidth={2.5} />
           </Button>
         </div>
+
+        {/* Hotspots panel — slide-in from the right */}
+        {hotspotsOpen && (
+          <div className="pointer-events-auto absolute right-3 top-16 z-[600] flex max-h-[calc(100%-7rem)] w-[300px] max-w-[calc(100%-1.5rem)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-slate-950/85 text-slate-100 shadow-2xl backdrop-blur-md">
+            <div className="flex items-center justify-between gap-2 border-b border-white/10 px-3 py-2.5">
+              <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider">
+                <TrendingUp className="h-3.5 w-3.5 text-[#FFBF00]" />
+                Top hotspots
+              </div>
+              <button
+                onClick={() => setHotspotsOpen(false)}
+                className="rounded-full p-1 text-slate-300 hover:bg-white/10"
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+            <div className="overflow-y-auto p-2">
+              {hotspots.length === 0 ? (
+                <p className="p-2 text-xs text-slate-400">
+                  Drop a few pins and we'll surface the highest-opportunity blocks.
+                </p>
+              ) : (
+                hotspots.map((h, i) => {
+                  const meta = HOTSPOT_TYPE_META[h.type];
+                  const active = activeHotspot === h.key;
+                  return (
+                    <button
+                      key={h.key}
+                      onClick={() => flyToHotspot(h)}
+                      className={cn(
+                        "mb-1.5 flex w-full items-start gap-2 rounded-xl border p-2.5 text-left transition-colors",
+                        active
+                          ? "border-[#FFBF00]/50 bg-[#FFBF00]/10"
+                          : "border-white/5 bg-white/5 hover:bg-white/10",
+                      )}
+                    >
+                      <div
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-extrabold text-slate-950"
+                        style={{ background: meta.color }}
+                      >
+                        {i + 1}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="truncate text-sm font-semibold">
+                            {h.label}
+                          </span>
+                          <span
+                            className="rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide"
+                            style={{
+                              color: meta.color,
+                              background: `${meta.color}22`,
+                            }}
+                          >
+                            {meta.label}
+                          </span>
+                        </div>
+                        <div className="mt-0.5 text-[11px] leading-snug text-slate-300">
+                          {h.reason}
+                        </div>
+                        <div className="mt-1 flex items-center gap-2 text-[10px] text-slate-400">
+                          <span>{h.leadCount} leads</span>
+                          <span>·</span>
+                          <span>{h.soldCount} sold</span>
+                          <span>·</span>
+                          <span className="font-stat font-bold text-slate-200">
+                            score {h.score.toFixed(1)}
+                          </span>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Persistent "Show hotspots" tab when panel closed */}
+        {!hotspotsOpen && hotspots.length > 0 && (
+          <button
+            onClick={() => setHotspotsOpen(true)}
+            className="pointer-events-auto absolute right-3 top-16 z-[600] inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-950/80 px-3 py-1.5 text-xs font-semibold text-slate-100 shadow-xl backdrop-blur-md hover:bg-slate-900"
+          >
+            <TrendingUp className="h-3.5 w-3.5 text-[#FFBF00]" />
+            {hotspots.length} hotspot{hotspots.length === 1 ? "" : "s"}
+          </button>
+        )}
       </Card>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

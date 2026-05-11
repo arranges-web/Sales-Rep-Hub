@@ -20,6 +20,7 @@ import {
   Flame,
   Bot,
   MessageCircle,
+  TrendingUp,
 } from "lucide-react";
 import { isSoundEnabled, onSoundChanged, setSoundEnabled } from "@/lib/sound";
 import {
@@ -60,6 +61,7 @@ const NAV_ITEMS = [
   { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
   { href: "/feed", label: "Hype Feed", icon: MessageSquareHeart },
   { href: "/map", label: "Canvassing Map", icon: MapIcon },
+  { href: "/opportunities", label: "Opportunities", icon: TrendingUp },
   { href: "/deals", label: "My Deals", icon: Briefcase },
   { href: "/messages", label: "Messages", icon: MessageCircle },
   { href: "/rewards", label: "Incentive Vault", icon: Gift },
@@ -86,6 +88,9 @@ const PREFETCHERS: Record<string, Prefetcher> = {
   "/map": () => [
     { queryKey: getListPinsQueryKey(), queryFn: () => listPins() },
     { queryKey: getListTerritoriesQueryKey(), queryFn: () => listTerritories() },
+  ],
+  "/opportunities": () => [
+    { queryKey: getListPinsQueryKey(), queryFn: () => listPins() },
   ],
   "/deals": () => [
     { queryKey: ["/api/deals"] as const, queryFn: () => listDeals() },
