@@ -17,12 +17,17 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AddCampaignStreetsBody,
   Badge,
+  Campaign,
+  CampaignDetail,
+  CampaignStreet,
   ChatMessage,
   CoachChatRequest,
   CoachChatResponse,
   Comment,
   Conversation,
+  CreateCampaignBody,
   CreateCommentBody,
   CreateConversationBody,
   CreateDealBody,
@@ -49,6 +54,7 @@ import type {
   ListPinsParams,
   ListRedemptionsParams,
   MapPin,
+  MyStats,
   PointConfig,
   Redemption,
   Reward,
@@ -56,6 +62,8 @@ import type {
   SkipTraceResult,
   Territory,
   TrainingResource,
+  UpdateCampaignBody,
+  UpdateCampaignStreetBody,
   UpdateDealBody,
   UpdateIncentiveTierBody,
   UpdatePinBody,
@@ -2832,6 +2840,788 @@ export const useCoachChat = <
 > => {
   return useMutation(getCoachChatMutationOptions(options));
 };
+
+/**
+ * @summary List all campaigns with progress stats
+ */
+export const getListCampaignsUrl = () => {
+  return `/api/campaigns`;
+};
+
+export const listCampaigns = async (
+  options?: RequestInit,
+): Promise<Campaign[]> => {
+  return customFetch<Campaign[]>(getListCampaignsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListCampaignsQueryKey = () => {
+  return [`/api/campaigns`] as const;
+};
+
+export const getListCampaignsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listCampaigns>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listCampaigns>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListCampaignsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listCampaigns>>> = ({
+    signal,
+  }) => listCampaigns({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listCampaigns>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListCampaignsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listCampaigns>>
+>;
+export type ListCampaignsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all campaigns with progress stats
+ */
+
+export function useListCampaigns<
+  TData = Awaited<ReturnType<typeof listCampaigns>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listCampaigns>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListCampaignsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a door or flyer campaign
+ */
+export const getCreateCampaignUrl = () => {
+  return `/api/campaigns`;
+};
+
+export const createCampaign = async (
+  createCampaignBody: CreateCampaignBody,
+  options?: RequestInit,
+): Promise<Campaign> => {
+  return customFetch<Campaign>(getCreateCampaignUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createCampaignBody),
+  });
+};
+
+export const getCreateCampaignMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCampaign>>,
+    TError,
+    { data: BodyType<CreateCampaignBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createCampaign>>,
+  TError,
+  { data: BodyType<CreateCampaignBody> },
+  TContext
+> => {
+  const mutationKey = ["createCampaign"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createCampaign>>,
+    { data: BodyType<CreateCampaignBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createCampaign(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateCampaignMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createCampaign>>
+>;
+export type CreateCampaignMutationBody = BodyType<CreateCampaignBody>;
+export type CreateCampaignMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a door or flyer campaign
+ */
+export const useCreateCampaign = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCampaign>>,
+    TError,
+    { data: BodyType<CreateCampaignBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createCampaign>>,
+  TError,
+  { data: BodyType<CreateCampaignBody> },
+  TContext
+> => {
+  return useMutation(getCreateCampaignMutationOptions(options));
+};
+
+/**
+ * @summary Get a campaign with its full street list
+ */
+export const getGetCampaignUrl = (campaignId: number) => {
+  return `/api/campaigns/${campaignId}`;
+};
+
+export const getCampaign = async (
+  campaignId: number,
+  options?: RequestInit,
+): Promise<CampaignDetail> => {
+  return customFetch<CampaignDetail>(getGetCampaignUrl(campaignId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCampaignQueryKey = (campaignId: number) => {
+  return [`/api/campaigns/${campaignId}`] as const;
+};
+
+export const getGetCampaignQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCampaign>>,
+  TError = ErrorType<unknown>,
+>(
+  campaignId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCampaign>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCampaignQueryKey(campaignId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCampaign>>> = ({
+    signal,
+  }) => getCampaign(campaignId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!campaignId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCampaign>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCampaignQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCampaign>>
+>;
+export type GetCampaignQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get a campaign with its full street list
+ */
+
+export function useGetCampaign<
+  TData = Awaited<ReturnType<typeof getCampaign>>,
+  TError = ErrorType<unknown>,
+>(
+  campaignId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCampaign>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCampaignQueryOptions(campaignId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update name/description/status/color of a campaign
+ */
+export const getUpdateCampaignUrl = (campaignId: number) => {
+  return `/api/campaigns/${campaignId}`;
+};
+
+export const updateCampaign = async (
+  campaignId: number,
+  updateCampaignBody: UpdateCampaignBody,
+  options?: RequestInit,
+): Promise<Campaign> => {
+  return customFetch<Campaign>(getUpdateCampaignUrl(campaignId), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateCampaignBody),
+  });
+};
+
+export const getUpdateCampaignMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateCampaign>>,
+    TError,
+    { campaignId: number; data: BodyType<UpdateCampaignBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateCampaign>>,
+  TError,
+  { campaignId: number; data: BodyType<UpdateCampaignBody> },
+  TContext
+> => {
+  const mutationKey = ["updateCampaign"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateCampaign>>,
+    { campaignId: number; data: BodyType<UpdateCampaignBody> }
+  > = (props) => {
+    const { campaignId, data } = props ?? {};
+
+    return updateCampaign(campaignId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateCampaignMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateCampaign>>
+>;
+export type UpdateCampaignMutationBody = BodyType<UpdateCampaignBody>;
+export type UpdateCampaignMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update name/description/status/color of a campaign
+ */
+export const useUpdateCampaign = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateCampaign>>,
+    TError,
+    { campaignId: number; data: BodyType<UpdateCampaignBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateCampaign>>,
+  TError,
+  { campaignId: number; data: BodyType<UpdateCampaignBody> },
+  TContext
+> => {
+  return useMutation(getUpdateCampaignMutationOptions(options));
+};
+
+/**
+ * @summary Delete a campaign and its streets
+ */
+export const getDeleteCampaignUrl = (campaignId: number) => {
+  return `/api/campaigns/${campaignId}`;
+};
+
+export const deleteCampaign = async (
+  campaignId: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteCampaignUrl(campaignId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteCampaignMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteCampaign>>,
+    TError,
+    { campaignId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteCampaign>>,
+  TError,
+  { campaignId: number },
+  TContext
+> => {
+  const mutationKey = ["deleteCampaign"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteCampaign>>,
+    { campaignId: number }
+  > = (props) => {
+    const { campaignId } = props ?? {};
+
+    return deleteCampaign(campaignId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteCampaignMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteCampaign>>
+>;
+
+export type DeleteCampaignMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete a campaign and its streets
+ */
+export const useDeleteCampaign = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteCampaign>>,
+    TError,
+    { campaignId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteCampaign>>,
+  TError,
+  { campaignId: number },
+  TContext
+> => {
+  return useMutation(getDeleteCampaignMutationOptions(options));
+};
+
+/**
+ * @summary Bulk add streets to a campaign (one name per line)
+ */
+export const getAddCampaignStreetsUrl = (campaignId: number) => {
+  return `/api/campaigns/${campaignId}/streets`;
+};
+
+export const addCampaignStreets = async (
+  campaignId: number,
+  addCampaignStreetsBody: AddCampaignStreetsBody,
+  options?: RequestInit,
+): Promise<CampaignStreet[]> => {
+  return customFetch<CampaignStreet[]>(getAddCampaignStreetsUrl(campaignId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(addCampaignStreetsBody),
+  });
+};
+
+export const getAddCampaignStreetsMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addCampaignStreets>>,
+    TError,
+    { campaignId: number; data: BodyType<AddCampaignStreetsBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof addCampaignStreets>>,
+  TError,
+  { campaignId: number; data: BodyType<AddCampaignStreetsBody> },
+  TContext
+> => {
+  const mutationKey = ["addCampaignStreets"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof addCampaignStreets>>,
+    { campaignId: number; data: BodyType<AddCampaignStreetsBody> }
+  > = (props) => {
+    const { campaignId, data } = props ?? {};
+
+    return addCampaignStreets(campaignId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AddCampaignStreetsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof addCampaignStreets>>
+>;
+export type AddCampaignStreetsMutationBody = BodyType<AddCampaignStreetsBody>;
+export type AddCampaignStreetsMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Bulk add streets to a campaign (one name per line)
+ */
+export const useAddCampaignStreets = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addCampaignStreets>>,
+    TError,
+    { campaignId: number; data: BodyType<AddCampaignStreetsBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof addCampaignStreets>>,
+  TError,
+  { campaignId: number; data: BodyType<AddCampaignStreetsBody> },
+  TContext
+> => {
+  return useMutation(getAddCampaignStreetsMutationOptions(options));
+};
+
+/**
+ * @summary Mark a street done / update its status, counts, or notes
+ */
+export const getUpdateCampaignStreetUrl = (
+  campaignId: number,
+  streetId: number,
+) => {
+  return `/api/campaigns/${campaignId}/streets/${streetId}`;
+};
+
+export const updateCampaignStreet = async (
+  campaignId: number,
+  streetId: number,
+  updateCampaignStreetBody: UpdateCampaignStreetBody,
+  options?: RequestInit,
+): Promise<CampaignStreet> => {
+  return customFetch<CampaignStreet>(
+    getUpdateCampaignStreetUrl(campaignId, streetId),
+    {
+      ...options,
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(updateCampaignStreetBody),
+    },
+  );
+};
+
+export const getUpdateCampaignStreetMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateCampaignStreet>>,
+    TError,
+    {
+      campaignId: number;
+      streetId: number;
+      data: BodyType<UpdateCampaignStreetBody>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateCampaignStreet>>,
+  TError,
+  {
+    campaignId: number;
+    streetId: number;
+    data: BodyType<UpdateCampaignStreetBody>;
+  },
+  TContext
+> => {
+  const mutationKey = ["updateCampaignStreet"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateCampaignStreet>>,
+    {
+      campaignId: number;
+      streetId: number;
+      data: BodyType<UpdateCampaignStreetBody>;
+    }
+  > = (props) => {
+    const { campaignId, streetId, data } = props ?? {};
+
+    return updateCampaignStreet(campaignId, streetId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateCampaignStreetMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateCampaignStreet>>
+>;
+export type UpdateCampaignStreetMutationBody =
+  BodyType<UpdateCampaignStreetBody>;
+export type UpdateCampaignStreetMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Mark a street done / update its status, counts, or notes
+ */
+export const useUpdateCampaignStreet = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateCampaignStreet>>,
+    TError,
+    {
+      campaignId: number;
+      streetId: number;
+      data: BodyType<UpdateCampaignStreetBody>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateCampaignStreet>>,
+  TError,
+  {
+    campaignId: number;
+    streetId: number;
+    data: BodyType<UpdateCampaignStreetBody>;
+  },
+  TContext
+> => {
+  return useMutation(getUpdateCampaignStreetMutationOptions(options));
+};
+
+/**
+ * @summary Remove a street from a campaign
+ */
+export const getDeleteCampaignStreetUrl = (
+  campaignId: number,
+  streetId: number,
+) => {
+  return `/api/campaigns/${campaignId}/streets/${streetId}`;
+};
+
+export const deleteCampaignStreet = async (
+  campaignId: number,
+  streetId: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteCampaignStreetUrl(campaignId, streetId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteCampaignStreetMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteCampaignStreet>>,
+    TError,
+    { campaignId: number; streetId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteCampaignStreet>>,
+  TError,
+  { campaignId: number; streetId: number },
+  TContext
+> => {
+  const mutationKey = ["deleteCampaignStreet"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteCampaignStreet>>,
+    { campaignId: number; streetId: number }
+  > = (props) => {
+    const { campaignId, streetId } = props ?? {};
+
+    return deleteCampaignStreet(campaignId, streetId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteCampaignStreetMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteCampaignStreet>>
+>;
+
+export type DeleteCampaignStreetMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Remove a street from a campaign
+ */
+export const useDeleteCampaignStreet = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteCampaignStreet>>,
+    TError,
+    { campaignId: number; streetId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteCampaignStreet>>,
+  TError,
+  { campaignId: number; streetId: number },
+  TContext
+> => {
+  return useMutation(getDeleteCampaignStreetMutationOptions(options));
+};
+
+/**
+ * @summary Aggregated lifetime stats for the current rep
+ */
+export const getGetMyStatsUrl = () => {
+  return `/api/users/me/stats`;
+};
+
+export const getMyStats = async (options?: RequestInit): Promise<MyStats> => {
+  return customFetch<MyStats>(getGetMyStatsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetMyStatsQueryKey = () => {
+  return [`/api/users/me/stats`] as const;
+};
+
+export const getGetMyStatsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMyStats>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getMyStats>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetMyStatsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyStats>>> = ({
+    signal,
+  }) => getMyStats({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getMyStats>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetMyStatsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getMyStats>>
+>;
+export type GetMyStatsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Aggregated lifetime stats for the current rep
+ */
+
+export function useGetMyStats<
+  TData = Awaited<ReturnType<typeof getMyStats>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getMyStats>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetMyStatsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary List the current user's DMs and group chats, newest first.

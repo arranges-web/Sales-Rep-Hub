@@ -22,6 +22,10 @@ import {
   CheckCircle2,
   Sparkles,
   Bookmark,
+  Clock,
+  Flame,
+  BookOpen,
+  ArrowRight,
 } from "lucide-react";
 import { BrandHeader } from "@/components/BrandHeader";
 import { EmptyState } from "@/components/EmptyState";
@@ -65,6 +69,56 @@ function saveSet(key: string, set: Set<number>) {
   }
 }
 
+const LAST_OPENED_KEY = "jt:training:lastOpened";
+
+function loadLastOpened(): number | null {
+  try {
+    const raw = localStorage.getItem(LAST_OPENED_KEY);
+    const n = raw == null ? NaN : Number(raw);
+    return Number.isFinite(n) ? n : null;
+  } catch {
+    return null;
+  }
+}
+function saveLastOpened(id: number) {
+  try {
+    localStorage.setItem(LAST_OPENED_KEY, String(id));
+  } catch {
+    /* ignore quota */
+  }
+}
+
+// Average adult reads ~220 wpm; round to a sensible minute count.
+function readingMinutes(text: string | null | undefined): number {
+  if (!text) return 0;
+  const words = text.trim().split(/\s+/).length;
+  return Math.max(1, Math.round(words / 220));
+}
+
+/**
+ * Split content into sections using markdown-style "## Heading" lines, so
+ * long training notes render as a real article rather than a wall of text.
+ * Falls back to a single body when no headings are present.
+ */
+type Section = { heading: string | null; body: string };
+function splitSections(text: string | null | undefined): Section[] {
+  if (!text) return [];
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const out: Section[] = [];
+  let current: Section = { heading: null, body: "" };
+  for (const line of lines) {
+    const m = line.match(/^##\s+(.+?)\s*$/);
+    if (m) {
+      if (current.heading || current.body.trim()) out.push(current);
+      current = { heading: m[1]!, body: "" };
+    } else {
+      current.body += (current.body ? "\n" : "") + line;
+    }
+  }
+  if (current.heading || current.body.trim()) out.push(current);
+  return out;
+}
+
 export default function TrainingPage() {
   const { data: resources } = useListTrainingResources();
   const [filter, setFilter] = useState<string>("all");
@@ -72,12 +126,20 @@ export default function TrainingPage() {
   const [open, setOpen] = useState<number | null>(null);
   const [completed, setCompleted] = useState<Set<number>>(() => new Set());
   const [saved, setSaved] = useState<Set<number>>(() => new Set());
+  const [lastOpened, setLastOpened] = useState<number | null>(null);
 
   // Hydrate completion/save state from localStorage after mount.
   useEffect(() => {
     setCompleted(loadSet(COMPLETED_KEY));
     setSaved(loadSet(SAVED_KEY));
+    setLastOpened(loadLastOpened());
   }, []);
+
+  const openResourceById = (id: number) => {
+    setOpen(id);
+    saveLastOpened(id);
+    setLastOpened(id);
+  };
 
   const toggleCompleted = (id: number) => {
     setCompleted((prev) => {
@@ -121,6 +183,22 @@ export default function TrainingPage() {
   const progress = total === 0 ? 0 : Math.round((doneCount / total) * 100);
 
   const openResource = open != null ? resources?.find((r) => r.id === open) : null;
+
+  // Featured: first item with a thumbnail, then fall back to whatever is
+  // first. "Continue" is the last thing this rep opened (if any).
+  const featured =
+    (resources ?? []).find((r) => !!r.thumbnailUrl) ?? (resources ?? [])[0] ?? null;
+  const continueReading =
+    lastOpened != null
+      ? (resources ?? []).find((r) => r.id === lastOpened && !completed.has(r.id)) ?? null
+      : null;
+  const savedItems = (resources ?? []).filter((r) => saved.has(r.id));
+
+  const related = openResource
+    ? (resources ?? [])
+        .filter((r) => r.id !== openResource.id && r.category === openResource.category)
+        .slice(0, 4)
+    : [];
 
   return (
     <div className="mx-auto max-w-6xl space-y-5 p-4 sm:p-6 lg:p-8">
@@ -199,6 +277,39 @@ export default function TrainingPage() {
         </div>
       </Card>
 
+      {/* Featured + Continue + Saved row */}
+      {(featured || continueReading || savedItems.length > 0) && (
+        <div className="grid gap-3 md:grid-cols-3">
+          {featured && (
+            <FeaturedCard
+              resource={featured}
+              done={completed.has(featured.id)}
+              onOpen={() => openResourceById(featured.id)}
+            />
+          )}
+          {continueReading ? (
+            <ContinueCard
+              resource={continueReading}
+              onOpen={() => openResourceById(continueReading.id)}
+            />
+          ) : (
+            <SavedCard
+              count={savedItems.length}
+              onJump={() => {
+                if (savedItems.length === 0) return;
+                openResourceById(savedItems[0]!.id);
+              }}
+            />
+          )}
+          {continueReading && savedItems.length > 0 && (
+            <SavedCard
+              count={savedItems.length}
+              onJump={() => openResourceById(savedItems[0]!.id)}
+            />
+          )}
+        </div>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 jt-fade-in-stagger">
         {filtered.map((r) => {
           const meta = CATEGORY_META[r.category] ?? CATEGORY_META.other!;
@@ -213,7 +324,7 @@ export default function TrainingPage() {
                 "hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-20px_rgba(46,163,242,0.45)]",
                 "hover:border-[#2EA3F2]/40",
               )}
-              onClick={() => setOpen(r.id)}
+              onClick={() => openResourceById(r.id)}
             >
               {r.thumbnailUrl ? (
                 <div className="relative h-32 w-full overflow-hidden">
@@ -296,7 +407,7 @@ export default function TrainingPage() {
                     className="rounded-lg bg-[#2EA3F2] text-slate-950 hover:bg-[#48b3f6]"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setOpen(r.id);
+                      openResourceById(r.id);
                     }}
                   >
                     Open
@@ -341,19 +452,138 @@ export default function TrainingPage() {
 
       {/* Full-content modal */}
       <Dialog open={open != null} onOpenChange={(o) => !o && setOpen(null)}>
-        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto rounded-2xl">
+        <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto rounded-2xl">
           {openResource && (
             <ResourceDetail
               resource={openResource}
               isDone={completed.has(openResource.id)}
               isSaved={saved.has(openResource.id)}
+              related={related}
               onToggleDone={() => toggleCompleted(openResource.id)}
               onToggleSaved={() => toggleSaved(openResource.id)}
+              onOpenRelated={(id) => openResourceById(id)}
             />
           )}
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function FeaturedCard({
+  resource: r,
+  done,
+  onOpen,
+}: {
+  resource: { id: number; title: string; description: string; category: string; thumbnailUrl?: string | null; contentText?: string | null };
+  done: boolean;
+  onOpen: () => void;
+}) {
+  const meta = CATEGORY_META[r.category] ?? CATEGORY_META.other!;
+  const Icon = meta.icon;
+  const mins = readingMinutes(r.contentText);
+  return (
+    <button
+      onClick={onOpen}
+      className="group relative isolate flex flex-col overflow-hidden rounded-2xl border border-[#FFBF00]/40 bg-card p-0 text-left transition-all hover:-translate-y-0.5 hover:border-[#FFBF00]/70 md:col-span-2"
+    >
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-90"
+        style={{
+          background: r.thumbnailUrl
+            ? `url(${r.thumbnailUrl}) center/cover`
+            : `linear-gradient(135deg, ${meta.color}55, transparent 75%)`,
+        }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-r from-card via-card/80 to-card/30" />
+      <div className="relative flex h-full flex-col gap-3 p-5">
+        <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#FFBF00]">
+          <Flame className="h-3.5 w-3.5" /> Featured · pick of the week
+        </div>
+        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+          <span style={{ color: meta.color }} className="inline-flex items-center gap-1">
+            <Icon className="h-3 w-3" strokeWidth={2.5} />
+            {meta.label}
+          </span>
+          {mins > 0 && (
+            <>
+              <span>·</span>
+              <Clock className="h-3 w-3" />
+              <span>{mins} min read</span>
+            </>
+          )}
+          {done && (
+            <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-[#2C8214]/20 px-1.5 py-0.5 text-[10px] font-bold text-[#7ed85c]">
+              <CheckCircle2 className="h-3 w-3" /> Done
+            </span>
+          )}
+        </div>
+        <h3 className="text-xl font-extrabold leading-tight">{r.title}</h3>
+        <p className="line-clamp-2 text-sm text-muted-foreground">
+          {r.description}
+        </p>
+        <div className="mt-auto inline-flex items-center gap-1 text-sm font-semibold text-[#FFBF00] transition-transform group-hover:translate-x-0.5">
+          Open the playbook <ArrowRight className="h-3.5 w-3.5" />
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function ContinueCard({
+  resource: r,
+  onOpen,
+}: {
+  resource: { id: number; title: string; category: string; contentText?: string | null };
+  onOpen: () => void;
+}) {
+  const meta = CATEGORY_META[r.category] ?? CATEGORY_META.other!;
+  const mins = readingMinutes(r.contentText);
+  return (
+    <button
+      onClick={onOpen}
+      className="group relative flex flex-col gap-2 overflow-hidden rounded-2xl border border-border bg-card p-4 text-left transition-all hover:-translate-y-0.5 hover:border-[#2EA3F2]/50"
+    >
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full opacity-25 blur-2xl"
+        style={{ background: meta.color }}
+      />
+      <div className="relative flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#2EA3F2]">
+        <BookOpen className="h-3.5 w-3.5" /> Continue reading
+      </div>
+      <div className="relative font-extrabold leading-tight">{r.title}</div>
+      <div className="relative mt-auto inline-flex items-center gap-1 text-xs text-muted-foreground">
+        {mins > 0 && (
+          <>
+            <Clock className="h-3 w-3" /> {mins} min left
+          </>
+        )}
+      </div>
+    </button>
+  );
+}
+
+function SavedCard({ count, onJump }: { count: number; onJump: () => void }) {
+  return (
+    <button
+      onClick={onJump}
+      disabled={count === 0}
+      className="group relative flex flex-col gap-2 overflow-hidden rounded-2xl border border-border bg-card p-4 text-left transition-all hover:-translate-y-0.5 hover:border-[#FFBF00]/40 disabled:opacity-60"
+    >
+      <div className="relative flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#FFBF00]">
+        <Bookmark className="h-3.5 w-3.5" /> Saved for later
+      </div>
+      <div className="font-stat relative text-3xl font-extrabold tabular-nums">
+        {count}
+      </div>
+      <div className="relative text-xs text-muted-foreground">
+        {count === 0
+          ? "Bookmark a resource to stash it here."
+          : "Tap to jump into your queue."}
+      </div>
+    </button>
   );
 }
 
@@ -388,8 +618,10 @@ function ResourceDetail({
   resource: r,
   isDone,
   isSaved,
+  related,
   onToggleDone,
   onToggleSaved,
+  onOpenRelated,
 }: {
   resource: {
     id: number;
@@ -402,15 +634,25 @@ function ResourceDetail({
   };
   isDone: boolean;
   isSaved: boolean;
+  related: Array<{
+    id: number;
+    title: string;
+    description: string;
+    category: string;
+    contentText?: string | null;
+  }>;
   onToggleDone: () => void;
   onToggleSaved: () => void;
+  onOpenRelated: (id: number) => void;
 }) {
   const meta = CATEGORY_META[r.category] ?? CATEGORY_META.other!;
   const Icon = meta.icon;
+  const sections = splitSections(r.contentText);
+  const mins = readingMinutes(r.contentText);
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <DialogHeader>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Badge
             className="gap-1 rounded-full border-0 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
             style={{ color: meta.color, background: `${meta.color}1f` }}
@@ -418,14 +660,65 @@ function ResourceDetail({
             <Icon className="h-3 w-3" strokeWidth={2.5} />
             {meta.label}
           </Badge>
+          {mins > 0 && (
+            <>
+              <Clock className="h-3 w-3" />
+              <span>{mins} min read</span>
+            </>
+          )}
         </div>
         <DialogTitle className="text-xl leading-tight">{r.title}</DialogTitle>
       </DialogHeader>
       <p className="text-sm text-muted-foreground">{r.description}</p>
-      {r.contentText && (
+
+      {sections.length === 0 && r.contentText && (
         <div className="prose prose-invert max-w-none whitespace-pre-wrap rounded-xl border border-border bg-background/40 p-4 text-sm leading-relaxed">
           {r.contentText}
         </div>
+      )}
+
+      {sections.length > 1 && (
+        <nav className="flex flex-wrap gap-1.5 rounded-xl border border-border bg-background/40 p-2 text-xs">
+          <span className="px-2 py-1 font-semibold uppercase tracking-wider text-muted-foreground">
+            Jump to
+          </span>
+          {sections.map((s, i) =>
+            s.heading ? (
+              <a
+                key={i}
+                href={`#sec-${i}`}
+                className="rounded-full bg-card px-2 py-1 font-medium text-foreground/80 hover:bg-muted"
+              >
+                {s.heading}
+              </a>
+            ) : null,
+          )}
+        </nav>
+      )}
+
+      {sections.length > 0 && (
+        <article className="space-y-4 rounded-xl border border-border bg-background/40 p-4 text-sm leading-relaxed">
+          {sections.map((s, i) => (
+            <section key={i} id={`sec-${i}`}>
+              {s.heading && (
+                <h3
+                  className="mb-2 inline-flex items-center gap-2 text-base font-extrabold leading-snug"
+                  style={{ color: meta.color }}
+                >
+                  <span
+                    className="inline-block h-1.5 w-5 rounded-full"
+                    style={{ background: meta.color }}
+                    aria-hidden
+                  />
+                  {s.heading}
+                </h3>
+              )}
+              <div className="whitespace-pre-wrap text-foreground/90">
+                {s.body.trim()}
+              </div>
+            </section>
+          ))}
+        </article>
       )}
       <div className="flex flex-wrap items-center gap-2">
         {r.contentUrl && (
@@ -459,6 +752,42 @@ function ResourceDetail({
           {isDone ? "Marked complete" : "Mark complete"}
         </Button>
       </div>
+
+      {related.length > 0 && (
+        <div className="space-y-2 border-t border-border pt-4">
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            <Sparkles className="h-3.5 w-3.5 text-[#FFBF00]" />
+            Related in {CATEGORY_META[r.category]?.label ?? "this section"}
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {related.map((rel) => {
+              const relMins = readingMinutes(rel.contentText);
+              return (
+                <button
+                  key={rel.id}
+                  onClick={() => onOpenRelated(rel.id)}
+                  className="group rounded-xl border border-border bg-background/50 p-3 text-left transition-all hover:-translate-y-0.5 hover:border-[#2EA3F2]/40 hover:bg-background/80"
+                >
+                  <div className="line-clamp-1 text-sm font-semibold">
+                    {rel.title}
+                  </div>
+                  <div className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">
+                    {rel.description}
+                  </div>
+                  <div className="mt-1.5 inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+                    {relMins > 0 && (
+                      <>
+                        <Clock className="h-2.5 w-2.5" /> {relMins} min
+                      </>
+                    )}
+                    <ArrowRight className="ml-auto h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

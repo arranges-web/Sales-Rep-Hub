@@ -232,6 +232,48 @@ export const messagesTable = pgTable(
   }),
 );
 
+export const campaignsTable = pgTable(
+  "campaigns",
+  {
+    id: serial("id").primaryKey(),
+    name: text("name").notNull(),
+    description: text("description"),
+    /** "door" | "flyer" */
+    type: text("type").notNull().default("door"),
+    color: text("color").notNull().default("#2EA3F2"),
+    /** "active" | "paused" | "complete" */
+    status: text("status").notNull().default("active"),
+    createdBy: integer("created_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    statusIdx: index("campaigns_status_idx").on(t.status),
+  }),
+);
+
+export const campaignStreetsTable = pgTable(
+  "campaign_streets",
+  {
+    id: serial("id").primaryKey(),
+    campaignId: integer("campaign_id").notNull(),
+    name: text("name").notNull(),
+    city: text("city"),
+    notes: text("notes"),
+    /** "pending" | "in_progress" | "done" | "skipped" */
+    status: text("status").notNull().default("pending"),
+    assignedToUserId: integer("assigned_to_user_id"),
+    completedByUserId: integer("completed_by_user_id"),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    flyersHandedOut: integer("flyers_handed_out").notNull().default(0),
+    doorsKnocked: integer("doors_knocked").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    campIdx: index("campaign_streets_camp_idx").on(t.campaignId),
+    statusIdx: index("campaign_streets_status_idx").on(t.status),
+  }),
+);
+
 export const trainingResourcesTable = pgTable("training_resources", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
@@ -260,3 +302,5 @@ export type TrainingResource = typeof trainingResourcesTable.$inferSelect;
 export type Conversation = typeof conversationsTable.$inferSelect;
 export type ConversationMember = typeof conversationMembersTable.$inferSelect;
 export type Message = typeof messagesTable.$inferSelect;
+export type Campaign = typeof campaignsTable.$inferSelect;
+export type CampaignStreet = typeof campaignStreetsTable.$inferSelect;

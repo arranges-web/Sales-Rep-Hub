@@ -817,6 +817,236 @@ export const CoachChatResponse = zod.object({
 });
 
 /**
+ * @summary List all campaigns with progress stats
+ */
+export const ListCampaignsResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  description: zod.string().nullish(),
+  type: zod.enum(["door", "flyer"]),
+  color: zod.string(),
+  status: zod.enum(["active", "paused", "complete"]),
+  createdBy: zod.number(),
+  createdByName: zod.string().nullish(),
+  createdAt: zod.coerce.date(),
+  streetCount: zod.number(),
+  doneCount: zod.number(),
+  inProgressCount: zod.number(),
+  totalDoorsKnocked: zod.number(),
+  totalFlyersHandedOut: zod.number(),
+});
+export const ListCampaignsResponse = zod.array(ListCampaignsResponseItem);
+
+/**
+ * @summary Create a door or flyer campaign
+ */
+export const CreateCampaignBody = zod.object({
+  name: zod.string(),
+  description: zod.string().nullish(),
+  type: zod.enum(["door", "flyer"]),
+  color: zod.string().nullish(),
+  streets: zod
+    .array(zod.string())
+    .nullish()
+    .describe("Optional one-per-line list of street names to seed."),
+});
+
+/**
+ * @summary Get a campaign with its full street list
+ */
+export const GetCampaignParams = zod.object({
+  campaignId: zod.coerce.number(),
+});
+
+export const GetCampaignResponse = zod
+  .object({
+    id: zod.number(),
+    name: zod.string(),
+    description: zod.string().nullish(),
+    type: zod.enum(["door", "flyer"]),
+    color: zod.string(),
+    status: zod.enum(["active", "paused", "complete"]),
+    createdBy: zod.number(),
+    createdByName: zod.string().nullish(),
+    createdAt: zod.coerce.date(),
+    streetCount: zod.number(),
+    doneCount: zod.number(),
+    inProgressCount: zod.number(),
+    totalDoorsKnocked: zod.number(),
+    totalFlyersHandedOut: zod.number(),
+  })
+  .and(
+    zod.object({
+      streets: zod.array(
+        zod.object({
+          id: zod.number(),
+          campaignId: zod.number(),
+          name: zod.string(),
+          city: zod.string().nullish(),
+          notes: zod.string().nullish(),
+          status: zod.enum(["pending", "in_progress", "done", "skipped"]),
+          assignedToUserId: zod.number().nullish(),
+          assignedToUserName: zod.string().nullish(),
+          completedByUserId: zod.number().nullish(),
+          completedByUserName: zod.string().nullish(),
+          completedAt: zod.coerce.date().nullish(),
+          flyersHandedOut: zod.number(),
+          doorsKnocked: zod.number(),
+          createdAt: zod.coerce.date(),
+        }),
+      ),
+    }),
+  );
+
+/**
+ * @summary Update name/description/status/color of a campaign
+ */
+export const UpdateCampaignParams = zod.object({
+  campaignId: zod.coerce.number(),
+});
+
+export const UpdateCampaignBody = zod.object({
+  name: zod.string().nullish(),
+  description: zod.string().nullish(),
+  status: zod
+    .union([
+      zod.literal("active"),
+      zod.literal("paused"),
+      zod.literal("complete"),
+      zod.literal(null),
+    ])
+    .nullish(),
+  color: zod.string().nullish(),
+});
+
+export const UpdateCampaignResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  description: zod.string().nullish(),
+  type: zod.enum(["door", "flyer"]),
+  color: zod.string(),
+  status: zod.enum(["active", "paused", "complete"]),
+  createdBy: zod.number(),
+  createdByName: zod.string().nullish(),
+  createdAt: zod.coerce.date(),
+  streetCount: zod.number(),
+  doneCount: zod.number(),
+  inProgressCount: zod.number(),
+  totalDoorsKnocked: zod.number(),
+  totalFlyersHandedOut: zod.number(),
+});
+
+/**
+ * @summary Delete a campaign and its streets
+ */
+export const DeleteCampaignParams = zod.object({
+  campaignId: zod.coerce.number(),
+});
+
+/**
+ * @summary Bulk add streets to a campaign (one name per line)
+ */
+export const AddCampaignStreetsParams = zod.object({
+  campaignId: zod.coerce.number(),
+});
+
+export const AddCampaignStreetsBody = zod.object({
+  names: zod.array(zod.string()),
+  city: zod.string().nullish(),
+});
+
+export const AddCampaignStreetsResponseItem = zod.object({
+  id: zod.number(),
+  campaignId: zod.number(),
+  name: zod.string(),
+  city: zod.string().nullish(),
+  notes: zod.string().nullish(),
+  status: zod.enum(["pending", "in_progress", "done", "skipped"]),
+  assignedToUserId: zod.number().nullish(),
+  assignedToUserName: zod.string().nullish(),
+  completedByUserId: zod.number().nullish(),
+  completedByUserName: zod.string().nullish(),
+  completedAt: zod.coerce.date().nullish(),
+  flyersHandedOut: zod.number(),
+  doorsKnocked: zod.number(),
+  createdAt: zod.coerce.date(),
+});
+export const AddCampaignStreetsResponse = zod.array(
+  AddCampaignStreetsResponseItem,
+);
+
+/**
+ * @summary Mark a street done / update its status, counts, or notes
+ */
+export const UpdateCampaignStreetParams = zod.object({
+  campaignId: zod.coerce.number(),
+  streetId: zod.coerce.number(),
+});
+
+export const UpdateCampaignStreetBody = zod.object({
+  status: zod
+    .union([
+      zod.literal("pending"),
+      zod.literal("in_progress"),
+      zod.literal("done"),
+      zod.literal("skipped"),
+      zod.literal(null),
+    ])
+    .nullish(),
+  notes: zod.string().nullish(),
+  flyersHandedOut: zod.number().nullish(),
+  doorsKnocked: zod.number().nullish(),
+  assignedToUserId: zod.number().nullish(),
+});
+
+export const UpdateCampaignStreetResponse = zod.object({
+  id: zod.number(),
+  campaignId: zod.number(),
+  name: zod.string(),
+  city: zod.string().nullish(),
+  notes: zod.string().nullish(),
+  status: zod.enum(["pending", "in_progress", "done", "skipped"]),
+  assignedToUserId: zod.number().nullish(),
+  assignedToUserName: zod.string().nullish(),
+  completedByUserId: zod.number().nullish(),
+  completedByUserName: zod.string().nullish(),
+  completedAt: zod.coerce.date().nullish(),
+  flyersHandedOut: zod.number(),
+  doorsKnocked: zod.number(),
+  createdAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Remove a street from a campaign
+ */
+export const DeleteCampaignStreetParams = zod.object({
+  campaignId: zod.coerce.number(),
+  streetId: zod.coerce.number(),
+});
+
+/**
+ * @summary Aggregated lifetime stats for the current rep
+ */
+export const GetMyStatsResponse = zod.object({
+  totalPoints: zod.number(),
+  monthPoints: zod.number(),
+  dealsCount: zod.number(),
+  monthDealsCount: zod.number(),
+  totalRevenue: zod.number(),
+  monthRevenue: zod.number(),
+  pinsCount: zod.number(),
+  soldPinsCount: zod.number(),
+  feedPostsCount: zod.number(),
+  badgesCount: zod.number(),
+  redemptionsCount: zod.number(),
+  currentStreak: zod.number(),
+  bestStreak: zod.number(),
+  streakAtRisk: zod.boolean(),
+  level: zod.number(),
+  nextLevelAt: zod.number(),
+});
+
+/**
  * @summary List the current user's DMs and group chats, newest first.
  */
 export const ListConversationsResponseItem = zod.object({

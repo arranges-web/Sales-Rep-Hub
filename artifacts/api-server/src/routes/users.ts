@@ -1,6 +1,15 @@
 import { Router, type IRouter } from "express";
-import { db, usersTable, territoriesTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import {
+  db,
+  usersTable,
+  territoriesTable,
+  dealsTable,
+  pinsTable,
+  feedPostsTable,
+  badgesTable,
+  redemptionsTable,
+} from "@workspace/db";
+import { and, eq, gte, sql } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../middlewares/auth";
 import { getAuth } from "@clerk/express";
 import { seedDataForNewRep } from "../lib/seed";
@@ -206,6 +215,83 @@ router.patch("/users/me/profile", requireAuth, async (req, res, next) => {
       .where(eq(usersTable.id, u.id))
       .returning();
     res.json(serializeUser(updated!));
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.get("/users/me/stats", requireAuth, async (req, res, next) => {
+  try {
+    const me = req.currentUser!;
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const [allDeals] = await db
+      .select({
+        c: sql<number>`COUNT(*)`,
+        rev: sql<number>`COALESCE(SUM(${dealsTable.amount}), 0)`,
+        pts: sql<number>`COALESCE(SUM(${dealsTable.pointsAwarded}), 0)`,
+      })
+      .from(dealsTable)
+      .where(
+        and(eq(dealsTable.repId, me.id), sql`${dealsTable.status} IN ('closed','paid')`),
+      );
+    const [monthDeals] = await db
+      .select({
+        c: sql<number>`COUNT(*)`,
+        rev: sql<number>`COALESCE(SUM(${dealsTable.amount}), 0)`,
+        pts: sql<number>`COALESCE(SUM(${dealsTable.pointsAwarded}), 0)`,
+      })
+      .from(dealsTable)
+      .where(
+        and(
+          eq(dealsTable.repId, me.id),
+          sql`${dealsTable.status} IN ('closed','paid')`,
+          gte(dealsTable.closedAt, startOfMonth),
+        ),
+      );
+    const [pins] = await db
+      .select({
+        total: sql<number>`COUNT(*)`,
+        sold: sql<number>`SUM(CASE WHEN ${pinsTable.status} = 'sold' THEN 1 ELSE 0 END)`,
+      })
+      .from(pinsTable)
+      .where(eq(pinsTable.repId, me.id));
+    const [feed] = await db
+      .select({ c: sql<number>`COUNT(*)` })
+      .from(feedPostsTable)
+      .where(eq(feedPostsTable.authorId, me.id));
+    const [badges] = await db
+      .select({ c: sql<number>`COUNT(*)` })
+      .from(badgesTable)
+      .where(eq(badgesTable.userId, me.id));
+    const [reds] = await db
+      .select({ c: sql<number>`COUNT(*)` })
+      .from(redemptionsTable)
+      .where(eq(redemptionsTable.userId, me.id));
+
+    const streak = await computeStreaks(me.id);
+    const lvl = levelInfo(me.totalPoints);
+
+    res.json({
+      totalPoints: me.totalPoints,
+      monthPoints: Number(monthDeals?.pts ?? 0),
+      dealsCount: Number(allDeals?.c ?? 0),
+      monthDealsCount: Number(monthDeals?.c ?? 0),
+      totalRevenue: Number(allDeals?.rev ?? 0),
+      monthRevenue: Number(monthDeals?.rev ?? 0),
+      pinsCount: Number(pins?.total ?? 0),
+      soldPinsCount: Number(pins?.sold ?? 0),
+      feedPostsCount: Number(feed?.c ?? 0),
+      badgesCount: Number(badges?.c ?? 0),
+      redemptionsCount: Number(reds?.c ?? 0),
+      currentStreak: streak.currentStreak,
+      bestStreak: streak.bestStreak,
+      streakAtRisk: streak.streakAtRisk,
+      level: lvl.level,
+      nextLevelAt: lvl.nextLevelAt,
+    });
   } catch (e) {
     next(e);
   }
