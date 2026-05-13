@@ -28,6 +28,8 @@ tags:
     description: Admin operations
   - name: coach
     description: AI sales-practice chat
+  - name: campaigns
+    description: Door-knocking and flyer-drop campaigns
   - name: messages
     description: Private DMs and group chats
   - name: Storage
@@ -677,6 +679,180 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+
+  # ─── Door / Flyer Campaigns ─────────────────────────────────────
+  /campaigns:
+    get:
+      operationId: listCampaigns
+      tags: [campaigns]
+      summary: List all campaigns with progress stats
+      responses:
+        "200":
+          description: Campaigns
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Campaign"
+    post:
+      operationId: createCampaign
+      tags: [campaigns]
+      summary: Create a door or flyer campaign
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCampaignBody"
+      responses:
+        "201":
+          description: Created campaign
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Campaign"
+  /campaigns/{campaignId}:
+    get:
+      operationId: getCampaign
+      tags: [campaigns]
+      summary: Get a campaign with its full street list
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Campaign detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CampaignDetail"
+    patch:
+      operationId: updateCampaign
+      tags: [campaigns]
+      summary: Update name/description/status/color of a campaign
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCampaignBody"
+      responses:
+        "200":
+          description: Updated campaign
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Campaign"
+    delete:
+      operationId: deleteCampaign
+      tags: [campaigns]
+      summary: Delete a campaign and its streets
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+  /campaigns/{campaignId}/streets:
+    post:
+      operationId: addCampaignStreets
+      tags: [campaigns]
+      summary: Bulk add streets to a campaign (one name per line)
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddCampaignStreetsBody"
+      responses:
+        "200":
+          description: Streets added
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CampaignStreet"
+  /campaigns/{campaignId}/streets/{streetId}:
+    patch:
+      operationId: updateCampaignStreet
+      tags: [campaigns]
+      summary: Mark a street done / update its status, counts, or notes
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: streetId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCampaignStreetBody"
+      responses:
+        "200":
+          description: Updated street
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CampaignStreet"
+    delete:
+      operationId: deleteCampaignStreet
+      tags: [campaigns]
+      summary: Remove a street from a campaign
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: streetId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── My Lifetime Stats ──────────────────────────────────────────
+  /users/me/stats:
+    get:
+      operationId: getMyStats
+      tags: [users]
+      summary: Aggregated lifetime stats for the current rep
+      responses:
+        "200":
+          description: My stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyStats"
 
   /conversations:
     get:
@@ -2335,3 +2511,220 @@ components:
           type: ["string", "null"]
         displayOrder:
           type: integer
+
+    Campaign:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        type:
+          type: string
+          enum: [door, flyer]
+        color:
+          type: string
+        status:
+          type: string
+          enum: [active, paused, complete]
+        createdBy:
+          type: integer
+        createdByName:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        streetCount:
+          type: integer
+        doneCount:
+          type: integer
+        inProgressCount:
+          type: integer
+        totalDoorsKnocked:
+          type: integer
+        totalFlyersHandedOut:
+          type: integer
+      required:
+        - id
+        - name
+        - type
+        - color
+        - status
+        - createdBy
+        - createdAt
+        - streetCount
+        - doneCount
+        - inProgressCount
+        - totalDoorsKnocked
+        - totalFlyersHandedOut
+
+    CampaignStreet:
+      type: object
+      properties:
+        id:
+          type: integer
+        campaignId:
+          type: integer
+        name:
+          type: string
+        city:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [pending, in_progress, done, skipped]
+        assignedToUserId:
+          type: ["integer", "null"]
+        assignedToUserName:
+          type: ["string", "null"]
+        completedByUserId:
+          type: ["integer", "null"]
+        completedByUserName:
+          type: ["string", "null"]
+        completedAt:
+          type: ["string", "null"]
+          format: date-time
+        flyersHandedOut:
+          type: integer
+        doorsKnocked:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - campaignId
+        - name
+        - status
+        - flyersHandedOut
+        - doorsKnocked
+        - createdAt
+
+    CampaignDetail:
+      allOf:
+        - $ref: "#/components/schemas/Campaign"
+        - type: object
+          properties:
+            streets:
+              type: array
+              items:
+                $ref: "#/components/schemas/CampaignStreet"
+          required:
+            - streets
+
+    CreateCampaignBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        type:
+          type: string
+          enum: [door, flyer]
+        color:
+          type: ["string", "null"]
+        streets:
+          description: Optional one-per-line list of street names to seed.
+          type: ["array", "null"]
+          items:
+            type: string
+      required:
+        - name
+        - type
+
+    UpdateCampaignBody:
+      type: object
+      properties:
+        name:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        status:
+          type: ["string", "null"]
+          enum: [active, paused, complete, null]
+        color:
+          type: ["string", "null"]
+
+    AddCampaignStreetsBody:
+      type: object
+      properties:
+        names:
+          type: array
+          items:
+            type: string
+        city:
+          type: ["string", "null"]
+      required:
+        - names
+
+    UpdateCampaignStreetBody:
+      type: object
+      properties:
+        status:
+          type: ["string", "null"]
+          enum: [pending, in_progress, done, skipped, null]
+        notes:
+          type: ["string", "null"]
+        flyersHandedOut:
+          type: ["integer", "null"]
+        doorsKnocked:
+          type: ["integer", "null"]
+        assignedToUserId:
+          type: ["integer", "null"]
+
+    MyStats:
+      type: object
+      properties:
+        totalPoints:
+          type: integer
+        monthPoints:
+          type: integer
+        dealsCount:
+          type: integer
+        monthDealsCount:
+          type: integer
+        totalRevenue:
+          type: number
+        monthRevenue:
+          type: number
+        pinsCount:
+          type: integer
+        soldPinsCount:
+          type: integer
+        feedPostsCount:
+          type: integer
+        badgesCount:
+          type: integer
+        redemptionsCount:
+          type: integer
+        currentStreak:
+          type: integer
+        bestStreak:
+          type: integer
+        streakAtRisk:
+          type: boolean
+        level:
+          type: integer
+        nextLevelAt:
+          type: integer
+      required:
+        - totalPoints
+        - monthPoints
+        - dealsCount
+        - monthDealsCount
+        - totalRevenue
+        - monthRevenue
+        - pinsCount
+        - soldPinsCount
+        - feedPostsCount
+        - badgesCount
+        - redemptionsCount
+        - currentStreak
+        - bestStreak
+        - streakAtRisk
+        - level
+        - nextLevelAt

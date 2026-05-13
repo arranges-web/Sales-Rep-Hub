@@ -21,6 +21,7 @@ import {
   Bot,
   MessageCircle,
   TrendingUp,
+  Megaphone,
 } from "lucide-react";
 import { isSoundEnabled, onSoundChanged, setSoundEnabled } from "@/lib/sound";
 import {
@@ -35,7 +36,9 @@ import {
   getListBadgesQueryKey,
   getListIncentiveTiersQueryKey,
   getListConversationsQueryKey,
+  getListCampaignsQueryKey,
   getMe,
+  listCampaigns,
   getLeaderboard,
   getLeaderboardSummary,
   listFeedPosts,
@@ -62,6 +65,7 @@ const NAV_ITEMS = [
   { href: "/feed", label: "Hype Feed", icon: MessageSquareHeart },
   { href: "/map", label: "Canvassing Map", icon: MapIcon },
   { href: "/opportunities", label: "Opportunities", icon: TrendingUp },
+  { href: "/campaigns", label: "Campaigns", icon: Megaphone },
   { href: "/deals", label: "My Deals", icon: Briefcase },
   { href: "/messages", label: "Messages", icon: MessageCircle },
   { href: "/rewards", label: "Incentive Vault", icon: Gift },
@@ -91,6 +95,9 @@ const PREFETCHERS: Record<string, Prefetcher> = {
   ],
   "/opportunities": () => [
     { queryKey: getListPinsQueryKey(), queryFn: () => listPins() },
+  ],
+  "/campaigns": () => [
+    { queryKey: getListCampaignsQueryKey(), queryFn: () => listCampaigns() },
   ],
   "/deals": () => [
     { queryKey: ["/api/deals"] as const, queryFn: () => listDeals() },

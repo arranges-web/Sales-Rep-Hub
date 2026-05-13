@@ -49,28 +49,53 @@ router.get("/public/pulse", async (_req, res, next) => {
 router.get("/leaderboard", requireAuth, async (req, res, next) => {
   try {
     const me = req.currentUser!;
+    const period =
+      typeof req.query.period === "string" &&
+      ["month", "week", "all_time"].includes(req.query.period)
+        ? (req.query.period as "month" | "week" | "all_time")
+        : "all_time";
+
+    // Build a "since" cutoff for the chosen window. all_time leaves it null
+    // and the SQL aggregates over the entire history.
+    const cutoff = (() => {
+      if (period === "all_time") return null;
+      const d = new Date();
+      if (period === "month") {
+        d.setDate(1);
+        d.setHours(0, 0, 0, 0);
+      } else {
+        const day = d.getDay();
+        const diff = (day + 6) % 7;
+        d.setDate(d.getDate() - diff);
+        d.setHours(0, 0, 0, 0);
+      }
+      return d;
+    })();
+
     const reps = await db
       .select()
       .from(usersTable)
-      .where(eq(usersTable.role, "rep"))
-      .orderBy(desc(usersTable.totalPoints));
+      .where(eq(usersTable.role, "rep"));
 
     const repIds = reps.map((r) => r.id);
     const streaks = await computeStreaksForAll(repIds);
 
-    // Bulk fetch deal stats and badges to avoid N+1.
+    // Bulk fetch deal stats and badges to avoid N+1. For period queries we
+    // also pull points-awarded-in-window so the board can be re-ranked.
     const statsRows = repIds.length
       ? await db
           .select({
             repId: dealsTable.repId,
             cnt: sql<number>`COUNT(*)`,
             rev: sql<number>`COALESCE(SUM(${dealsTable.amount}), 0)`,
+            pts: sql<number>`COALESCE(SUM(${dealsTable.pointsAwarded}), 0)`,
           })
           .from(dealsTable)
           .where(
             and(
               inArray(dealsTable.repId, repIds),
               sql`${dealsTable.status} IN ('closed','paid')`,
+              ...(cutoff ? [gte(dealsTable.closedAt, cutoff)] : []),
             ),
           )
           .groupBy(dealsTable.repId)
@@ -89,13 +114,20 @@ router.get("/leaderboard", requireAuth, async (req, res, next) => {
       badgesByUser.set(b.userId, arr);
     }
 
-    const result = reps.map((u, idx) => {
+    // Materialize the rows first so we can resort by window points when
+    // a period is requested. all_time keeps the user.totalPoints sort.
+    const unsorted = reps.map((u) => {
       const s = statsByRep.get(u.id);
       const badges = badgesByUser.get(u.id) ?? [];
+      const windowPoints = Number(s?.pts ?? 0);
+      const points = cutoff ? windowPoints : u.totalPoints;
       const lvl = levelInfo(u.totalPoints);
-      const streak = streaks.get(u.id) ?? { currentStreak: 0, bestStreak: 0, streakAtRisk: false };
+      const streak = streaks.get(u.id) ?? {
+        currentStreak: 0,
+        bestStreak: 0,
+        streakAtRisk: false,
+      };
       return {
-        rank: idx + 1,
         userId: u.id,
         name: u.name,
         avatarUrl: u.avatarUrl ?? null,
@@ -103,7 +135,7 @@ router.get("/leaderboard", requireAuth, async (req, res, next) => {
         hometown: u.hometown ?? null,
         bio: u.bio ?? null,
         hawaiiGoal: u.hawaiiGoal ?? null,
-        totalPoints: u.totalPoints,
+        totalPoints: points,
         dealsCount: Number(s?.cnt ?? 0),
         totalRevenue: Number(s?.rev ?? 0),
         badges: badges.map((b) => ({
@@ -123,6 +155,8 @@ router.get("/leaderboard", requireAuth, async (req, res, next) => {
         streakAtRisk: streak.streakAtRisk,
       };
     });
+    unsorted.sort((a, b) => b.totalPoints - a.totalPoints);
+    const result = unsorted.map((row, idx) => ({ rank: idx + 1, ...row }));
     res.json(result);
   } catch (e) {
     next(e);

@@ -844,6 +844,177 @@ export interface UpdateTrainingResourceBody {
   displayOrder?: number;
 }
 
+export type CampaignType = (typeof CampaignType)[keyof typeof CampaignType];
+
+export const CampaignType = {
+  door: "door",
+  flyer: "flyer",
+} as const;
+
+export type CampaignStatus =
+  (typeof CampaignStatus)[keyof typeof CampaignStatus];
+
+export const CampaignStatus = {
+  active: "active",
+  paused: "paused",
+  complete: "complete",
+} as const;
+
+export interface Campaign {
+  id: number;
+  name: string;
+  /** @nullable */
+  description?: string | null;
+  type: CampaignType;
+  color: string;
+  status: CampaignStatus;
+  createdBy: number;
+  /** @nullable */
+  createdByName?: string | null;
+  createdAt: string;
+  streetCount: number;
+  doneCount: number;
+  inProgressCount: number;
+  totalDoorsKnocked: number;
+  totalFlyersHandedOut: number;
+}
+
+export type CampaignStreetStatus =
+  (typeof CampaignStreetStatus)[keyof typeof CampaignStreetStatus];
+
+export const CampaignStreetStatus = {
+  pending: "pending",
+  in_progress: "in_progress",
+  done: "done",
+  skipped: "skipped",
+} as const;
+
+export interface CampaignStreet {
+  id: number;
+  campaignId: number;
+  name: string;
+  /** @nullable */
+  city?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  status: CampaignStreetStatus;
+  /** @nullable */
+  assignedToUserId?: number | null;
+  /** @nullable */
+  assignedToUserName?: string | null;
+  /** @nullable */
+  completedByUserId?: number | null;
+  /** @nullable */
+  completedByUserName?: string | null;
+  /** @nullable */
+  completedAt?: string | null;
+  flyersHandedOut: number;
+  doorsKnocked: number;
+  createdAt: string;
+}
+
+export type CampaignDetail = Campaign & {
+  streets: CampaignStreet[];
+};
+
+export type CreateCampaignBodyType =
+  (typeof CreateCampaignBodyType)[keyof typeof CreateCampaignBodyType];
+
+export const CreateCampaignBodyType = {
+  door: "door",
+  flyer: "flyer",
+} as const;
+
+export interface CreateCampaignBody {
+  name: string;
+  /** @nullable */
+  description?: string | null;
+  type: CreateCampaignBodyType;
+  /** @nullable */
+  color?: string | null;
+  /**
+   * Optional one-per-line list of street names to seed.
+   * @nullable
+   */
+  streets?: string[] | null;
+}
+
+/**
+ * @nullable
+ */
+export type UpdateCampaignBodyStatus =
+  | (typeof UpdateCampaignBodyStatus)[keyof typeof UpdateCampaignBodyStatus]
+  | null;
+
+export const UpdateCampaignBodyStatus = {
+  active: "active",
+  paused: "paused",
+  complete: "complete",
+} as const;
+
+export interface UpdateCampaignBody {
+  /** @nullable */
+  name?: string | null;
+  /** @nullable */
+  description?: string | null;
+  /** @nullable */
+  status?: UpdateCampaignBodyStatus;
+  /** @nullable */
+  color?: string | null;
+}
+
+export interface AddCampaignStreetsBody {
+  names: string[];
+  /** @nullable */
+  city?: string | null;
+}
+
+/**
+ * @nullable
+ */
+export type UpdateCampaignStreetBodyStatus =
+  | (typeof UpdateCampaignStreetBodyStatus)[keyof typeof UpdateCampaignStreetBodyStatus]
+  | null;
+
+export const UpdateCampaignStreetBodyStatus = {
+  pending: "pending",
+  in_progress: "in_progress",
+  done: "done",
+  skipped: "skipped",
+} as const;
+
+export interface UpdateCampaignStreetBody {
+  /** @nullable */
+  status?: UpdateCampaignStreetBodyStatus;
+  /** @nullable */
+  notes?: string | null;
+  /** @nullable */
+  flyersHandedOut?: number | null;
+  /** @nullable */
+  doorsKnocked?: number | null;
+  /** @nullable */
+  assignedToUserId?: number | null;
+}
+
+export interface MyStats {
+  totalPoints: number;
+  monthPoints: number;
+  dealsCount: number;
+  monthDealsCount: number;
+  totalRevenue: number;
+  monthRevenue: number;
+  pinsCount: number;
+  soldPinsCount: number;
+  feedPostsCount: number;
+  badgesCount: number;
+  redemptionsCount: number;
+  currentStreak: number;
+  bestStreak: number;
+  streakAtRisk: boolean;
+  level: number;
+  nextLevelAt: number;
+}
+
 export type ListDealsParams = {
   repId?: number;
   status?: ListDealsStatus;
