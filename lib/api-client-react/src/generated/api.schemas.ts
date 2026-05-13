@@ -996,6 +996,11 @@ export interface UpdateCampaignStreetBody {
   assignedToUserId?: number | null;
 }
 
+export interface SeedDemoResult {
+  ok: boolean;
+  elapsedMs: number;
+}
+
 export interface MyStats {
   totalPoints: number;
   monthPoints: number;

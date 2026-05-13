@@ -21,6 +21,7 @@ import {
   useListTerritories,
   useCreateTerritory,
   useDeleteTerritory,
+  useSeedDemoData,
   getListUsersQueryKey,
   getListIncentiveTiersQueryKey,
   getListPointConfigsQueryKey,
@@ -50,7 +51,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter,
   DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
-import { Trash2, Plus, Check, X, Pencil, Palette, Settings } from "lucide-react";
+import { Trash2, Plus, Check, X, Pencil, Palette, Settings, Sparkles, Loader2 } from "lucide-react";
 import { BrandHeader } from "@/components/BrandHeader";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -72,6 +73,7 @@ export default function AdminPage() {
         subtitle="Reps, points, rewards, training, territories."
         icon={<Settings className="h-6 w-6" strokeWidth={1.5} />}
         accent="#FFBF00"
+        actions={<SeedDemoButton />}
       />
       <Tabs defaultValue="users" className="space-y-4">
         <TabsList className="rounded-xl flex-wrap h-auto">
@@ -92,6 +94,45 @@ export default function AdminPage() {
         <TabsContent value="territories"><TerritoriesTab /></TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+function SeedDemoButton() {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const seed = useSeedDemoData();
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      disabled={seed.isPending}
+      onClick={async () => {
+        try {
+          const res = await seed.mutateAsync();
+          // Repopulate everything that depends on freshly-seeded data.
+          qc.invalidateQueries();
+          toast({
+            title: "Demo data restored",
+            description: `Seed ran in ${res.elapsedMs}ms — refresh to see the demo lineup.`,
+          });
+        } catch (e) {
+          toast({
+            title: "Seed failed",
+            description: String(e),
+            variant: "destructive",
+          });
+        }
+      }}
+      className="rounded-lg gap-1.5"
+      title="Re-run the demo seed (idempotent — never wipes real users)"
+    >
+      {seed.isPending ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : (
+        <Sparkles className="h-3.5 w-3.5 text-[#FFBF00]" />
+      )}
+      Restore demo data
+    </Button>
   );
 }
 

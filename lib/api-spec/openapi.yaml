@@ -840,6 +840,26 @@ paths:
         "204":
           description: Deleted
 
+  # ─── Force-rerun demo seed (admin) ──────────────────────────────
+  /admin/seed-demo:
+    post:
+      operationId: seedDemoData
+      tags: [admin]
+      summary: Force-rerun the baseline demo seed. Idempotent.
+      responses:
+        "200":
+          description: Seed ran
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SeedDemoResult"
+        "403":
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
   # ─── My Lifetime Stats ──────────────────────────────────────────
   /users/me/stats:
     get:
@@ -2675,6 +2695,17 @@ components:
           type: ["integer", "null"]
         assignedToUserId:
           type: ["integer", "null"]
+
+    SeedDemoResult:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        elapsedMs:
+          type: integer
+      required:
+        - ok
+        - elapsedMs
 
     MyStats:
       type: object

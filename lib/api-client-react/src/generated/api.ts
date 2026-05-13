@@ -58,6 +58,7 @@ import type {
   PointConfig,
   Redemption,
   Reward,
+  SeedDemoResult,
   SendMessageBody,
   SkipTraceResult,
   Territory,
@@ -3548,6 +3549,87 @@ export const useDeleteCampaignStreet = <
   TContext
 > => {
   return useMutation(getDeleteCampaignStreetMutationOptions(options));
+};
+
+/**
+ * @summary Force-rerun the baseline demo seed. Idempotent.
+ */
+export const getSeedDemoDataUrl = () => {
+  return `/api/admin/seed-demo`;
+};
+
+export const seedDemoData = async (
+  options?: RequestInit,
+): Promise<SeedDemoResult> => {
+  return customFetch<SeedDemoResult>(getSeedDemoDataUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getSeedDemoDataMutationOptions = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof seedDemoData>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof seedDemoData>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["seedDemoData"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof seedDemoData>>,
+    void
+  > = () => {
+    return seedDemoData(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SeedDemoDataMutationResult = NonNullable<
+  Awaited<ReturnType<typeof seedDemoData>>
+>;
+
+export type SeedDemoDataMutationError = ErrorType<ErrorEnvelope>;
+
+/**
+ * @summary Force-rerun the baseline demo seed. Idempotent.
+ */
+export const useSeedDemoData = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof seedDemoData>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof seedDemoData>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getSeedDemoDataMutationOptions(options));
 };
 
 /**

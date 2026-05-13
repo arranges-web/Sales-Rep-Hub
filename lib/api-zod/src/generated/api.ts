@@ -1025,6 +1025,14 @@ export const DeleteCampaignStreetParams = zod.object({
 });
 
 /**
+ * @summary Force-rerun the baseline demo seed. Idempotent.
+ */
+export const SeedDemoDataResponse = zod.object({
+  ok: zod.boolean(),
+  elapsedMs: zod.number(),
+});
+
+/**
  * @summary Aggregated lifetime stats for the current rep
  */
 export const GetMyStatsResponse = zod.object({

@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { db, incentiveTiersTable, pointConfigsTable, trainingResourcesTable } from "@workspace/db";
 import { eq, asc } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../middlewares/auth";
+import { seedBaselineData } from "../lib/seed";
 
 const router: IRouter = Router();
 
@@ -153,5 +154,24 @@ router.delete("/training/:resourceId", requireAuth, requireAdmin, async (req, re
     next(e);
   }
 });
+
+// Force-rerun the baseline demo seed. Useful after a schema push that
+// cleared rows, or when bringing a fresh environment online without
+// restarting the API. Idempotent — uses the same self-healing seeders
+// as boot, so real-user data is never clobbered.
+router.post(
+  "/admin/seed-demo",
+  requireAuth,
+  requireAdmin,
+  async (_req, res, next) => {
+    try {
+      const t0 = Date.now();
+      await seedBaselineData();
+      res.json({ ok: true, elapsedMs: Date.now() - t0 });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
 
 export default router;
