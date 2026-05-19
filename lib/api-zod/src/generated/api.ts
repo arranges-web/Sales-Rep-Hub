@@ -665,6 +665,15 @@ export const ListPinsResponseItem = zod.object({
       "How resident info was obtained — rep (manual), skiptrace (lookup), or null.",
     ),
   lastKnockedAt: zod.coerce.date().nullish(),
+  source: zod
+    .string()
+    .nullish()
+    .describe(
+      'Where this pin came from — \"rep\" (manual) or an integration like \"jobber\".',
+    ),
+  externalId: zod.string().nullish(),
+  jobValue: zod.number().nullish(),
+  jobStatus: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
 export const ListPinsResponse = zod.array(ListPinsResponseItem);
@@ -713,6 +722,15 @@ export const GetPinResponse = zod.object({
       "How resident info was obtained — rep (manual), skiptrace (lookup), or null.",
     ),
   lastKnockedAt: zod.coerce.date().nullish(),
+  source: zod
+    .string()
+    .nullish()
+    .describe(
+      'Where this pin came from — \"rep\" (manual) or an integration like \"jobber\".',
+    ),
+  externalId: zod.string().nullish(),
+  jobValue: zod.number().nullish(),
+  jobStatus: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
 
@@ -758,6 +776,15 @@ export const UpdatePinResponse = zod.object({
       "How resident info was obtained — rep (manual), skiptrace (lookup), or null.",
     ),
   lastKnockedAt: zod.coerce.date().nullish(),
+  source: zod
+    .string()
+    .nullish()
+    .describe(
+      'Where this pin came from — \"rep\" (manual) or an integration like \"jobber\".',
+    ),
+  externalId: zod.string().nullish(),
+  jobValue: zod.number().nullish(),
+  jobStatus: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
 
@@ -1022,6 +1049,105 @@ export const UpdateCampaignStreetResponse = zod.object({
 export const DeleteCampaignStreetParams = zod.object({
   campaignId: zod.coerce.number(),
   streetId: zod.coerce.number(),
+});
+
+/**
+ * @summary Get Jobber connection status (admin only)
+ */
+export const GetJobberStatusResponse = zod.object({
+  provider: zod.enum(["jobber"]),
+  configured: zod.boolean(),
+  accountName: zod.string().nullish(),
+  accessTokenMask: zod
+    .string()
+    .nullish()
+    .describe("Masked version of the stored access token (first 4 + last 4)."),
+  lastSyncAt: zod.coerce.date().nullish(),
+  lastSyncStatus: zod
+    .union([zod.literal("ok"), zod.literal("failed"), zod.literal(null)])
+    .nullish(),
+  lastSyncError: zod.string().nullish(),
+  lastSyncJobsCount: zod.number(),
+  pinsFromJobber: zod.number(),
+});
+
+/**
+ * @summary Set or clear the Jobber access token (admin only)
+ */
+export const UpdateJobberCredentialsBody = zod.object({
+  accessToken: zod
+    .string()
+    .nullish()
+    .describe("Paste a Jobber OAuth access token. Pass null to clear."),
+  accountName: zod.string().nullish(),
+});
+
+export const UpdateJobberCredentialsResponse = zod.object({
+  provider: zod.enum(["jobber"]),
+  configured: zod.boolean(),
+  accountName: zod.string().nullish(),
+  accessTokenMask: zod
+    .string()
+    .nullish()
+    .describe("Masked version of the stored access token (first 4 + last 4)."),
+  lastSyncAt: zod.coerce.date().nullish(),
+  lastSyncStatus: zod
+    .union([zod.literal("ok"), zod.literal("failed"), zod.literal(null)])
+    .nullish(),
+  lastSyncError: zod.string().nullish(),
+  lastSyncJobsCount: zod.number(),
+  pinsFromJobber: zod.number(),
+});
+
+/**
+ * @summary Disconnect Jobber by wiping the stored token (admin only)
+ */
+export const DisconnectJobberResponse = zod.object({
+  provider: zod.enum(["jobber"]),
+  configured: zod.boolean(),
+  accountName: zod.string().nullish(),
+  accessTokenMask: zod
+    .string()
+    .nullish()
+    .describe("Masked version of the stored access token (first 4 + last 4)."),
+  lastSyncAt: zod.coerce.date().nullish(),
+  lastSyncStatus: zod
+    .union([zod.literal("ok"), zod.literal("failed"), zod.literal(null)])
+    .nullish(),
+  lastSyncError: zod.string().nullish(),
+  lastSyncJobsCount: zod.number(),
+  pinsFromJobber: zod.number(),
+});
+
+/**
+ * @summary Pull all jobs from Jobber and upsert into pins (admin only)
+ */
+export const SyncJobberResponse = zod.object({
+  ok: zod.boolean(),
+  jobsSeen: zod.number(),
+  pinsCreated: zod.number(),
+  pinsUpdated: zod.number(),
+  geocodeMisses: zod.number(),
+  error: zod.string().nullish(),
+  elapsedMs: zod.number(),
+  status: zod.object({
+    provider: zod.enum(["jobber"]),
+    configured: zod.boolean(),
+    accountName: zod.string().nullish(),
+    accessTokenMask: zod
+      .string()
+      .nullish()
+      .describe(
+        "Masked version of the stored access token (first 4 + last 4).",
+      ),
+    lastSyncAt: zod.coerce.date().nullish(),
+    lastSyncStatus: zod
+      .union([zod.literal("ok"), zod.literal("failed"), zod.literal(null)])
+      .nullish(),
+    lastSyncError: zod.string().nullish(),
+    lastSyncJobsCount: zod.number(),
+    pinsFromJobber: zod.number(),
+  }),
 });
 
 /**

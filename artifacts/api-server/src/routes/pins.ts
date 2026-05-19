@@ -29,6 +29,10 @@ function ser(
     residentPhone: p.residentPhone ?? null,
     residentSource: p.residentSource ?? null,
     lastKnockedAt: p.lastKnockedAt ? p.lastKnockedAt.toISOString() : null,
+    source: p.source ?? "rep",
+    externalId: p.externalId ?? null,
+    jobValue: p.jobValue ?? null,
+    jobStatus: p.jobStatus ?? null,
     createdAt: p.createdAt.toISOString(),
   };
 }
@@ -179,6 +183,12 @@ router.delete("/pins/:pinId", requireAuth, async (req, res, next) => {
     }
     if (existing.repId !== me.id && me.role !== "admin") {
       res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    // Jobber-owned pins are managed by the next sync — only admins can delete
+    // them, and even then they'll likely come back unless Jobber removed the job.
+    if (existing.source === "jobber" && me.role !== "admin") {
+      res.status(403).json({ error: "Jobber-synced pins can only be removed by an admin" });
       return;
     }
     await db.delete(pinsTable).where(eq(pinsTable.id, id));

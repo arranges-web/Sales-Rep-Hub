@@ -47,6 +47,8 @@ import type {
   HealthStatus,
   HighFiveResult,
   IncentiveTier,
+  JobberStatus,
+  JobberSyncResult,
   LeaderboardEntry,
   LeaderboardSummary,
   ListBadgesParams,
@@ -67,6 +69,7 @@ import type {
   UpdateCampaignStreetBody,
   UpdateDealBody,
   UpdateIncentiveTierBody,
+  UpdateJobberCredentialsBody,
   UpdatePinBody,
   UpdatePointConfigBody,
   UpdateProfileBody,
@@ -3549,6 +3552,330 @@ export const useDeleteCampaignStreet = <
   TContext
 > => {
   return useMutation(getDeleteCampaignStreetMutationOptions(options));
+};
+
+/**
+ * @summary Get Jobber connection status (admin only)
+ */
+export const getGetJobberStatusUrl = () => {
+  return `/api/integrations/jobber`;
+};
+
+export const getJobberStatus = async (
+  options?: RequestInit,
+): Promise<JobberStatus> => {
+  return customFetch<JobberStatus>(getGetJobberStatusUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetJobberStatusQueryKey = () => {
+  return [`/api/integrations/jobber`] as const;
+};
+
+export const getGetJobberStatusQueryOptions = <
+  TData = Awaited<ReturnType<typeof getJobberStatus>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getJobberStatus>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetJobberStatusQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getJobberStatus>>> = ({
+    signal,
+  }) => getJobberStatus({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getJobberStatus>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetJobberStatusQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getJobberStatus>>
+>;
+export type GetJobberStatusQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get Jobber connection status (admin only)
+ */
+
+export function useGetJobberStatus<
+  TData = Awaited<ReturnType<typeof getJobberStatus>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getJobberStatus>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetJobberStatusQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Set or clear the Jobber access token (admin only)
+ */
+export const getUpdateJobberCredentialsUrl = () => {
+  return `/api/integrations/jobber`;
+};
+
+export const updateJobberCredentials = async (
+  updateJobberCredentialsBody: UpdateJobberCredentialsBody,
+  options?: RequestInit,
+): Promise<JobberStatus> => {
+  return customFetch<JobberStatus>(getUpdateJobberCredentialsUrl(), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateJobberCredentialsBody),
+  });
+};
+
+export const getUpdateJobberCredentialsMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateJobberCredentials>>,
+    TError,
+    { data: BodyType<UpdateJobberCredentialsBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateJobberCredentials>>,
+  TError,
+  { data: BodyType<UpdateJobberCredentialsBody> },
+  TContext
+> => {
+  const mutationKey = ["updateJobberCredentials"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateJobberCredentials>>,
+    { data: BodyType<UpdateJobberCredentialsBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateJobberCredentials(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateJobberCredentialsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateJobberCredentials>>
+>;
+export type UpdateJobberCredentialsMutationBody =
+  BodyType<UpdateJobberCredentialsBody>;
+export type UpdateJobberCredentialsMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Set or clear the Jobber access token (admin only)
+ */
+export const useUpdateJobberCredentials = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateJobberCredentials>>,
+    TError,
+    { data: BodyType<UpdateJobberCredentialsBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateJobberCredentials>>,
+  TError,
+  { data: BodyType<UpdateJobberCredentialsBody> },
+  TContext
+> => {
+  return useMutation(getUpdateJobberCredentialsMutationOptions(options));
+};
+
+/**
+ * @summary Disconnect Jobber by wiping the stored token (admin only)
+ */
+export const getDisconnectJobberUrl = () => {
+  return `/api/integrations/jobber`;
+};
+
+export const disconnectJobber = async (
+  options?: RequestInit,
+): Promise<JobberStatus> => {
+  return customFetch<JobberStatus>(getDisconnectJobberUrl(), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDisconnectJobberMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof disconnectJobber>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof disconnectJobber>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["disconnectJobber"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof disconnectJobber>>,
+    void
+  > = () => {
+    return disconnectJobber(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DisconnectJobberMutationResult = NonNullable<
+  Awaited<ReturnType<typeof disconnectJobber>>
+>;
+
+export type DisconnectJobberMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Disconnect Jobber by wiping the stored token (admin only)
+ */
+export const useDisconnectJobber = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof disconnectJobber>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof disconnectJobber>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getDisconnectJobberMutationOptions(options));
+};
+
+/**
+ * @summary Pull all jobs from Jobber and upsert into pins (admin only)
+ */
+export const getSyncJobberUrl = () => {
+  return `/api/integrations/jobber/sync`;
+};
+
+export const syncJobber = async (
+  options?: RequestInit,
+): Promise<JobberSyncResult> => {
+  return customFetch<JobberSyncResult>(getSyncJobberUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getSyncJobberMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof syncJobber>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof syncJobber>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["syncJobber"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof syncJobber>>,
+    void
+  > = () => {
+    return syncJobber(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SyncJobberMutationResult = NonNullable<
+  Awaited<ReturnType<typeof syncJobber>>
+>;
+
+export type SyncJobberMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Pull all jobs from Jobber and upsert into pins (admin only)
+ */
+export const useSyncJobber = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof syncJobber>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof syncJobber>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getSyncJobberMutationOptions(options));
 };
 
 /**

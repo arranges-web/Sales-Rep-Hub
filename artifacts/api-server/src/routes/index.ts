@@ -12,6 +12,7 @@ import adminRouter from "./admin";
 import storageRouter from "./storage";
 import coachRouter from "./coach";
 import campaignsRouter from "./campaigns";
+import integrationsRouter from "./integrations";
 import messagesRouter from "./messages";
 
 const router: IRouter = Router();
@@ -29,6 +30,7 @@ router.use(badgesRouter);
 router.use(adminRouter);
 router.use(coachRouter);
 router.use(campaignsRouter);
+router.use(integrationsRouter);
 router.use(messagesRouter);
 
 export default router;

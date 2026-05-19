@@ -127,11 +127,57 @@ export const pinsTable = pgTable(
     residentPhone: text("resident_phone"),
     residentSource: text("resident_source"),
     lastKnockedAt: timestamp("last_knocked_at", { withTimezone: true }),
+    /** "rep" (manual) or external integration like "jobber". */
+    source: text("source").notNull().default("rep"),
+    /** Stable id from the external system, e.g. "jobber:job:gid://...". */
+    externalId: text("external_id"),
+    /** For Jobber jobs: total invoiced value. */
+    jobValue: doublePrecision("job_value"),
+    /** Raw status string from Jobber (e.g., "active", "archived", "requires_invoicing"). */
+    jobStatus: text("job_status"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
     repIdx: index("pins_rep_idx").on(t.repId),
+    externalIdx: uniqueIndex("pins_external_id_idx").on(t.externalId),
+    sourceIdx: index("pins_source_idx").on(t.source),
   }),
+);
+
+export const integrationCredentialsTable = pgTable(
+  "integration_credentials",
+  {
+    id: serial("id").primaryKey(),
+    /** Stable provider key, e.g., "jobber". */
+    provider: text("provider").notNull(),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    accountName: text("account_name"),
+    lastSyncAt: timestamp("last_sync_at", { withTimezone: true }),
+    /** "ok" | "failed" | null (never). */
+    lastSyncStatus: text("last_sync_status"),
+    lastSyncError: text("last_sync_error"),
+    lastSyncJobsCount: integer("last_sync_jobs_count").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    providerIdx: uniqueIndex("integration_credentials_provider_idx").on(t.provider),
+  }),
+);
+
+// Cache geocoded address → lat/lng so we don't re-hit Nominatim. Keyed on
+// the raw address string; consumers should normalize before lookup.
+export const geocodeCacheTable = pgTable(
+  "geocode_cache",
+  {
+    address: text("address").primaryKey(),
+    latitude: doublePrecision("latitude"),
+    longitude: doublePrecision("longitude"),
+    resolvedAddress: text("resolved_address"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
 );
 
 export const rewardsTable = pgTable("rewards", {
@@ -304,3 +350,5 @@ export type ConversationMember = typeof conversationMembersTable.$inferSelect;
 export type Message = typeof messagesTable.$inferSelect;
 export type Campaign = typeof campaignsTable.$inferSelect;
 export type CampaignStreet = typeof campaignStreetsTable.$inferSelect;
+export type IntegrationCredential = typeof integrationCredentialsTable.$inferSelect;
+export type GeocodeCacheRow = typeof geocodeCacheTable.$inferSelect;
