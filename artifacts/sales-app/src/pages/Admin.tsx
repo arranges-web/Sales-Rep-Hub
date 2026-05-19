@@ -21,6 +21,13 @@ import {
   useListTerritories,
   useCreateTerritory,
   useDeleteTerritory,
+  useSeedDemoData,
+  useGetJobberStatus,
+  useUpdateJobberCredentials,
+  useSyncJobber,
+  useDisconnectJobber,
+  getGetJobberStatusQueryKey,
+  getListPinsQueryKey,
   getListUsersQueryKey,
   getListIncentiveTiersQueryKey,
   getListPointConfigsQueryKey,
@@ -50,7 +57,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter,
   DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
-import { Trash2, Plus, Check, X, Pencil, Palette, Settings } from "lucide-react";
+import { Trash2, Plus, Check, X, Pencil, Palette, Settings, Sparkles, Loader2 } from "lucide-react";
 import { BrandHeader } from "@/components/BrandHeader";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -72,6 +79,7 @@ export default function AdminPage() {
         subtitle="Reps, points, rewards, training, territories."
         icon={<Settings className="h-6 w-6" strokeWidth={1.5} />}
         accent="#FFBF00"
+        actions={<SeedDemoButton />}
       />
       <Tabs defaultValue="users" className="space-y-4">
         <TabsList className="rounded-xl flex-wrap h-auto">
@@ -82,6 +90,7 @@ export default function AdminPage() {
           <TabsTrigger value="redemptions" className="rounded-lg">Redemptions</TabsTrigger>
           <TabsTrigger value="training" className="rounded-lg">Training</TabsTrigger>
           <TabsTrigger value="territories" className="rounded-lg">Territories</TabsTrigger>
+          <TabsTrigger value="integrations" className="rounded-lg">Integrations</TabsTrigger>
         </TabsList>
         <TabsContent value="users"><UsersTab /></TabsContent>
         <TabsContent value="tiers"><TiersTab /></TabsContent>
@@ -90,8 +99,48 @@ export default function AdminPage() {
         <TabsContent value="redemptions"><RedemptionsTab /></TabsContent>
         <TabsContent value="training"><TrainingTab /></TabsContent>
         <TabsContent value="territories"><TerritoriesTab /></TabsContent>
+        <TabsContent value="integrations"><IntegrationsTab /></TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+function SeedDemoButton() {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const seed = useSeedDemoData();
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      disabled={seed.isPending}
+      onClick={async () => {
+        try {
+          const res = await seed.mutateAsync();
+          // Repopulate everything that depends on freshly-seeded data.
+          qc.invalidateQueries();
+          toast({
+            title: "Demo data restored",
+            description: `Seed ran in ${res.elapsedMs}ms — refresh to see the demo lineup.`,
+          });
+        } catch (e) {
+          toast({
+            title: "Seed failed",
+            description: String(e),
+            variant: "destructive",
+          });
+        }
+      }}
+      className="rounded-lg gap-1.5"
+      title="Re-run the demo seed (idempotent — never wipes real users)"
+    >
+      {seed.isPending ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : (
+        <Sparkles className="h-3.5 w-3.5 text-[#FFBF00]" />
+      )}
+      Restore demo data
+    </Button>
   );
 }
 
@@ -741,3 +790,198 @@ function TerritoriesTab() {
     </div>
   );
 }
+
+
+function IntegrationsTab() {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const { data: status } = useGetJobberStatus();
+  const update = useUpdateJobberCredentials();
+  const sync = useSyncJobber();
+  const disconnect = useDisconnectJobber();
+
+  const [token, setToken] = useState("");
+  const [accountName, setAccountName] = useState("");
+
+  const refresh = () => {
+    qc.invalidateQueries({ queryKey: getGetJobberStatusQueryKey() });
+    qc.invalidateQueries({ queryKey: getListPinsQueryKey() });
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card className="relative overflow-hidden p-5">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-[#2C8214]/25 blur-3xl"
+        />
+        <div className="relative flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-[#2C8214]" />
+              <h2 className="text-base font-bold tracking-tight">Jobber</h2>
+              {status?.configured ? (
+                <Badge className="border-0 bg-[#2C8214]/20 text-[#7ed85c]">Connected</Badge>
+              ) : (
+                <Badge variant="outline">Not connected</Badge>
+              )}
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Sync every Jobber client and job into the canvassing map. Past jobs land as green "sold" pins so reps can see exactly where the company has worked.
+            </p>
+            {status?.accountName && (
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Account: <span className="font-semibold text-foreground/80">{status.accountName}</span>
+              </p>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              disabled={!status?.configured || sync.isPending}
+              onClick={async () => {
+                try {
+                  const res = await sync.mutateAsync();
+                  refresh();
+                  if (res.ok) {
+                    toast({
+                      title: "Jobber sync complete",
+                      description: `${res.pinsCreated} new pin${res.pinsCreated === 1 ? "" : "s"}, ${res.pinsUpdated} updated, ${res.geocodeMisses} addresses couldn't be geocoded.`,
+                    });
+                  } else {
+                    toast({
+                      title: "Sync failed",
+                      description: res.error ?? "Unknown error",
+                      variant: "destructive",
+                    });
+                  }
+                } catch (e) {
+                  toast({ title: "Sync failed", description: String(e), variant: "destructive" });
+                }
+              }}
+              className="rounded-lg bg-[#2EA3F2] text-slate-950 hover:bg-[#48b3f6]"
+            >
+              {sync.isPending ? (
+                <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Sparkles className="mr-1 h-3.5 w-3.5" />
+              )}
+              Sync now
+            </Button>
+            {status?.configured && (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={disconnect.isPending}
+                onClick={async () => {
+                  if (!confirm("Disconnect Jobber? The synced pins will stay on the map until you delete them manually.")) return;
+                  await disconnect.mutateAsync();
+                  refresh();
+                  setToken("");
+                  toast({ title: "Jobber disconnected" });
+                }}
+                className="rounded-lg"
+              >
+                Disconnect
+              </Button>
+            )}
+          </div>
+        </div>
+
+        <div className="relative mt-4 grid gap-3 sm:grid-cols-3">
+          <MiniStat label="Pins from Jobber" value={status?.pinsFromJobber ?? 0} color="#7ed85c" />
+          <MiniStat label="Last sync count" value={status?.lastSyncJobsCount ?? 0} color="#2EA3F2" />
+          <MiniStat
+            label="Last sync"
+            value={status?.lastSyncAt ? new Date(status.lastSyncAt).toLocaleString() : "Never"}
+            color={
+              status?.lastSyncStatus === "failed"
+                ? "#f87171"
+                : status?.lastSyncStatus === "ok"
+                  ? "#7ed85c"
+                  : "#94a3b8"
+            }
+          />
+        </div>
+        {status?.lastSyncError && (
+          <p className="relative mt-3 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
+            Last error: {status.lastSyncError}
+          </p>
+        )}
+      </Card>
+
+      <Card className="space-y-4 p-5">
+        <div>
+          <Label>Jobber access token</Label>
+          <Input
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+            placeholder={status?.accessTokenMask ? `Replace ${status.accessTokenMask}` : "Paste your Jobber OAuth access token"}
+            className="mt-1 rounded-lg font-mono"
+            type="password"
+            autoComplete="off"
+          />
+          <p className="mt-1 text-xs text-muted-foreground">
+            Generate a token in your Jobber developer dashboard (Apps → your app → OAuth token). Stored server-side; never exposed to the rep app.
+          </p>
+        </div>
+        <div>
+          <Label>Account label (optional)</Label>
+          <Input
+            value={accountName}
+            onChange={(e) => setAccountName(e.target.value)}
+            placeholder={status?.accountName ?? "Joshua Tree FL"}
+            className="mt-1 rounded-lg"
+          />
+        </div>
+        <div className="flex justify-end">
+          <Button
+            disabled={!token.trim() || update.isPending}
+            onClick={async () => {
+              try {
+                await update.mutateAsync({
+                  data: {
+                    accessToken: token.trim(),
+                    accountName: accountName.trim() || null,
+                  },
+                });
+                refresh();
+                setToken("");
+                toast({ title: "Jobber credentials saved" });
+              } catch (e) {
+                toast({ title: "Could not save", description: String(e), variant: "destructive" });
+              }
+            }}
+            className="rounded-lg bg-[#2EA3F2] text-slate-950 hover:bg-[#48b3f6]"
+          >
+            {update.isPending ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Check className="mr-1 h-3.5 w-3.5" />}
+            Save token
+          </Button>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function MiniStat({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: number | string;
+  color: string;
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-background/40 p-3">
+      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div
+        className="font-stat mt-1 text-lg font-extrabold tabular-nums"
+        style={{ color }}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+

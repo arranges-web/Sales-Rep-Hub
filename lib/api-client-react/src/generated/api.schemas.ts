@@ -387,6 +387,17 @@ export interface MapPin {
   residentSource?: string | null;
   /** @nullable */
   lastKnockedAt?: string | null;
+  /**
+   * Where this pin came from — "rep" (manual) or an integration like "jobber".
+   * @nullable
+   */
+  source?: string | null;
+  /** @nullable */
+  externalId?: string | null;
+  /** @nullable */
+  jobValue?: number | null;
+  /** @nullable */
+  jobStatus?: string | null;
   createdAt: string;
 }
 
@@ -994,6 +1005,72 @@ export interface UpdateCampaignStreetBody {
   doorsKnocked?: number | null;
   /** @nullable */
   assignedToUserId?: number | null;
+}
+
+export type JobberStatusProvider =
+  (typeof JobberStatusProvider)[keyof typeof JobberStatusProvider];
+
+export const JobberStatusProvider = {
+  jobber: "jobber",
+} as const;
+
+/**
+ * @nullable
+ */
+export type JobberStatusLastSyncStatus =
+  | (typeof JobberStatusLastSyncStatus)[keyof typeof JobberStatusLastSyncStatus]
+  | null;
+
+export const JobberStatusLastSyncStatus = {
+  ok: "ok",
+  failed: "failed",
+} as const;
+
+export interface JobberStatus {
+  provider: JobberStatusProvider;
+  configured: boolean;
+  /** @nullable */
+  accountName?: string | null;
+  /**
+   * Masked version of the stored access token (first 4 + last 4).
+   * @nullable
+   */
+  accessTokenMask?: string | null;
+  /** @nullable */
+  lastSyncAt?: string | null;
+  /** @nullable */
+  lastSyncStatus?: JobberStatusLastSyncStatus;
+  /** @nullable */
+  lastSyncError?: string | null;
+  lastSyncJobsCount: number;
+  pinsFromJobber: number;
+}
+
+export interface UpdateJobberCredentialsBody {
+  /**
+   * Paste a Jobber OAuth access token. Pass null to clear.
+   * @nullable
+   */
+  accessToken?: string | null;
+  /** @nullable */
+  accountName?: string | null;
+}
+
+export interface JobberSyncResult {
+  ok: boolean;
+  jobsSeen: number;
+  pinsCreated: number;
+  pinsUpdated: number;
+  geocodeMisses: number;
+  /** @nullable */
+  error?: string | null;
+  elapsedMs: number;
+  status: JobberStatus;
+}
+
+export interface SeedDemoResult {
+  ok: boolean;
+  elapsedMs: number;
 }
 
 export interface MyStats {

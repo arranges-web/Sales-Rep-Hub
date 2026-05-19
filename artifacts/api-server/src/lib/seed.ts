@@ -13,6 +13,8 @@ import {
   commentsTable,
   highFivesTable,
   redemptionsTable,
+  campaignsTable,
+  campaignStreetsTable,
 } from "@workspace/db";
 import { sql, eq, and, inArray, notInArray, desc, or, isNull } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
@@ -189,6 +191,7 @@ export async function seedBaselineData(): Promise<void> {
     await healMockRepsIfStale();
     await seedFeedSocialSignals();
     await seedDemoRedemptions();
+    await seedDemoCampaigns();
     // Snapshot of current populated state for easy verification on dev
     // and in CI logs. Each branch above also logs only when it actually
     // mutates, so absence of branch-specific log lines = idempotent boot.
@@ -203,6 +206,8 @@ export async function seedBaselineData(): Promise<void> {
         training: sql<number>`(SELECT COUNT(*) FROM ${trainingResourcesTable})`,
         redemptions: sql<number>`(SELECT COUNT(*) FROM ${redemptionsTable})`,
         territories: sql<number>`(SELECT COUNT(*) FROM ${territoriesTable})`,
+        campaigns: sql<number>`(SELECT COUNT(*) FROM ${campaignsTable})`,
+        campaignStreets: sql<number>`(SELECT COUNT(*) FROM ${campaignStreetsTable})`,
       })
       .from(sql`(SELECT 1) AS dummy`);
     logger.info(
@@ -1069,6 +1074,132 @@ async function seedDemoRedemptions(): Promise<void> {
       alreadyHadPending: have.pending ?? 0,
     },
     "Seeded demo redemptions",
+  );
+}
+
+// Demo campaigns shipped pre-populated so the /campaigns feature has
+// life when a new environment publishes. Strictly additive: only
+// inserts campaigns whose name is missing. Streets attached are
+// idempotent per campaign via the same name check.
+const DEMO_CAMPAIGNS: Array<{
+  name: string;
+  description: string;
+  type: "door" | "flyer";
+  color: string;
+  status: "active" | "paused" | "complete";
+  streets: Array<{
+    name: string;
+    city: string;
+    status: "pending" | "in_progress" | "done";
+    doorsKnocked?: number;
+    flyersHandedOut?: number;
+    notes?: string;
+  }>;
+}> = [
+  {
+    name: "Cape Coral Wednesday push",
+    description: "Yellow Streets neighborhood — high-density palms, tons of follow-ups owed.",
+    type: "door",
+    color: "#2EA3F2",
+    status: "active",
+    streets: [
+      { name: "SW 12th Pl",      city: "Cape Coral, FL", status: "done",        doorsKnocked: 38, notes: "Two solid leads, follow up Thu evening." },
+      { name: "SW 14th Ave",     city: "Cape Coral, FL", status: "done",        doorsKnocked: 42 },
+      { name: "Cultural Park Blvd", city: "Cape Coral, FL", status: "in_progress", doorsKnocked: 18, notes: "Started 3pm, stop at 96 if it rains." },
+      { name: "Surfside Blvd",   city: "Cape Coral, FL", status: "pending" },
+      { name: "Veterans Pkwy",   city: "Cape Coral, FL", status: "pending" },
+      { name: "Chiquita Blvd",   city: "Cape Coral, FL", status: "pending" },
+    ],
+  },
+  {
+    name: "Fort Myers River District flyers",
+    description: "Restaurant and retail strip — 2,000 flyers, weekend storm-cleanup push.",
+    type: "flyer",
+    color: "#FFBF00",
+    status: "active",
+    streets: [
+      { name: "First Street",        city: "Fort Myers, FL", status: "done",       flyersHandedOut: 320 },
+      { name: "Hendry Street",       city: "Fort Myers, FL", status: "done",       flyersHandedOut: 285 },
+      { name: "Bay Street",          city: "Fort Myers, FL", status: "in_progress",flyersHandedOut: 140, notes: "Skipped the courthouse block, ask back tomorrow." },
+      { name: "Edwards Drive",       city: "Fort Myers, FL", status: "pending" },
+      { name: "McGregor Blvd",       city: "Fort Myers, FL", status: "pending" },
+    ],
+  },
+  {
+    name: "Naples gated communities",
+    description: "Old Naples loop. Concierge approach, not knock-knock — leave the deluxe brochure.",
+    type: "flyer",
+    color: "#A78BFA",
+    status: "paused",
+    streets: [
+      { name: "Gulf Shore Blvd",   city: "Naples, FL", status: "done",    flyersHandedOut: 145 },
+      { name: "5th Avenue South",  city: "Naples, FL", status: "pending" },
+      { name: "Crayton Road",      city: "Naples, FL", status: "pending" },
+    ],
+  },
+];
+
+async function seedDemoCampaigns(): Promise<void> {
+  // Pick any user to credit as the campaign owner — prefer admin, else any
+  // user. If the users table is empty, skip; the seed will retry next boot.
+  const [admin] = await db
+    .select({ id: usersTable.id })
+    .from(usersTable)
+    .where(eq(usersTable.role, "admin"))
+    .limit(1);
+  let ownerId = admin?.id ?? null;
+  if (!ownerId) {
+    const [anyUser] = await db
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .limit(1);
+    ownerId = anyUser?.id ?? null;
+  }
+  if (!ownerId) return;
+
+  // Names of existing campaigns so we only insert what's missing — never
+  // overwrite admin- or rep-created campaigns.
+  const existing = await db
+    .select({ name: campaignsTable.name })
+    .from(campaignsTable);
+  const have = new Set(existing.map((r) => r.name));
+  const missing = DEMO_CAMPAIGNS.filter((c) => !have.has(c.name));
+  if (missing.length === 0) return;
+
+  let totalStreets = 0;
+  for (const c of missing) {
+    const [created] = await db
+      .insert(campaignsTable)
+      .values({
+        name: c.name,
+        description: c.description,
+        type: c.type,
+        color: c.color,
+        status: c.status,
+        createdBy: ownerId,
+      })
+      .returning();
+    if (!created) continue;
+    if (c.streets.length > 0) {
+      await db.insert(campaignStreetsTable).values(
+        c.streets.map((s) => ({
+          campaignId: created.id,
+          name: s.name,
+          city: s.city,
+          status: s.status,
+          notes: s.notes ?? null,
+          doorsKnocked: s.doorsKnocked ?? 0,
+          flyersHandedOut: s.flyersHandedOut ?? 0,
+          completedAt: s.status === "done" ? new Date() : null,
+          completedByUserId: s.status === "done" ? ownerId : null,
+        })),
+      );
+      totalStreets += c.streets.length;
+    }
+  }
+  logger.info(
+    { campaigns: missing.length, streets: totalStreets },
+    "Seeded demo campaigns",
   );
 }
 

@@ -70,6 +70,15 @@ const STATUS_COLORS = {
   follow_up: "#FFBF00",
 } as const;
 
+// Pulled out so the house-number label only renders at zooms where
+// neighboring labels won't collide.
+const HOUSE_NUMBER_MIN_ZOOM = 17;
+
+function extractHouseNumber(address: string): string | null {
+  const m = address.trim().match(/^(\d+[A-Za-z]?)\b/);
+  return m ? m[1]! : null;
+}
+
 // Pins not knocked in this many days are considered "stale" and recolored
 // to remind reps to either re-knock or move on.
 const STALE_DAYS = 14;
@@ -79,31 +88,62 @@ const HOUSE_ZOOM = 19;
 
 function pinIcon(
   color: string,
-  opts: { stale?: boolean; selected?: boolean; status?: string } = {},
+  opts: {
+    stale?: boolean;
+    selected?: boolean;
+    status?: string;
+    source?: string;
+    houseNumber?: string | null;
+    showNumber?: boolean;
+  } = {},
 ) {
   const ring = opts.selected
     ? "box-shadow:0 0 0 3px #FFBF00, 0 4px 14px rgba(0,0,0,.55);"
     : "box-shadow:0 4px 12px rgba(0,0,0,.45);";
   const opacity = opts.stale ? 0.55 : 1;
+  // Inner glyph: checkmark for sold, "$" for Jobber jobs (it's a real
+  // money line), dot for everything else.
   const inner =
-    opts.status === "sold"
-      ? `<svg viewBox="0 0 24 24" width="11" height="11" stroke="${color}" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>`
-      : `<div style="width:8px;height:8px;border-radius:50%;background:${color};"></div>`;
+    opts.source === "jobber"
+      ? `<span style="color:${color};font-weight:900;font-size:11px;line-height:1;">$</span>`
+      : opts.status === "sold"
+        ? `<svg viewBox="0 0 24 24" width="11" height="11" stroke="${color}" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>`
+        : `<div style="width:8px;height:8px;border-radius:50%;background:${color};"></div>`;
+
+  // Optional house-number label rendered under the pin tip. Centered on
+  // the pin's anchor; we widen the icon box so the label has room.
+  const label =
+    opts.showNumber && opts.houseNumber
+      ? `<div style="
+          position:absolute;left:50%;top:42px;transform:translateX(-50%);
+          padding:2px 6px;border-radius:6px;
+          background:rgba(15,22,32,.85);color:#fff;
+          font-family:'Inter',system-ui,sans-serif;
+          font-weight:700;font-size:10px;letter-spacing:.02em;
+          border:1px solid rgba(255,255,255,.15);
+          box-shadow:0 4px 12px rgba(0,0,0,.4);
+          white-space:nowrap;pointer-events:none;
+        ">${opts.houseNumber}</div>`
+      : "";
+
   return L.divIcon({
     className: "jt-pin",
-    html: `<div style="position:relative;width:32px;height:42px;">
-      <div style="
-        position:absolute;left:1px;top:0;width:30px;height:30px;
-        border-radius:50% 50% 50% 0;
-        background:${color};transform:rotate(-45deg);
-        border:2.5px solid #fff;${ring}
-        opacity:${opacity};
-        display:flex;align-items:center;justify-content:center;">
-        <div style="transform:rotate(45deg);display:flex;align-items:center;justify-content:center;background:#fff;width:14px;height:14px;border-radius:50%;">${inner}</div>
+    html: `<div style="position:relative;width:64px;height:64px;">
+      <div style="position:absolute;left:50%;top:0;transform:translateX(-50%);width:32px;height:42px;">
+        <div style="
+          position:absolute;left:1px;top:0;width:30px;height:30px;
+          border-radius:50% 50% 50% 0;
+          background:${color};transform:rotate(-45deg);
+          border:2.5px solid #fff;${ring}
+          opacity:${opacity};
+          display:flex;align-items:center;justify-content:center;">
+          <div style="transform:rotate(45deg);display:flex;align-items:center;justify-content:center;background:#fff;width:14px;height:14px;border-radius:50%;">${inner}</div>
+        </div>
       </div>
+      ${label}
     </div>`,
-    iconSize: [32, 42],
-    iconAnchor: [16, 38],
+    iconSize: [64, 64],
+    iconAnchor: [32, 38],
     popupAnchor: [0, -34],
   });
 }
@@ -235,6 +275,8 @@ export default function MapPage() {
   const skipTrace = useSkipTracePin();
 
   const [filter, setFilter] = useState<"all" | "lead" | "sold">("all");
+  const [sourceFilter, setSourceFilter] = useState<"all" | "rep" | "jobber">("all");
+  const [currentZoom, setCurrentZoom] = useState<number>(11);
   const [tileMode, setTileMode] = useState<TileMode>("hybrid");
   const [showHouseNumbers, setShowHouseNumbers] = useState(true);
   const [showHeatmap, setShowHeatmap] = useState(false);
@@ -262,8 +304,15 @@ export default function MapPage() {
   });
 
   const filtered = useMemo(
-    () => (pins ?? []).filter((p) => filter === "all" || p.status === filter),
-    [pins, filter],
+    () =>
+      (pins ?? [])
+        .filter((p) => filter === "all" || p.status === filter)
+        .filter((p) => {
+          if (sourceFilter === "all") return true;
+          const src = p.source ?? "rep";
+          return src === sourceFilter;
+        }),
+    [pins, filter, sourceFilter],
   );
 
   const counts = useMemo(() => {
@@ -271,7 +320,11 @@ export default function MapPage() {
     const leads = all.filter((p) => p.status === "lead").length;
     const sold = all.filter((p) => p.status === "sold").length;
     const stale = all.filter((p) => isStale(p)).length;
-    return { all: all.length, leads, sold, stale };
+    const jobs = all.filter((p) => (p.source ?? "rep") === "jobber").length;
+    const jobValue = all
+      .filter((p) => (p.source ?? "rep") === "jobber")
+      .reduce((sum, p) => sum + (p.jobValue ?? 0), 0);
+    return { all: all.length, leads, sold, stale, jobs, jobValue };
   }, [pins]);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -332,6 +385,11 @@ export default function MapPage() {
     // Hotspot rectangles live below pins so taps still fall through to markers.
     const hotspotsLayer = L.layerGroup().addTo(map);
     hotspotsLayerRef.current = hotspotsLayer;
+
+    // Track zoom so the marker render effect can decide whether to paint
+    // house-number labels (we only want them at street-level zooms).
+    setCurrentZoom(map.getZoom());
+    map.on("zoomend", () => setCurrentZoom(map.getZoom()));
 
     map.on("click", async (e) => {
       const { lat, lng } = e.latlng;
@@ -552,11 +610,22 @@ export default function MapPage() {
     const cluster = clusterRef.current;
     if (!cluster) return;
     cluster.clearLayers();
+    const showNumber = currentZoom >= HOUSE_NUMBER_MIN_ZOOM;
     filtered.forEach((p) => {
-      const baseColor =
-        STATUS_COLORS[p.status as keyof typeof STATUS_COLORS] ?? STATUS_COLORS.lead;
+      const isJobber = (p.source ?? "rep") === "jobber";
+      // Jobber jobs always paint in JT green — they're confirmed money on
+      // the books, distinct from rep-dropped lead/sold pins.
+      const baseColor = isJobber
+        ? "#2C8214"
+        : (STATUS_COLORS[p.status as keyof typeof STATUS_COLORS] ?? STATUS_COLORS.lead);
       const m = L.marker([p.latitude, p.longitude], {
-        icon: pinIcon(baseColor, { stale: isStale(p), status: p.status }),
+        icon: pinIcon(baseColor, {
+          stale: !isJobber && isStale(p),
+          status: p.status,
+          source: p.source ?? "rep",
+          houseNumber: extractHouseNumber(p.address),
+          showNumber,
+        }),
       });
       m.on("click", () => {
         setDetail(p);
@@ -568,7 +637,7 @@ export default function MapPage() {
       });
       cluster.addLayer(m);
     });
-  }, [filtered]);
+  }, [filtered, currentZoom]);
 
   // Re-sync the detail sheet with the latest server data when pins refetch
   // (so after we mutate a pin, the open sheet stays current).
@@ -653,6 +722,15 @@ export default function MapPage() {
           <div className="flex flex-wrap items-center gap-1.5">
             <CountChip label="Leads" value={counts.leads} color="#2EA3F2" />
             <CountChip label="Sold" value={counts.sold} color="#2C8214" />
+            {counts.jobs > 0 && (
+              <CountChip
+                label={`Jobber · $${(counts.jobValue / 1000).toFixed(
+                  counts.jobValue >= 100_000 ? 0 : 1,
+                )}k`}
+                value={counts.jobs}
+                color="#7ed85c"
+              />
+            )}
             {counts.stale > 0 && (
               <CountChip label="Stale" value={counts.stale} color="#FFBF00" />
             )}
@@ -945,21 +1023,47 @@ export default function MapPage() {
         </div>
 
         {/* Top-right: filter chips */}
-        <div className="pointer-events-none absolute right-3 top-3 z-[500] flex flex-wrap justify-end gap-1.5">
-          {(["all", "lead", "sold"] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={cn(
-                "pointer-events-auto rounded-full border px-3 py-1.5 text-xs font-semibold capitalize shadow-xl backdrop-blur-md transition-colors",
-                filter === f
-                  ? "border-transparent bg-[#2EA3F2] text-slate-950"
-                  : "border-white/10 bg-slate-950/70 text-slate-100 hover:bg-slate-900/80",
-              )}
-            >
-              {f}
-            </button>
-          ))}
+        <div className="pointer-events-none absolute right-3 top-3 z-[500] flex max-w-[calc(100%-1.5rem)] flex-col items-end gap-1.5">
+          <div className="pointer-events-auto inline-flex rounded-full border border-white/10 bg-slate-950/70 p-1 text-xs font-medium text-slate-100 shadow-xl backdrop-blur-md">
+            {(["all", "lead", "sold"] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={cn(
+                  "rounded-full px-3 py-1.5 transition-colors",
+                  filter === f
+                    ? "bg-[#2EA3F2] text-slate-950"
+                    : "text-slate-200 hover:text-white",
+                )}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+          {counts.jobs > 0 && (
+            <div className="pointer-events-auto inline-flex rounded-full border border-white/10 bg-slate-950/70 p-1 text-xs font-medium text-slate-100 shadow-xl backdrop-blur-md">
+              {(
+                [
+                  { k: "all" as const, label: "All sources" },
+                  { k: "rep" as const, label: "Rep pins" },
+                  { k: "jobber" as const, label: "Jobber" },
+                ]
+              ).map((s) => (
+                <button
+                  key={s.k}
+                  onClick={() => setSourceFilter(s.k)}
+                  className={cn(
+                    "rounded-full px-3 py-1.5 transition-colors",
+                    sourceFilter === s.k
+                      ? "bg-[#2C8214] text-white"
+                      : "text-slate-200 hover:text-white",
+                  )}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Bottom-left: legend */}
@@ -1329,16 +1433,52 @@ function PinDetail({
       </DialogHeader>
 
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-        <Badge
-          className="text-white capitalize"
-          style={{ backgroundColor: pin.status === "sold" ? "#2C8214" : "#2EA3F2" }}
-        >
-          {pin.status}
-        </Badge>
+        {pin.source === "jobber" ? (
+          <Badge
+            className="text-white capitalize"
+            style={{ backgroundColor: "#2C8214" }}
+          >
+            Jobber job
+          </Badge>
+        ) : (
+          <Badge
+            className="text-white capitalize"
+            style={{ backgroundColor: pin.status === "sold" ? "#2C8214" : "#2EA3F2" }}
+          >
+            {pin.status}
+          </Badge>
+        )}
         <span>by {pin.repName}</span>
-        <span>·</span>
-        <span>{lastKnockText}</span>
+        {pin.source !== "jobber" && (
+          <>
+            <span>·</span>
+            <span>{lastKnockText}</span>
+          </>
+        )}
       </div>
+
+      {/* Jobber-specific block: job value and raw status */}
+      {pin.source === "jobber" && (
+        <div className="space-y-1 rounded-xl border border-[#2C8214]/40 bg-[#2C8214]/10 p-3">
+          <div className="text-xs font-semibold uppercase tracking-wide text-[#7ed85c]">
+            From Jobber
+          </div>
+          {typeof pin.jobValue === "number" && pin.jobValue > 0 && (
+            <div className="font-stat text-2xl font-extrabold tabular-nums text-[#7ed85c]">
+              ${pin.jobValue.toLocaleString()}
+            </div>
+          )}
+          {pin.jobStatus && (
+            <div className="text-xs text-foreground/80">
+              Status: <span className="font-semibold capitalize">{pin.jobStatus}</span>
+            </div>
+          )}
+          <p className="text-[11px] text-muted-foreground">
+            Synced from Jobber. Edits here won't roundtrip — manage the job in
+            Jobber directly.
+          </p>
+        </div>
+      )}
 
       {/* Resident / phone block */}
       <div className="space-y-2 rounded-xl border border-border bg-card/50 p-3">

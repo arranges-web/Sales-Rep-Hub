@@ -30,6 +30,8 @@ tags:
     description: AI sales-practice chat
   - name: campaigns
     description: Door-knocking and flyer-drop campaigns
+  - name: integrations
+    description: External system integrations (Jobber, etc.)
   - name: messages
     description: Private DMs and group chats
   - name: Storage
@@ -839,6 +841,80 @@ paths:
       responses:
         "204":
           description: Deleted
+
+  # ─── Jobber integration (admin) ─────────────────────────────────
+  /integrations/jobber:
+    get:
+      operationId: getJobberStatus
+      tags: [integrations]
+      summary: Get Jobber connection status (admin only)
+      responses:
+        "200":
+          description: Status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobberStatus"
+    put:
+      operationId: updateJobberCredentials
+      tags: [integrations]
+      summary: Set or clear the Jobber access token (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateJobberCredentialsBody"
+      responses:
+        "200":
+          description: Updated status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobberStatus"
+    delete:
+      operationId: disconnectJobber
+      tags: [integrations]
+      summary: Disconnect Jobber by wiping the stored token (admin only)
+      responses:
+        "200":
+          description: Status after disconnect
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobberStatus"
+  /integrations/jobber/sync:
+    post:
+      operationId: syncJobber
+      tags: [integrations]
+      summary: Pull all jobs from Jobber and upsert into pins (admin only)
+      responses:
+        "200":
+          description: Sync result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobberSyncResult"
+
+  # ─── Force-rerun demo seed (admin) ──────────────────────────────
+  /admin/seed-demo:
+    post:
+      operationId: seedDemoData
+      tags: [admin]
+      summary: Force-rerun the baseline demo seed. Idempotent.
+      responses:
+        "200":
+          description: Seed ran
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SeedDemoResult"
+        "403":
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
 
   # ─── My Lifetime Stats ──────────────────────────────────────────
   /users/me/stats:
@@ -1889,6 +1965,15 @@ components:
         lastKnockedAt:
           type: ["string", "null"]
           format: date-time
+        source:
+          type: ["string", "null"]
+          description: 'Where this pin came from — "rep" (manual) or an integration like "jobber".'
+        externalId:
+          type: ["string", "null"]
+        jobValue:
+          type: ["number", "null"]
+        jobStatus:
+          type: ["string", "null"]
         createdAt:
           type: string
           format: date-time
@@ -2675,6 +2760,85 @@ components:
           type: ["integer", "null"]
         assignedToUserId:
           type: ["integer", "null"]
+
+    JobberStatus:
+      type: object
+      properties:
+        provider:
+          type: string
+          enum: [jobber]
+        configured:
+          type: boolean
+        accountName:
+          type: ["string", "null"]
+        accessTokenMask:
+          type: ["string", "null"]
+          description: Masked version of the stored access token (first 4 + last 4).
+        lastSyncAt:
+          type: ["string", "null"]
+          format: date-time
+        lastSyncStatus:
+          type: ["string", "null"]
+          enum: [ok, failed, null]
+        lastSyncError:
+          type: ["string", "null"]
+        lastSyncJobsCount:
+          type: integer
+        pinsFromJobber:
+          type: integer
+      required:
+        - provider
+        - configured
+        - lastSyncJobsCount
+        - pinsFromJobber
+
+    UpdateJobberCredentialsBody:
+      type: object
+      properties:
+        accessToken:
+          type: ["string", "null"]
+          description: Paste a Jobber OAuth access token. Pass null to clear.
+        accountName:
+          type: ["string", "null"]
+
+    JobberSyncResult:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        jobsSeen:
+          type: integer
+        pinsCreated:
+          type: integer
+        pinsUpdated:
+          type: integer
+        geocodeMisses:
+          type: integer
+        error:
+          type: ["string", "null"]
+        elapsedMs:
+          type: integer
+        status:
+          $ref: "#/components/schemas/JobberStatus"
+      required:
+        - ok
+        - jobsSeen
+        - pinsCreated
+        - pinsUpdated
+        - geocodeMisses
+        - elapsedMs
+        - status
+
+    SeedDemoResult:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        elapsedMs:
+          type: integer
+      required:
+        - ok
+        - elapsedMs
 
     MyStats:
       type: object
