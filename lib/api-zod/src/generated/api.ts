@@ -651,18 +651,37 @@ export const ListPinsResponseItem = zod.object({
   repAccentColor: zod.string().nullish(),
   latitude: zod.number(),
   longitude: zod.number(),
-  status: zod.enum(["lead", "sold"]),
+  status: zod.enum(["lead", "sold", "quoted", "requested"]),
   address: zod.string(),
   notes: zod.string().nullish(),
   photoUrl: zod.string().nullish(),
   dealId: zod.number().nullish(),
   residentName: zod.string().nullish(),
-  residentPhone: zod.string().nullish(),
+  residentPhone: zod
+    .string()
+    .nullish()
+    .describe(
+      "Best single number for this resident — the primary\/mobile line when Jobber has several.",
+    ),
+  residentPhones: zod
+    .array(
+      zod.object({
+        number: zod.string(),
+        description: zod
+          .string()
+          .nullish()
+          .describe("Jobber label for the line, e.g. MAIN or MOBILE."),
+        primary: zod.boolean(),
+      }),
+    )
+    .optional()
+    .describe("Every phone number known for this resident, primary first."),
+  residentEmail: zod.string().nullish(),
   residentSource: zod
     .string()
     .nullish()
     .describe(
-      "How resident info was obtained — rep (manual), skiptrace (lookup), or null.",
+      "How resident info was obtained — rep (manual), jobber (synced), skiptrace (lookup), or null.",
     ),
   lastKnockedAt: zod.coerce.date().nullish(),
   source: zod
@@ -672,6 +691,22 @@ export const ListPinsResponseItem = zod.object({
       'Where this pin came from — \"rep\" (manual) or an integration like \"jobber\".',
     ),
   externalId: zod.string().nullish(),
+  externalKind: zod
+    .string()
+    .nullish()
+    .describe(
+      "Which Jobber record produced this pin — job, quote, or request.",
+    ),
+  externalClientId: zod
+    .string()
+    .nullish()
+    .describe(
+      "Jobber client id, so multiple pins for one homeowner can be grouped.",
+    ),
+  externalUrl: zod
+    .string()
+    .nullish()
+    .describe("Deep link to open this record in Jobber."),
   jobValue: zod.number().nullish(),
   jobStatus: zod.string().nullish(),
   createdAt: zod.coerce.date(),
@@ -685,12 +720,13 @@ export const CreatePinBody = zod.object({
   latitude: zod.number(),
   longitude: zod.number(),
   address: zod.string(),
-  status: zod.enum(["lead", "sold"]),
+  status: zod.enum(["lead", "sold", "quoted", "requested"]),
   notes: zod.string().nullish(),
   photoUrl: zod.string().nullish(),
   dealId: zod.number().nullish(),
   residentName: zod.string().nullish(),
   residentPhone: zod.string().nullish(),
+  residentEmail: zod.string().nullish(),
 });
 
 /**
@@ -708,18 +744,37 @@ export const GetPinResponse = zod.object({
   repAccentColor: zod.string().nullish(),
   latitude: zod.number(),
   longitude: zod.number(),
-  status: zod.enum(["lead", "sold"]),
+  status: zod.enum(["lead", "sold", "quoted", "requested"]),
   address: zod.string(),
   notes: zod.string().nullish(),
   photoUrl: zod.string().nullish(),
   dealId: zod.number().nullish(),
   residentName: zod.string().nullish(),
-  residentPhone: zod.string().nullish(),
+  residentPhone: zod
+    .string()
+    .nullish()
+    .describe(
+      "Best single number for this resident — the primary\/mobile line when Jobber has several.",
+    ),
+  residentPhones: zod
+    .array(
+      zod.object({
+        number: zod.string(),
+        description: zod
+          .string()
+          .nullish()
+          .describe("Jobber label for the line, e.g. MAIN or MOBILE."),
+        primary: zod.boolean(),
+      }),
+    )
+    .optional()
+    .describe("Every phone number known for this resident, primary first."),
+  residentEmail: zod.string().nullish(),
   residentSource: zod
     .string()
     .nullish()
     .describe(
-      "How resident info was obtained — rep (manual), skiptrace (lookup), or null.",
+      "How resident info was obtained — rep (manual), jobber (synced), skiptrace (lookup), or null.",
     ),
   lastKnockedAt: zod.coerce.date().nullish(),
   source: zod
@@ -729,6 +784,22 @@ export const GetPinResponse = zod.object({
       'Where this pin came from — \"rep\" (manual) or an integration like \"jobber\".',
     ),
   externalId: zod.string().nullish(),
+  externalKind: zod
+    .string()
+    .nullish()
+    .describe(
+      "Which Jobber record produced this pin — job, quote, or request.",
+    ),
+  externalClientId: zod
+    .string()
+    .nullish()
+    .describe(
+      "Jobber client id, so multiple pins for one homeowner can be grouped.",
+    ),
+  externalUrl: zod
+    .string()
+    .nullish()
+    .describe("Deep link to open this record in Jobber."),
   jobValue: zod.number().nullish(),
   jobStatus: zod.string().nullish(),
   createdAt: zod.coerce.date(),
@@ -742,12 +813,13 @@ export const UpdatePinParams = zod.object({
 });
 
 export const UpdatePinBody = zod.object({
-  status: zod.enum(["lead", "sold"]).optional(),
+  status: zod.enum(["lead", "sold", "quoted", "requested"]).optional(),
   notes: zod.string().nullish(),
   photoUrl: zod.string().nullish(),
   dealId: zod.number().nullish(),
   residentName: zod.string().nullish(),
   residentPhone: zod.string().nullish(),
+  residentEmail: zod.string().nullish(),
   markKnocked: zod
     .boolean()
     .nullish()
@@ -762,18 +834,37 @@ export const UpdatePinResponse = zod.object({
   repAccentColor: zod.string().nullish(),
   latitude: zod.number(),
   longitude: zod.number(),
-  status: zod.enum(["lead", "sold"]),
+  status: zod.enum(["lead", "sold", "quoted", "requested"]),
   address: zod.string(),
   notes: zod.string().nullish(),
   photoUrl: zod.string().nullish(),
   dealId: zod.number().nullish(),
   residentName: zod.string().nullish(),
-  residentPhone: zod.string().nullish(),
+  residentPhone: zod
+    .string()
+    .nullish()
+    .describe(
+      "Best single number for this resident — the primary\/mobile line when Jobber has several.",
+    ),
+  residentPhones: zod
+    .array(
+      zod.object({
+        number: zod.string(),
+        description: zod
+          .string()
+          .nullish()
+          .describe("Jobber label for the line, e.g. MAIN or MOBILE."),
+        primary: zod.boolean(),
+      }),
+    )
+    .optional()
+    .describe("Every phone number known for this resident, primary first."),
+  residentEmail: zod.string().nullish(),
   residentSource: zod
     .string()
     .nullish()
     .describe(
-      "How resident info was obtained — rep (manual), skiptrace (lookup), or null.",
+      "How resident info was obtained — rep (manual), jobber (synced), skiptrace (lookup), or null.",
     ),
   lastKnockedAt: zod.coerce.date().nullish(),
   source: zod
@@ -783,6 +874,22 @@ export const UpdatePinResponse = zod.object({
       'Where this pin came from — \"rep\" (manual) or an integration like \"jobber\".',
     ),
   externalId: zod.string().nullish(),
+  externalKind: zod
+    .string()
+    .nullish()
+    .describe(
+      "Which Jobber record produced this pin — job, quote, or request.",
+    ),
+  externalClientId: zod
+    .string()
+    .nullish()
+    .describe(
+      "Jobber client id, so multiple pins for one homeowner can be grouped.",
+    ),
+  externalUrl: zod
+    .string()
+    .nullish()
+    .describe("Deep link to open this record in Jobber."),
   jobValue: zod.number().nullish(),
   jobStatus: zod.string().nullish(),
   createdAt: zod.coerce.date(),
@@ -1064,11 +1171,26 @@ export const GetJobberStatusResponse = zod.object({
     .describe("Masked version of the stored access token (first 4 + last 4)."),
   lastSyncAt: zod.coerce.date().nullish(),
   lastSyncStatus: zod
-    .union([zod.literal("ok"), zod.literal("failed"), zod.literal(null)])
-    .nullish(),
+    .union([
+      zod.literal("ok"),
+      zod.literal("partial"),
+      zod.literal("failed"),
+      zod.literal(null),
+    ])
+    .nullish()
+    .describe(
+      "partial means at least one of jobs\/quotes\/requests synced and at least one failed.",
+    ),
   lastSyncError: zod.string().nullish(),
   lastSyncJobsCount: zod.number(),
   pinsFromJobber: zod.number(),
+  jobPins: zod.number().optional(),
+  quotePins: zod.number().optional(),
+  requestPins: zod.number().optional(),
+  pinsWithPhone: zod
+    .number()
+    .optional()
+    .describe("Jobber pins that carry at least one phone number."),
 });
 
 /**
@@ -1092,11 +1214,26 @@ export const UpdateJobberCredentialsResponse = zod.object({
     .describe("Masked version of the stored access token (first 4 + last 4)."),
   lastSyncAt: zod.coerce.date().nullish(),
   lastSyncStatus: zod
-    .union([zod.literal("ok"), zod.literal("failed"), zod.literal(null)])
-    .nullish(),
+    .union([
+      zod.literal("ok"),
+      zod.literal("partial"),
+      zod.literal("failed"),
+      zod.literal(null),
+    ])
+    .nullish()
+    .describe(
+      "partial means at least one of jobs\/quotes\/requests synced and at least one failed.",
+    ),
   lastSyncError: zod.string().nullish(),
   lastSyncJobsCount: zod.number(),
   pinsFromJobber: zod.number(),
+  jobPins: zod.number().optional(),
+  quotePins: zod.number().optional(),
+  requestPins: zod.number().optional(),
+  pinsWithPhone: zod
+    .number()
+    .optional()
+    .describe("Jobber pins that carry at least one phone number."),
 });
 
 /**
@@ -1112,11 +1249,26 @@ export const DisconnectJobberResponse = zod.object({
     .describe("Masked version of the stored access token (first 4 + last 4)."),
   lastSyncAt: zod.coerce.date().nullish(),
   lastSyncStatus: zod
-    .union([zod.literal("ok"), zod.literal("failed"), zod.literal(null)])
-    .nullish(),
+    .union([
+      zod.literal("ok"),
+      zod.literal("partial"),
+      zod.literal("failed"),
+      zod.literal(null),
+    ])
+    .nullish()
+    .describe(
+      "partial means at least one of jobs\/quotes\/requests synced and at least one failed.",
+    ),
   lastSyncError: zod.string().nullish(),
   lastSyncJobsCount: zod.number(),
   pinsFromJobber: zod.number(),
+  jobPins: zod.number().optional(),
+  quotePins: zod.number().optional(),
+  requestPins: zod.number().optional(),
+  pinsWithPhone: zod
+    .number()
+    .optional()
+    .describe("Jobber pins that carry at least one phone number."),
 });
 
 /**
@@ -1130,6 +1282,23 @@ export const SyncJobberResponse = zod.object({
   geocodeMisses: zod.number(),
   error: zod.string().nullish(),
   elapsedMs: zod.number(),
+  entities: zod
+    .array(
+      zod.object({
+        kind: zod.enum(["job", "quote", "request"]),
+        ok: zod.boolean(),
+        seen: zod.number(),
+        created: zod.number(),
+        updated: zod.number(),
+        skippedNoAddress: zod.number(),
+        geocodeMisses: zod.number(),
+        error: zod.string().nullish(),
+      }),
+    )
+    .optional()
+    .describe(
+      "Per-connection breakdown — jobs, quotes, and requests each sync independently.",
+    ),
   status: zod.object({
     provider: zod.enum(["jobber"]),
     configured: zod.boolean(),
@@ -1142,11 +1311,26 @@ export const SyncJobberResponse = zod.object({
       ),
     lastSyncAt: zod.coerce.date().nullish(),
     lastSyncStatus: zod
-      .union([zod.literal("ok"), zod.literal("failed"), zod.literal(null)])
-      .nullish(),
+      .union([
+        zod.literal("ok"),
+        zod.literal("partial"),
+        zod.literal("failed"),
+        zod.literal(null),
+      ])
+      .nullish()
+      .describe(
+        "partial means at least one of jobs\/quotes\/requests synced and at least one failed.",
+      ),
     lastSyncError: zod.string().nullish(),
     lastSyncJobsCount: zod.number(),
     pinsFromJobber: zod.number(),
+    jobPins: zod.number().optional(),
+    quotePins: zod.number().optional(),
+    requestPins: zod.number().optional(),
+    pinsWithPhone: zod
+      .number()
+      .optional()
+      .describe("Jobber pins that carry at least one phone number."),
   }),
 });
 
@@ -1156,6 +1340,125 @@ export const SyncJobberResponse = zod.object({
 export const SeedDemoDataResponse = zod.object({
   ok: zod.boolean(),
   elapsedMs: zod.number(),
+});
+
+/**
+ * @summary Dry run — what a demo-data purge would delete (admin only)
+ */
+export const GetDemoDataStatusResponse = zod.object({
+  demoDataEnabled: zod
+    .boolean()
+    .describe(
+      "False once Go Live has been run — the boot seeder stops adding demo rows.",
+    ),
+  realUsers: zod.number(),
+  counts: zod.object({
+    mockReps: zod.number(),
+    deals: zod.number(),
+    pins: zod.number(),
+    badges: zod.number(),
+    feedPosts: zod.number(),
+    comments: zod.number(),
+    highFives: zod.number(),
+    redemptions: zod.number(),
+    campaigns: zod.number(),
+    campaignStreets: zod.number(),
+    starterDealsOnRealReps: zod
+      .number()
+      .describe("Canned starter deals handed to real reps on first sign-in."),
+    starterPinsOnRealReps: zod.number(),
+  }),
+});
+
+/**
+ * @summary Delete all demo data and disable the demo seeder permanently (admin only)
+ */
+export const PurgeDemoDataBody = zod.object({
+  confirm: zod.string().describe('Must be the literal string \"GO LIVE\".'),
+  includeRealRepStarterData: zod
+    .boolean()
+    .nullish()
+    .describe(
+      "Also remove canned starter deals\/pins from real reps' accounts. Defaults to true.",
+    ),
+  disableDemoData: zod
+    .boolean()
+    .nullish()
+    .describe("Turn the demo seeder off permanently. Defaults to true."),
+});
+
+export const PurgeDemoDataResponse = zod.object({
+  ok: zod.boolean(),
+  deleted: zod.object({
+    mockReps: zod.number(),
+    deals: zod.number(),
+    pins: zod.number(),
+    badges: zod.number(),
+    feedPosts: zod.number(),
+    comments: zod.number(),
+    highFives: zod.number(),
+    redemptions: zod.number(),
+    campaigns: zod.number(),
+    campaignStreets: zod.number(),
+    starterDealsOnRealReps: zod
+      .number()
+      .describe("Canned starter deals handed to real reps on first sign-in."),
+    starterPinsOnRealReps: zod.number(),
+  }),
+  demoDataEnabled: zod.boolean(),
+  elapsedMs: zod.number(),
+  status: zod.object({
+    demoDataEnabled: zod
+      .boolean()
+      .describe(
+        "False once Go Live has been run — the boot seeder stops adding demo rows.",
+      ),
+    realUsers: zod.number(),
+    counts: zod.object({
+      mockReps: zod.number(),
+      deals: zod.number(),
+      pins: zod.number(),
+      badges: zod.number(),
+      feedPosts: zod.number(),
+      comments: zod.number(),
+      highFives: zod.number(),
+      redemptions: zod.number(),
+      campaigns: zod.number(),
+      campaignStreets: zod.number(),
+      starterDealsOnRealReps: zod
+        .number()
+        .describe("Canned starter deals handed to real reps on first sign-in."),
+      starterPinsOnRealReps: zod.number(),
+    }),
+  }),
+});
+
+/**
+ * @summary Re-enable demo seeding and run it once (admin only)
+ */
+export const EnableDemoDataResponse = zod.object({
+  demoDataEnabled: zod
+    .boolean()
+    .describe(
+      "False once Go Live has been run — the boot seeder stops adding demo rows.",
+    ),
+  realUsers: zod.number(),
+  counts: zod.object({
+    mockReps: zod.number(),
+    deals: zod.number(),
+    pins: zod.number(),
+    badges: zod.number(),
+    feedPosts: zod.number(),
+    comments: zod.number(),
+    highFives: zod.number(),
+    redemptions: zod.number(),
+    campaigns: zod.number(),
+    campaignStreets: zod.number(),
+    starterDealsOnRealReps: zod
+      .number()
+      .describe("Canned starter deals handed to real reps on first sign-in."),
+    starterPinsOnRealReps: zod.number(),
+  }),
 });
 
 /**

@@ -3,6 +3,8 @@ import { db, incentiveTiersTable, pointConfigsTable, trainingResourcesTable } fr
 import { eq, asc } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../middlewares/auth";
 import { seedBaselineData } from "../lib/seed";
+import { previewDemoData, purgeDemoData } from "../lib/demoData";
+import { setDemoDataEnabled } from "../lib/settings";
 
 const router: IRouter = Router();
 
@@ -173,5 +175,47 @@ router.post(
     }
   },
 );
+
+// Dry run for the Go Live card — exactly what a purge would remove.
+router.get("/admin/demo-data", requireAuth, requireAdmin, async (_req, res, next) => {
+  try {
+    res.json(await previewDemoData());
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Go live: delete the demo cohort and everything attached to it, and flip the
+// seeder off for good. Requires an explicit `confirm: "GO LIVE"` in the body
+// so a stray POST can't wipe the board.
+router.post("/admin/demo-data/purge", requireAuth, requireAdmin, async (req, res, next) => {
+  try {
+    const body = req.body ?? {};
+    if (body.confirm !== "GO LIVE") {
+      res.status(400).json({
+        error: 'Confirmation required. Send { "confirm": "GO LIVE" }.',
+      });
+      return;
+    }
+    const result = await purgeDemoData({
+      includeRealRepStarterData: body.includeRealRepStarterData !== false,
+      disableDemoData: body.disableDemoData !== false,
+    });
+    res.json({ ...result, status: await previewDemoData() });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Escape hatch: turn demo seeding back on (e.g. for a training environment).
+router.post("/admin/demo-data/enable", requireAuth, requireAdmin, async (_req, res, next) => {
+  try {
+    await setDemoDataEnabled(true);
+    await seedBaselineData();
+    res.json(await previewDemoData());
+  } catch (e) {
+    next(e);
+  }
+});
 
 export default router;

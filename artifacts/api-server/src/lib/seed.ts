@@ -20,8 +20,9 @@ import { sql, eq, and, inArray, notInArray, desc, or, isNull } from "drizzle-orm
 import type { PgTable } from "drizzle-orm/pg-core";
 import { logger } from "./logger";
 import { pointsForDeal, recomputeUserPoints } from "./points";
+import { isDemoDataEnabled } from "./settings";
 
-const SEED_CLERK_PREFIX = "seed_mock_";
+export const SEED_CLERK_PREFIX = "seed_mock_";
 
 // Number of mock reps that the demo expects to be live. If fewer exist,
 // the seed self-heals on startup so the launch experience never feels empty.
@@ -182,16 +183,27 @@ async function isEmpty(table: PgTable): Promise<boolean> {
 export async function seedBaselineData(): Promise<void> {
   try {
     const t0 = Date.now();
+    // Real configuration always gets seeded/healed — territories, point
+    // rules, tiers, the reward lineup, and training are things the company
+    // actually uses, not demo filler.
     await seedTerritories();
     await backfillTerritoryBounds();
     await seedPointConfigs();
     await seedIncentiveTiers();
     await restockRewardsIfStale();
     await restockTrainingIfStale();
-    await healMockRepsIfStale();
-    await seedFeedSocialSignals();
-    await seedDemoRedemptions();
-    await seedDemoCampaigns();
+
+    // Everything below is demo filler. Once Admin → Go Live has been run,
+    // this stays off permanently so mock reps never reappear after a deploy.
+    const demo = await isDemoDataEnabled();
+    if (demo) {
+      await healMockRepsIfStale();
+      await seedFeedSocialSignals();
+      await seedDemoRedemptions();
+      await seedDemoCampaigns();
+    } else {
+      logger.info("Demo data disabled (post go-live) — skipping mock seeders");
+    }
     // Snapshot of current populated state for easy verification on dev
     // and in CI logs. Each branch above also logs only when it actually
     // mutates, so absence of branch-specific log lines = idempotent boot.
@@ -1081,7 +1093,7 @@ async function seedDemoRedemptions(): Promise<void> {
 // life when a new environment publishes. Strictly additive: only
 // inserts campaigns whose name is missing. Streets attached are
 // idempotent per campaign via the same name check.
-const DEMO_CAMPAIGNS: Array<{
+export const DEMO_CAMPAIGNS: Array<{
   name: string;
   description: string;
   type: "door" | "flyer";
@@ -1203,6 +1215,37 @@ async function seedDemoCampaigns(): Promise<void> {
   );
 }
 
+// The starter set handed to a freshly-registered rep while the app is still
+// in demo mode. Exported because the go-live purge needs the same fingerprint
+// to find and remove these rows from *real* reps' accounts — keep the two in
+// sync by construction rather than by copy/paste.
+// Mix: enough closed deals to feel motivating + a healthy pipeline of
+// in-progress leads so the rep lands on an active-looking dashboard
+// (not a "you've already won everything, now what?" wall).
+export const NEW_REP_STARTER_DEALS: Array<{
+  service: ServiceType;
+  amount: number;
+  customer: string;
+  address: string;
+  daysAgo: number;
+  status: "closed" | "lead";
+}> = [
+  { service: "large_removal",    amount: 4800, customer: "Hernandez Family", address: "1432 Coral Ridge Dr, Cape Coral FL", daysAgo: 1,  status: "closed" },
+  { service: "trimming_pruning", amount: 1200, customer: "Whitaker Family",  address: "784 Hibiscus Ln, Fort Myers FL",     daysAgo: 4,  status: "closed" },
+  { service: "stump_grinding",   amount: 450,  customer: "Reed Family",      address: "55 Pine Island Rd, Cape Coral FL",   daysAgo: 8,  status: "closed" },
+  { service: "trimming_pruning", amount: 950,  customer: "Sanders Family",   address: "411 Manatee Ln, Cape Coral FL",      daysAgo: 0,  status: "lead" },
+  { service: "large_removal",    amount: 5400, customer: "Park Family",      address: "1003 Riverside Dr, Fort Myers FL",   daysAgo: 1,  status: "lead" },
+  { service: "trimming_pruning", amount: 1600, customer: "Owens Family",     address: "999 Bayfront Pkwy, Naples FL",       daysAgo: 2,  status: "lead" },
+];
+
+export const NEW_REP_STARTER_PINS: Array<[string, number, number, string]> = [
+  ["1432 Coral Ridge Dr, Cape Coral FL", 26.6406, -82.0123, "sold"],
+  ["411 Manatee Ln, Cape Coral FL",      26.6700, -82.0050, "lead"],
+  ["1003 Riverside Dr, Fort Myers FL",   26.6500, -81.8700, "lead"],
+];
+
+export const NEW_REP_STARTER_PIN_NOTE = "Recent canvass — keep warm.";
+
 // Seed minimal personal data for a freshly-registered real rep so the dashboard
 // is not empty on first sign-in. Called from POST /users when a new rep is
 // created. Idempotent per user via a check on existing deals.
@@ -1212,6 +1255,11 @@ export async function seedDataForNewRep(opts: {
   userAvatarUrl: string | null;
 }): Promise<void> {
   try {
+    // After go-live a new rep starts with a genuinely empty board. Handing a
+    // real salesperson six invented deals and a Hawaii goal they never set is
+    // exactly the demo data we're trying to get rid of.
+    if (!(await isDemoDataEnabled())) return;
+
     // Stronger idempotency: short-circuit if the rep already has ANY deals,
     // pins, or authored posts. Prevents partial re-seeding if a previous
     // run failed midway, or if the rep has already started using the app.
@@ -1238,17 +1286,7 @@ export async function seedDataForNewRep(opts: {
 
     const now = Date.now();
     const day = 24 * 60 * 60 * 1000;
-    // Mix: enough closed deals to feel motivating + a healthy pipeline of
-    // in-progress leads so the rep lands on an active-looking dashboard
-    // (not a "you've already won everything, now what?" wall).
-    const personal: Array<{ service: ServiceType; amount: number; customer: string; address: string; daysAgo: number; status: "closed" | "lead" }> = [
-      { service: "large_removal",    amount: 4800, customer: "Hernandez Family", address: "1432 Coral Ridge Dr, Cape Coral FL", daysAgo: 1,  status: "closed" },
-      { service: "trimming_pruning", amount: 1200, customer: "Whitaker Family",  address: "784 Hibiscus Ln, Fort Myers FL",     daysAgo: 4,  status: "closed" },
-      { service: "stump_grinding",   amount: 450,  customer: "Reed Family",       address: "55 Pine Island Rd, Cape Coral FL",   daysAgo: 8,  status: "closed" },
-      { service: "trimming_pruning", amount: 950,  customer: "Sanders Family",    address: "411 Manatee Ln, Cape Coral FL",      daysAgo: 0,  status: "lead" },
-      { service: "large_removal",    amount: 5400, customer: "Park Family",       address: "1003 Riverside Dr, Fort Myers FL",   daysAgo: 1,  status: "lead" },
-      { service: "trimming_pruning", amount: 1600, customer: "Owens Family",      address: "999 Bayfront Pkwy, Naples FL",       daysAgo: 2,  status: "lead" },
-    ];
+    const personal = NEW_REP_STARTER_DEALS;
 
     for (const d of personal) {
       const points = await pointsForDeal(d.service, d.amount);
@@ -1269,19 +1307,14 @@ export async function seedDataForNewRep(opts: {
     await recomputeUserPoints(opts.userId);
 
     // A couple of pins for this rep.
-    const pinAddrs: Array<[string, number, number, string]> = [
-      ["1432 Coral Ridge Dr, Cape Coral FL", 26.6406, -82.0123, "sold"],
-      ["411 Manatee Ln, Cape Coral FL",       26.6700, -82.0050, "lead"],
-      ["1003 Riverside Dr, Fort Myers FL",   26.6500, -81.8700, "lead"],
-    ];
-    for (const [addr, lat, lng, status] of pinAddrs) {
+    for (const [addr, lat, lng, status] of NEW_REP_STARTER_PINS) {
       await db.insert(pinsTable).values({
         repId: opts.userId,
         latitude: lat,
         longitude: lng,
         address: addr,
         status,
-        notes: "Recent canvass — keep warm.",
+        notes: NEW_REP_STARTER_PIN_NOTE,
       });
     }
 

@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, integrationCredentialsTable, pinsTable } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../middlewares/auth";
 import { syncJobberJobs } from "../lib/jobber";
 
@@ -24,6 +24,26 @@ async function serializeJobberStatus() {
     .from(pinsTable)
     .where(eq(pinsTable.source, "jobber"));
 
+  // Break the synced pins down by which Jobber record produced them so the
+  // admin can see at a glance that quotes and requests actually came through.
+  const byKind = await db
+    .select({ kind: pinsTable.externalKind, c: sql<number>`COUNT(*)` })
+    .from(pinsTable)
+    .where(eq(pinsTable.source, "jobber"))
+    .groupBy(pinsTable.externalKind);
+  const kindCount = (kind: string) =>
+    Number(byKind.find((r) => r.kind === kind)?.c ?? 0);
+
+  const [withPhone] = await db
+    .select({ c: sql<number>`COUNT(*)` })
+    .from(pinsTable)
+    .where(
+      and(
+        eq(pinsTable.source, "jobber"),
+        sql`${pinsTable.residentPhone} IS NOT NULL`,
+      ),
+    );
+
   return {
     provider: "jobber" as const,
     configured: !!cred?.accessToken,
@@ -34,6 +54,10 @@ async function serializeJobberStatus() {
     lastSyncError: cred?.lastSyncError ?? null,
     lastSyncJobsCount: cred?.lastSyncJobsCount ?? 0,
     pinsFromJobber: Number(pinCount?.c ?? 0),
+    jobPins: kindCount("job"),
+    quotePins: kindCount("quote"),
+    requestPins: kindCount("request"),
+    pinsWithPhone: Number(withPhone?.c ?? 0),
   };
 }
 

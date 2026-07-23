@@ -26,6 +26,10 @@ import {
   useUpdateJobberCredentials,
   useSyncJobber,
   useDisconnectJobber,
+  useGetDemoDataStatus,
+  usePurgeDemoData,
+  useEnableDemoData,
+  getGetDemoDataStatusQueryKey,
   getGetJobberStatusQueryKey,
   getListPinsQueryKey,
   getListUsersQueryKey,
@@ -57,7 +61,10 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter,
   DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
-import { Trash2, Plus, Check, X, Pencil, Palette, Settings, Sparkles, Loader2 } from "lucide-react";
+import {
+  Trash2, Plus, Check, X, Pencil, Palette, Settings, Sparkles, Loader2,
+  Rocket, AlertTriangle, ShieldCheck,
+} from "lucide-react";
 import { BrandHeader } from "@/components/BrandHeader";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -91,6 +98,7 @@ export default function AdminPage() {
           <TabsTrigger value="training" className="rounded-lg">Training</TabsTrigger>
           <TabsTrigger value="territories" className="rounded-lg">Territories</TabsTrigger>
           <TabsTrigger value="integrations" className="rounded-lg">Integrations</TabsTrigger>
+          <TabsTrigger value="golive" className="rounded-lg">Go Live</TabsTrigger>
         </TabsList>
         <TabsContent value="users"><UsersTab /></TabsContent>
         <TabsContent value="tiers"><TiersTab /></TabsContent>
@@ -100,6 +108,7 @@ export default function AdminPage() {
         <TabsContent value="training"><TrainingTab /></TabsContent>
         <TabsContent value="territories"><TerritoriesTab /></TabsContent>
         <TabsContent value="integrations"><IntegrationsTab /></TabsContent>
+        <TabsContent value="golive"><GoLiveTab /></TabsContent>
       </Tabs>
     </div>
   );
@@ -826,8 +835,11 @@ function IntegrationsTab() {
                 <Badge variant="outline">Not connected</Badge>
               )}
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Sync every Jobber client and job into the canvassing map. Past jobs land as green "sold" pins so reps can see exactly where the company has worked.
+            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+              Pulls jobs, quotes and work requests out of Jobber and onto the canvassing map,
+              with the homeowner's name, every phone number on file and their email. Completed
+              jobs land as green "sold" pins, open quotes as gold, and work requests as blue —
+              so reps can see where the company has worked and who's still un-closed.
             </p>
             {status?.accountName && (
               <p className="mt-1 text-[11px] text-muted-foreground">
@@ -844,9 +856,16 @@ function IntegrationsTab() {
                   const res = await sync.mutateAsync();
                   refresh();
                   if (res.ok) {
+                    const perKind = (res.entities ?? [])
+                      .map((e) => `${e.seen} ${e.kind}${e.seen === 1 ? "" : "s"}`)
+                      .join(", ");
                     toast({
-                      title: "Jobber sync complete",
-                      description: `${res.pinsCreated} new pin${res.pinsCreated === 1 ? "" : "s"}, ${res.pinsUpdated} updated, ${res.geocodeMisses} addresses couldn't be geocoded.`,
+                      title: res.error ? "Jobber sync partly complete" : "Jobber sync complete",
+                      description:
+                        `Pulled ${perKind || "0 records"}. ` +
+                        `${res.pinsCreated} new pin${res.pinsCreated === 1 ? "" : "s"}, ` +
+                        `${res.pinsUpdated} updated, ${res.geocodeMisses} address${res.geocodeMisses === 1 ? "" : "es"} couldn't be geocoded.` +
+                        (res.error ? ` Problem: ${res.error}` : ""),
                     });
                   } else {
                     toast({
@@ -888,26 +907,39 @@ function IntegrationsTab() {
           </div>
         </div>
 
-        <div className="relative mt-4 grid gap-3 sm:grid-cols-3">
-          <MiniStat label="Pins from Jobber" value={status?.pinsFromJobber ?? 0} color="#7ed85c" />
-          <MiniStat label="Last sync count" value={status?.lastSyncJobsCount ?? 0} color="#2EA3F2" />
+        <div className="relative mt-4 grid gap-3 sm:grid-cols-4">
+          <MiniStat label="Jobs" value={status?.jobPins ?? 0} color="#7ed85c" />
+          <MiniStat label="Quotes" value={status?.quotePins ?? 0} color="#FFBF00" />
+          <MiniStat label="Requests" value={status?.requestPins ?? 0} color="#2EA3F2" />
+          <MiniStat label="With a phone #" value={status?.pinsWithPhone ?? 0} color="#a78bfa" />
+        </div>
+        <div className="relative mt-3 grid gap-3 sm:grid-cols-2">
+          <MiniStat label="Total Jobber pins" value={status?.pinsFromJobber ?? 0} color="#2EA3F2" />
           <MiniStat
             label="Last sync"
             value={status?.lastSyncAt ? new Date(status.lastSyncAt).toLocaleString() : "Never"}
             color={
               status?.lastSyncStatus === "failed"
                 ? "#f87171"
-                : status?.lastSyncStatus === "ok"
-                  ? "#7ed85c"
-                  : "#94a3b8"
+                : status?.lastSyncStatus === "partial"
+                  ? "#FFBF00"
+                  : status?.lastSyncStatus === "ok"
+                    ? "#7ed85c"
+                    : "#94a3b8"
             }
           />
         </div>
         {status?.lastSyncError && (
           <p className="relative mt-3 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
-            Last error: {status.lastSyncError}
+            {status.lastSyncStatus === "partial" ? "Partial sync — " : "Last error: "}
+            {status.lastSyncError}
           </p>
         )}
+        <p className="relative mt-3 text-[11px] text-muted-foreground">
+          The first sync geocodes every unique address at roughly one per second (OpenStreetMap's
+          rate limit), so a large Jobber account can take a while. Results are cached — later syncs
+          are fast.
+        </p>
       </Card>
 
       <Card className="space-y-4 p-5">
@@ -959,6 +991,232 @@ function IntegrationsTab() {
           </Button>
         </div>
       </Card>
+    </div>
+  );
+}
+
+function GoLiveTab() {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const { data: status, isLoading } = useGetDemoDataStatus();
+  const purge = usePurgeDemoData();
+  const enable = useEnableDemoData();
+
+  const [confirmText, setConfirmText] = useState("");
+  const [includeStarter, setIncludeStarter] = useState(true);
+
+  const counts = status?.counts;
+  const live = status?.demoDataEnabled === false;
+
+  // Everything the purge touches, in the order a person would think about it.
+  const rows: Array<{ label: string; value: number; hint?: string }> = counts
+    ? [
+        { label: "Demo reps", value: counts.mockReps, hint: "Marcus, Tasha, Diego & co." },
+        { label: "Their deals", value: counts.deals },
+        { label: "Their map pins", value: counts.pins },
+        { label: "Their badges", value: counts.badges },
+        { label: "Feed posts", value: counts.feedPosts, hint: "Includes bot posts" },
+        { label: "Comments", value: counts.comments },
+        { label: "High-fives", value: counts.highFives },
+        { label: "Reward redemptions", value: counts.redemptions },
+        { label: "Demo campaigns", value: counts.campaigns },
+        { label: "Campaign streets", value: counts.campaignStreets },
+      ]
+    : [];
+
+  const starterTotal =
+    (counts?.starterDealsOnRealReps ?? 0) + (counts?.starterPinsOnRealReps ?? 0);
+  const totalRows = rows.reduce((n, r) => n + r.value, 0) + (includeStarter ? starterTotal : 0);
+
+  const refresh = () => {
+    qc.invalidateQueries({ queryKey: getGetDemoDataStatusQueryKey() });
+    qc.invalidateQueries({ queryKey: getListUsersQueryKey() });
+    qc.invalidateQueries({ queryKey: getListPinsQueryKey() });
+    qc.invalidateQueries({ queryKey: getListRedemptionsQueryKey() });
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card className="relative overflow-hidden p-5">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-[#FFBF00]/20 blur-3xl"
+        />
+        <div className="relative flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              {live ? (
+                <ShieldCheck className="h-4 w-4 text-[#2C8214]" />
+              ) : (
+                <Rocket className="h-4 w-4 text-[#FFBF00]" />
+              )}
+              <h2 className="text-base font-bold tracking-tight">Go Live</h2>
+              {live ? (
+                <Badge className="border-0 bg-[#2C8214]/20 text-[#7ed85c]">Live — real data only</Badge>
+              ) : (
+                <Badge className="border-0 bg-[#FFBF00]/20 text-[#FFBF00]">Demo mode</Badge>
+              )}
+            </div>
+            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+              {live
+                ? "Demo data is off. New reps start with a clean board, and the seeder will not re-add mock reps on deploy."
+                : "Clear every mock rep and their fake deals, pins, posts and redemptions, then switch the seeder off for good. Your rewards, incentive tiers, point rules, training library and territories are kept."}
+            </p>
+          </div>
+        </div>
+
+        <div className="relative mt-4 grid gap-3 sm:grid-cols-3">
+          <MiniStat label="Real reps" value={status?.realUsers ?? 0} color="#2EA3F2" />
+          <MiniStat
+            label="Demo rows remaining"
+            value={isLoading ? "…" : totalRows}
+            color={totalRows > 0 ? "#FFBF00" : "#7ed85c"}
+          />
+          <MiniStat
+            label="Seeder"
+            value={live ? "Disabled" : "Active"}
+            color={live ? "#7ed85c" : "#FFBF00"}
+          />
+        </div>
+      </Card>
+
+      {counts && (
+        <Card className="space-y-4 p-5">
+          <div>
+            <h3 className="text-sm font-bold tracking-tight">What will be deleted</h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Counted live from the database. Real reps' own deals, pins and posts are never touched.
+            </p>
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-2">
+            {rows.map((r) => (
+              <div
+                key={r.label}
+                className="flex items-center justify-between rounded-xl border border-border bg-background/40 px-3 py-2"
+              >
+                <div>
+                  <div className="text-xs font-semibold">{r.label}</div>
+                  {r.hint && (
+                    <div className="text-[10px] text-muted-foreground">{r.hint}</div>
+                  )}
+                </div>
+                <div
+                  className="font-stat text-sm font-extrabold tabular-nums"
+                  style={{ color: r.value > 0 ? "#f87171" : "#64748b" }}
+                >
+                  {r.value}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-background/40 p-3">
+            <input
+              type="checkbox"
+              checked={includeStarter}
+              onChange={(e) => setIncludeStarter(e.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-[#2EA3F2]"
+            />
+            <span className="text-xs">
+              <span className="font-semibold">
+                Also remove starter data from real reps ({starterTotal} row
+                {starterTotal === 1 ? "" : "s"})
+              </span>
+              <span className="mt-0.5 block text-muted-foreground">
+                Reps who signed in during the demo were handed six sample deals ("Hernandez
+                Family", "Park Family"…) and three sample pins. This strips those and
+                recalculates their points from real closed deals only.
+              </span>
+            </span>
+          </label>
+
+          {!live && (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3">
+              <div className="flex items-center gap-2 text-xs font-bold text-destructive">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                This cannot be undone
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Type <span className="font-mono font-bold text-foreground">GO LIVE</span> to
+                confirm.
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <Input
+                  value={confirmText}
+                  onChange={(e) => setConfirmText(e.target.value)}
+                  placeholder="GO LIVE"
+                  className="w-44 rounded-lg font-mono"
+                  autoComplete="off"
+                />
+                <Button
+                  disabled={confirmText.trim() !== "GO LIVE" || purge.isPending}
+                  onClick={async () => {
+                    try {
+                      const res = await purge.mutateAsync({
+                        data: {
+                          confirm: "GO LIVE",
+                          includeRealRepStarterData: includeStarter,
+                          disableDemoData: true,
+                        },
+                      });
+                      refresh();
+                      setConfirmText("");
+                      const d = res.deleted;
+                      toast({
+                        title: "You're live",
+                        description: `Removed ${d.mockReps} demo reps, ${d.deals} deals, ${d.pins} pins and ${d.feedPosts} feed posts. Demo seeding is now off.`,
+                      });
+                    } catch (e) {
+                      toast({
+                        title: "Purge failed",
+                        description: String(e),
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  className="rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {purge.isPending ? (
+                    <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Rocket className="mr-1 h-3.5 w-3.5" />
+                  )}
+                  Clear demo data & go live
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {live && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-background/40 p-3">
+              <p className="text-xs text-muted-foreground">
+                Need the demo back for a training session or a walkthrough?
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={enable.isPending}
+                onClick={async () => {
+                  if (
+                    !confirm(
+                      "Re-enable demo data? This re-adds the 25 mock reps and their activity.",
+                    )
+                  )
+                    return;
+                  await enable.mutateAsync();
+                  refresh();
+                  toast({ title: "Demo data re-enabled" });
+                }}
+                className="rounded-lg"
+              >
+                {enable.isPending && <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />}
+                Re-enable demo data
+              </Button>
+            </div>
+          )}
+        </Card>
+      )}
     </div>
   );
 }

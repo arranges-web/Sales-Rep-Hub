@@ -356,7 +356,19 @@ export type MapPinStatus = (typeof MapPinStatus)[keyof typeof MapPinStatus];
 export const MapPinStatus = {
   lead: "lead",
   sold: "sold",
+  quoted: "quoted",
+  requested: "requested",
 } as const;
+
+export interface ResidentPhone {
+  number: string;
+  /**
+   * Jobber label for the line, e.g. MAIN or MOBILE.
+   * @nullable
+   */
+  description?: string | null;
+  primary: boolean;
+}
 
 export interface MapPin {
   id: number;
@@ -378,10 +390,17 @@ export interface MapPin {
   dealId?: number | null;
   /** @nullable */
   residentName?: string | null;
-  /** @nullable */
-  residentPhone?: string | null;
   /**
-   * How resident info was obtained — rep (manual), skiptrace (lookup), or null.
+   * Best single number for this resident — the primary/mobile line when Jobber has several.
+   * @nullable
+   */
+  residentPhone?: string | null;
+  /** Every phone number known for this resident, primary first. */
+  residentPhones?: ResidentPhone[];
+  /** @nullable */
+  residentEmail?: string | null;
+  /**
+   * How resident info was obtained — rep (manual), jobber (synced), skiptrace (lookup), or null.
    * @nullable
    */
   residentSource?: string | null;
@@ -394,6 +413,21 @@ export interface MapPin {
   source?: string | null;
   /** @nullable */
   externalId?: string | null;
+  /**
+   * Which Jobber record produced this pin — job, quote, or request.
+   * @nullable
+   */
+  externalKind?: string | null;
+  /**
+   * Jobber client id, so multiple pins for one homeowner can be grouped.
+   * @nullable
+   */
+  externalClientId?: string | null;
+  /**
+   * Deep link to open this record in Jobber.
+   * @nullable
+   */
+  externalUrl?: string | null;
   /** @nullable */
   jobValue?: number | null;
   /** @nullable */
@@ -407,6 +441,8 @@ export type CreatePinBodyStatus =
 export const CreatePinBodyStatus = {
   lead: "lead",
   sold: "sold",
+  quoted: "quoted",
+  requested: "requested",
 } as const;
 
 export interface CreatePinBody {
@@ -424,6 +460,8 @@ export interface CreatePinBody {
   residentName?: string | null;
   /** @nullable */
   residentPhone?: string | null;
+  /** @nullable */
+  residentEmail?: string | null;
 }
 
 export type UpdatePinBodyStatus =
@@ -432,6 +470,8 @@ export type UpdatePinBodyStatus =
 export const UpdatePinBodyStatus = {
   lead: "lead",
   sold: "sold",
+  quoted: "quoted",
+  requested: "requested",
 } as const;
 
 export interface UpdatePinBody {
@@ -446,6 +486,8 @@ export interface UpdatePinBody {
   residentName?: string | null;
   /** @nullable */
   residentPhone?: string | null;
+  /** @nullable */
+  residentEmail?: string | null;
   /**
    * When true, sets lastKnockedAt to now.
    * @nullable
@@ -1015,6 +1057,7 @@ export const JobberStatusProvider = {
 } as const;
 
 /**
+ * partial means at least one of jobs/quotes/requests synced and at least one failed.
  * @nullable
  */
 export type JobberStatusLastSyncStatus =
@@ -1023,6 +1066,7 @@ export type JobberStatusLastSyncStatus =
 
 export const JobberStatusLastSyncStatus = {
   ok: "ok",
+  partial: "partial",
   failed: "failed",
 } as const;
 
@@ -1038,12 +1082,66 @@ export interface JobberStatus {
   accessTokenMask?: string | null;
   /** @nullable */
   lastSyncAt?: string | null;
-  /** @nullable */
+  /**
+   * partial means at least one of jobs/quotes/requests synced and at least one failed.
+   * @nullable
+   */
   lastSyncStatus?: JobberStatusLastSyncStatus;
   /** @nullable */
   lastSyncError?: string | null;
   lastSyncJobsCount: number;
   pinsFromJobber: number;
+  jobPins?: number;
+  quotePins?: number;
+  requestPins?: number;
+  /** Jobber pins that carry at least one phone number. */
+  pinsWithPhone?: number;
+}
+
+export interface DemoDataCounts {
+  mockReps: number;
+  deals: number;
+  pins: number;
+  badges: number;
+  feedPosts: number;
+  comments: number;
+  highFives: number;
+  redemptions: number;
+  campaigns: number;
+  campaignStreets: number;
+  /** Canned starter deals handed to real reps on first sign-in. */
+  starterDealsOnRealReps: number;
+  starterPinsOnRealReps: number;
+}
+
+export interface DemoDataStatus {
+  /** False once Go Live has been run — the boot seeder stops adding demo rows. */
+  demoDataEnabled: boolean;
+  realUsers: number;
+  counts: DemoDataCounts;
+}
+
+export interface PurgeDemoDataBody {
+  /** Must be the literal string "GO LIVE". */
+  confirm: string;
+  /**
+   * Also remove canned starter deals/pins from real reps' accounts. Defaults to true.
+   * @nullable
+   */
+  includeRealRepStarterData?: boolean | null;
+  /**
+   * Turn the demo seeder off permanently. Defaults to true.
+   * @nullable
+   */
+  disableDemoData?: boolean | null;
+}
+
+export interface PurgeDemoDataResult {
+  ok: boolean;
+  deleted: DemoDataCounts;
+  demoDataEnabled: boolean;
+  elapsedMs: number;
+  status: DemoDataStatus;
 }
 
 export interface UpdateJobberCredentialsBody {
@@ -1056,6 +1154,27 @@ export interface UpdateJobberCredentialsBody {
   accountName?: string | null;
 }
 
+export type JobberEntitySyncResultKind =
+  (typeof JobberEntitySyncResultKind)[keyof typeof JobberEntitySyncResultKind];
+
+export const JobberEntitySyncResultKind = {
+  job: "job",
+  quote: "quote",
+  request: "request",
+} as const;
+
+export interface JobberEntitySyncResult {
+  kind: JobberEntitySyncResultKind;
+  ok: boolean;
+  seen: number;
+  created: number;
+  updated: number;
+  skippedNoAddress: number;
+  geocodeMisses: number;
+  /** @nullable */
+  error?: string | null;
+}
+
 export interface JobberSyncResult {
   ok: boolean;
   jobsSeen: number;
@@ -1065,6 +1184,8 @@ export interface JobberSyncResult {
   /** @nullable */
   error?: string | null;
   elapsedMs: number;
+  /** Per-connection breakdown — jobs, quotes, and requests each sync independently. */
+  entities?: JobberEntitySyncResult[];
   status: JobberStatus;
 }
 

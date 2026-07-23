@@ -146,7 +146,7 @@ export default function LandingPage() {
         <div className="mt-20 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[
             { icon: Trophy, color: "#FFBF00", title: "Leaderboard", body: "Live rankings, badges, tier cutoffs." },
-            { icon: MapPin, color: "#2EA3F2", title: "Canvas Map", body: "Drop pins, work streets, win blocks." },
+            { icon: MapPin, color: "#2EA3F2", title: "Canvas Map", body: "Every Jobber job, quote and request on one map — with the homeowner's phone." },
             { icon: Gift, color: "#2C8214", title: "Vault", body: "Trade points for gear, tools, trips." },
             { icon: Zap, color: "#FFBF00", title: "Hype Feed", body: "Wins, high-fives, comments." },
           ].map((f) => {
@@ -169,6 +169,28 @@ export default function LandingPage() {
           })}
         </div>
       </main>
+
+      <footer className="mt-16 border-t border-border">
+        <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-6 py-8 text-center sm:flex-row sm:justify-between sm:text-left">
+          <div className="text-xs text-muted-foreground">
+            <span className="font-semibold text-foreground/80">Joshua Tree Inc.</span> — ISA
+            certified arborists serving Cape Coral, Fort Myers &amp; Southwest Florida.
+          </div>
+          <div className="flex items-center gap-4 text-xs">
+            <a
+              href="https://myjoshuatree.com/"
+              target="_blank"
+              rel="noreferrer"
+              className="font-semibold text-[#2EA3F2] hover:underline"
+            >
+              myjoshuatree.com
+            </a>
+            <span className="text-muted-foreground">
+              Internal use only · Employees &amp; contractors
+            </span>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

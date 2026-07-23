@@ -41,6 +41,7 @@ import type {
   CreateTrainingResourceBody,
   CreateUserBody,
   Deal,
+  DemoDataStatus,
   ErrorEnvelope,
   FeedPost,
   GetLeaderboardParams,
@@ -58,6 +59,8 @@ import type {
   MapPin,
   MyStats,
   PointConfig,
+  PurgeDemoDataBody,
+  PurgeDemoDataResult,
   Redemption,
   Reward,
   SeedDemoResult,
@@ -3957,6 +3960,248 @@ export const useSeedDemoData = <
   TContext
 > => {
   return useMutation(getSeedDemoDataMutationOptions(options));
+};
+
+/**
+ * @summary Dry run — what a demo-data purge would delete (admin only)
+ */
+export const getGetDemoDataStatusUrl = () => {
+  return `/api/admin/demo-data`;
+};
+
+export const getDemoDataStatus = async (
+  options?: RequestInit,
+): Promise<DemoDataStatus> => {
+  return customFetch<DemoDataStatus>(getGetDemoDataStatusUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetDemoDataStatusQueryKey = () => {
+  return [`/api/admin/demo-data`] as const;
+};
+
+export const getGetDemoDataStatusQueryOptions = <
+  TData = Awaited<ReturnType<typeof getDemoDataStatus>>,
+  TError = ErrorType<ErrorEnvelope>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getDemoDataStatus>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetDemoDataStatusQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getDemoDataStatus>>
+  > = ({ signal }) => getDemoDataStatus({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getDemoDataStatus>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetDemoDataStatusQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getDemoDataStatus>>
+>;
+export type GetDemoDataStatusQueryError = ErrorType<ErrorEnvelope>;
+
+/**
+ * @summary Dry run — what a demo-data purge would delete (admin only)
+ */
+
+export function useGetDemoDataStatus<
+  TData = Awaited<ReturnType<typeof getDemoDataStatus>>,
+  TError = ErrorType<ErrorEnvelope>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getDemoDataStatus>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetDemoDataStatusQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Delete all demo data and disable the demo seeder permanently (admin only)
+ */
+export const getPurgeDemoDataUrl = () => {
+  return `/api/admin/demo-data/purge`;
+};
+
+export const purgeDemoData = async (
+  purgeDemoDataBody: PurgeDemoDataBody,
+  options?: RequestInit,
+): Promise<PurgeDemoDataResult> => {
+  return customFetch<PurgeDemoDataResult>(getPurgeDemoDataUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(purgeDemoDataBody),
+  });
+};
+
+export const getPurgeDemoDataMutationOptions = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof purgeDemoData>>,
+    TError,
+    { data: BodyType<PurgeDemoDataBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof purgeDemoData>>,
+  TError,
+  { data: BodyType<PurgeDemoDataBody> },
+  TContext
+> => {
+  const mutationKey = ["purgeDemoData"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof purgeDemoData>>,
+    { data: BodyType<PurgeDemoDataBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return purgeDemoData(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PurgeDemoDataMutationResult = NonNullable<
+  Awaited<ReturnType<typeof purgeDemoData>>
+>;
+export type PurgeDemoDataMutationBody = BodyType<PurgeDemoDataBody>;
+export type PurgeDemoDataMutationError = ErrorType<ErrorEnvelope>;
+
+/**
+ * @summary Delete all demo data and disable the demo seeder permanently (admin only)
+ */
+export const usePurgeDemoData = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof purgeDemoData>>,
+    TError,
+    { data: BodyType<PurgeDemoDataBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof purgeDemoData>>,
+  TError,
+  { data: BodyType<PurgeDemoDataBody> },
+  TContext
+> => {
+  return useMutation(getPurgeDemoDataMutationOptions(options));
+};
+
+/**
+ * @summary Re-enable demo seeding and run it once (admin only)
+ */
+export const getEnableDemoDataUrl = () => {
+  return `/api/admin/demo-data/enable`;
+};
+
+export const enableDemoData = async (
+  options?: RequestInit,
+): Promise<DemoDataStatus> => {
+  return customFetch<DemoDataStatus>(getEnableDemoDataUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getEnableDemoDataMutationOptions = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof enableDemoData>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof enableDemoData>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["enableDemoData"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof enableDemoData>>,
+    void
+  > = () => {
+    return enableDemoData(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type EnableDemoDataMutationResult = NonNullable<
+  Awaited<ReturnType<typeof enableDemoData>>
+>;
+
+export type EnableDemoDataMutationError = ErrorType<ErrorEnvelope>;
+
+/**
+ * @summary Re-enable demo seeding and run it once (admin only)
+ */
+export const useEnableDemoData = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof enableDemoData>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof enableDemoData>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getEnableDemoDataMutationOptions(options));
 };
 
 /**

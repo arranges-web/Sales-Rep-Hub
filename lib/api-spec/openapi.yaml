@@ -916,6 +916,74 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
 
+  # ─── Go live: demo data status + purge (admin) ──────────────────
+  /admin/demo-data:
+    get:
+      operationId: getDemoDataStatus
+      tags: [admin]
+      summary: Dry run — what a demo-data purge would delete (admin only)
+      responses:
+        "200":
+          description: Demo data status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DemoDataStatus"
+        "403":
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /admin/demo-data/purge:
+    post:
+      operationId: purgeDemoData
+      tags: [admin]
+      summary: Delete all demo data and disable the demo seeder permanently (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PurgeDemoDataBody"
+      responses:
+        "200":
+          description: Purge result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PurgeDemoDataResult"
+        "400":
+          description: Missing confirmation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /admin/demo-data/enable:
+    post:
+      operationId: enableDemoData
+      tags: [admin]
+      summary: Re-enable demo seeding and run it once (admin only)
+      responses:
+        "200":
+          description: Demo data status after re-seeding
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DemoDataStatus"
+        "403":
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
   # ─── My Lifetime Stats ──────────────────────────────────────────
   /users/me/stats:
     get:
@@ -1946,7 +2014,7 @@ components:
           type: number
         status:
           type: string
-          enum: [lead, sold]
+          enum: [lead, sold, quoted, requested]
         address:
           type: string
         notes:
@@ -1959,9 +2027,17 @@ components:
           type: ["string", "null"]
         residentPhone:
           type: ["string", "null"]
+          description: Best single number for this resident — the primary/mobile line when Jobber has several.
+        residentPhones:
+          type: array
+          description: Every phone number known for this resident, primary first.
+          items:
+            $ref: "#/components/schemas/ResidentPhone"
+        residentEmail:
+          type: ["string", "null"]
         residentSource:
           type: ["string", "null"]
-          description: 'How resident info was obtained — rep (manual), skiptrace (lookup), or null.'
+          description: 'How resident info was obtained — rep (manual), jobber (synced), skiptrace (lookup), or null.'
         lastKnockedAt:
           type: ["string", "null"]
           format: date-time
@@ -1970,6 +2046,15 @@ components:
           description: 'Where this pin came from — "rep" (manual) or an integration like "jobber".'
         externalId:
           type: ["string", "null"]
+        externalKind:
+          type: ["string", "null"]
+          description: 'Which Jobber record produced this pin — job, quote, or request.'
+        externalClientId:
+          type: ["string", "null"]
+          description: Jobber client id, so multiple pins for one homeowner can be grouped.
+        externalUrl:
+          type: ["string", "null"]
+          description: Deep link to open this record in Jobber.
         jobValue:
           type: ["number", "null"]
         jobStatus:
@@ -1987,6 +2072,20 @@ components:
         - address
         - createdAt
 
+    ResidentPhone:
+      type: object
+      properties:
+        number:
+          type: string
+        description:
+          type: ["string", "null"]
+          description: 'Jobber label for the line, e.g. MAIN or MOBILE.'
+        primary:
+          type: boolean
+      required:
+        - number
+        - primary
+
     CreatePinBody:
       type: object
       properties:
@@ -1998,7 +2097,7 @@ components:
           type: string
         status:
           type: string
-          enum: [lead, sold]
+          enum: [lead, sold, quoted, requested]
         notes:
           type: ["string", "null"]
         photoUrl:
@@ -2008,6 +2107,8 @@ components:
         residentName:
           type: ["string", "null"]
         residentPhone:
+          type: ["string", "null"]
+        residentEmail:
           type: ["string", "null"]
       required:
         - latitude
@@ -2020,7 +2121,7 @@ components:
       properties:
         status:
           type: string
-          enum: [lead, sold]
+          enum: [lead, sold, quoted, requested]
         notes:
           type: ["string", "null"]
         photoUrl:
@@ -2030,6 +2131,8 @@ components:
         residentName:
           type: ["string", "null"]
         residentPhone:
+          type: ["string", "null"]
+        residentEmail:
           type: ["string", "null"]
         markKnocked:
           type: ["boolean", "null"]
@@ -2779,18 +2882,120 @@ components:
           format: date-time
         lastSyncStatus:
           type: ["string", "null"]
-          enum: [ok, failed, null]
+          enum: [ok, partial, failed, null]
+          description: partial means at least one of jobs/quotes/requests synced and at least one failed.
         lastSyncError:
           type: ["string", "null"]
         lastSyncJobsCount:
           type: integer
         pinsFromJobber:
           type: integer
+        jobPins:
+          type: integer
+        quotePins:
+          type: integer
+        requestPins:
+          type: integer
+        pinsWithPhone:
+          type: integer
+          description: Jobber pins that carry at least one phone number.
       required:
         - provider
         - configured
         - lastSyncJobsCount
         - pinsFromJobber
+
+    DemoDataCounts:
+      type: object
+      properties:
+        mockReps:
+          type: integer
+        deals:
+          type: integer
+        pins:
+          type: integer
+        badges:
+          type: integer
+        feedPosts:
+          type: integer
+        comments:
+          type: integer
+        highFives:
+          type: integer
+        redemptions:
+          type: integer
+        campaigns:
+          type: integer
+        campaignStreets:
+          type: integer
+        starterDealsOnRealReps:
+          type: integer
+          description: Canned starter deals handed to real reps on first sign-in.
+        starterPinsOnRealReps:
+          type: integer
+      required:
+        - mockReps
+        - deals
+        - pins
+        - badges
+        - feedPosts
+        - comments
+        - highFives
+        - redemptions
+        - campaigns
+        - campaignStreets
+        - starterDealsOnRealReps
+        - starterPinsOnRealReps
+
+    DemoDataStatus:
+      type: object
+      properties:
+        demoDataEnabled:
+          type: boolean
+          description: False once Go Live has been run — the boot seeder stops adding demo rows.
+        realUsers:
+          type: integer
+        counts:
+          $ref: "#/components/schemas/DemoDataCounts"
+      required:
+        - demoDataEnabled
+        - realUsers
+        - counts
+
+    PurgeDemoDataBody:
+      type: object
+      properties:
+        confirm:
+          type: string
+          description: Must be the literal string "GO LIVE".
+        includeRealRepStarterData:
+          type: ["boolean", "null"]
+          description: Also remove canned starter deals/pins from real reps' accounts. Defaults to true.
+        disableDemoData:
+          type: ["boolean", "null"]
+          description: Turn the demo seeder off permanently. Defaults to true.
+      required:
+        - confirm
+
+    PurgeDemoDataResult:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        deleted:
+          $ref: "#/components/schemas/DemoDataCounts"
+        demoDataEnabled:
+          type: boolean
+        elapsedMs:
+          type: integer
+        status:
+          $ref: "#/components/schemas/DemoDataStatus"
+      required:
+        - ok
+        - deleted
+        - demoDataEnabled
+        - elapsedMs
+        - status
 
     UpdateJobberCredentialsBody:
       type: object
@@ -2818,6 +3023,11 @@ components:
           type: ["string", "null"]
         elapsedMs:
           type: integer
+        entities:
+          type: array
+          description: Per-connection breakdown — jobs, quotes, and requests each sync independently.
+          items:
+            $ref: "#/components/schemas/JobberEntitySyncResult"
         status:
           $ref: "#/components/schemas/JobberStatus"
       required:
@@ -2828,6 +3038,35 @@ components:
         - geocodeMisses
         - elapsedMs
         - status
+
+    JobberEntitySyncResult:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum: [job, quote, request]
+        ok:
+          type: boolean
+        seen:
+          type: integer
+        created:
+          type: integer
+        updated:
+          type: integer
+        skippedNoAddress:
+          type: integer
+        geocodeMisses:
+          type: integer
+        error:
+          type: ["string", "null"]
+      required:
+        - kind
+        - ok
+        - seen
+        - created
+        - updated
+        - skippedNoAddress
+        - geocodeMisses
 
     SeedDemoResult:
       type: object

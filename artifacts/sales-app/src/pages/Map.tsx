@@ -45,6 +45,9 @@ import {
   Flame,
   Target,
   TrendingUp,
+  MessageSquare,
+  Mail,
+  ExternalLink,
 } from "lucide-react";
 import { AvatarRing } from "@/components/AvatarRing";
 import { BrandHeader } from "@/components/BrandHeader";
@@ -68,7 +71,28 @@ const STATUS_COLORS = {
   lead: "#2EA3F2",
   sold: "#2C8214",
   follow_up: "#FFBF00",
+  // Jobber-sourced opportunities that haven't closed yet.
+  quoted: "#FFBF00",
+  requested: "#a78bfa",
 } as const;
+
+// Rep-facing labels. "quoted"/"requested" only ever come from Jobber.
+const STATUS_LABELS: Record<string, string> = {
+  lead: "Lead",
+  sold: "Sold",
+  follow_up: "Follow up",
+  quoted: "Quoted",
+  requested: "Requested",
+};
+
+/** Strip formatting so tel:/sms: links work on every handset. */
+function dialable(phone: string): string {
+  const trimmed = phone.trim();
+  const digits = trimmed.replace(/[^\d+]/g, "");
+  // Assume US/NANP for bare 10-digit numbers — Joshua Tree works SWFL.
+  if (/^\d{10}$/.test(digits)) return `+1${digits}`;
+  return digits || trimmed;
+}
 
 // Pulled out so the house-number label only renders at zooms where
 // neighboring labels won't collide.
@@ -101,14 +125,21 @@ function pinIcon(
     ? "box-shadow:0 0 0 3px #FFBF00, 0 4px 14px rgba(0,0,0,.55);"
     : "box-shadow:0 4px 12px rgba(0,0,0,.45);";
   const opacity = opts.stale ? 0.55 : 1;
-  // Inner glyph: checkmark for sold, "$" for Jobber jobs (it's a real
-  // money line), dot for everything else.
+  // Inner glyph tells the rep what they're looking at before they tap:
+  // "?" for an un-closed Jobber quote, "!" for an inbound work request,
+  // "$" for a real Jobber job, a checkmark for sold, a dot otherwise.
+  const glyph = (ch: string) =>
+    `<span style="color:${color};font-weight:900;font-size:11px;line-height:1;">${ch}</span>`;
   const inner =
-    opts.source === "jobber"
-      ? `<span style="color:${color};font-weight:900;font-size:11px;line-height:1;">$</span>`
-      : opts.status === "sold"
-        ? `<svg viewBox="0 0 24 24" width="11" height="11" stroke="${color}" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>`
-        : `<div style="width:8px;height:8px;border-radius:50%;background:${color};"></div>`;
+    opts.status === "quoted"
+      ? glyph("?")
+      : opts.status === "requested"
+        ? glyph("!")
+        : opts.source === "jobber"
+          ? glyph("$")
+          : opts.status === "sold"
+            ? `<svg viewBox="0 0 24 24" width="11" height="11" stroke="${color}" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>`
+            : `<div style="width:8px;height:8px;border-radius:50%;background:${color};"></div>`;
 
   // Optional house-number label rendered under the pin tip. Centered on
   // the pin's anchor; we widen the icon box so the label has room.
@@ -274,7 +305,7 @@ export default function MapPage() {
   const update = useUpdatePin();
   const skipTrace = useSkipTracePin();
 
-  const [filter, setFilter] = useState<"all" | "lead" | "sold">("all");
+  const [filter, setFilter] = useState<"all" | "lead" | "sold" | "quoted" | "requested">("all");
   const [sourceFilter, setSourceFilter] = useState<"all" | "rep" | "jobber">("all");
   const [currentZoom, setCurrentZoom] = useState<number>(11);
   const [tileMode, setTileMode] = useState<TileMode>("hybrid");
@@ -319,12 +350,32 @@ export default function MapPage() {
     const all = pins ?? [];
     const leads = all.filter((p) => p.status === "lead").length;
     const sold = all.filter((p) => p.status === "sold").length;
+    const quoted = all.filter((p) => p.status === "quoted").length;
+    const requested = all.filter((p) => p.status === "requested").length;
     const stale = all.filter((p) => isStale(p)).length;
     const jobs = all.filter((p) => (p.source ?? "rep") === "jobber").length;
     const jobValue = all
       .filter((p) => (p.source ?? "rep") === "jobber")
       .reduce((sum, p) => sum + (p.jobValue ?? 0), 0);
-    return { all: all.length, leads, sold, stale, jobs, jobValue };
+    // Money sitting in un-approved quotes — the re-knock pot.
+    const quotedValue = all
+      .filter((p) => p.status === "quoted")
+      .reduce((sum, p) => sum + (p.jobValue ?? 0), 0);
+    const withPhone = all.filter(
+      (p) => !!p.residentPhone || (p.residentPhones?.length ?? 0) > 0,
+    ).length;
+    return {
+      all: all.length,
+      leads,
+      sold,
+      quoted,
+      requested,
+      stale,
+      jobs,
+      jobValue,
+      quotedValue,
+      withPhone,
+    };
   }, [pins]);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -613,11 +664,13 @@ export default function MapPage() {
     const showNumber = currentZoom >= HOUSE_NUMBER_MIN_ZOOM;
     filtered.forEach((p) => {
       const isJobber = (p.source ?? "rep") === "jobber";
-      // Jobber jobs always paint in JT green — they're confirmed money on
-      // the books, distinct from rep-dropped lead/sold pins.
-      const baseColor = isJobber
-        ? "#2C8214"
-        : (STATUS_COLORS[p.status as keyof typeof STATUS_COLORS] ?? STATUS_COLORS.lead);
+      // Completed Jobber jobs always paint in JT green — confirmed money on
+      // the books. Quotes and requests keep their own colors because they're
+      // the un-closed work a rep should actually go knock.
+      const baseColor =
+        isJobber && p.status !== "quoted" && p.status !== "requested"
+          ? "#2C8214"
+          : (STATUS_COLORS[p.status as keyof typeof STATUS_COLORS] ?? STATUS_COLORS.lead);
       const m = L.marker([p.latitude, p.longitude], {
         icon: pinIcon(baseColor, {
           stale: !isJobber && isStale(p),
@@ -722,6 +775,22 @@ export default function MapPage() {
           <div className="flex flex-wrap items-center gap-1.5">
             <CountChip label="Leads" value={counts.leads} color="#2EA3F2" />
             <CountChip label="Sold" value={counts.sold} color="#2C8214" />
+            {counts.quoted > 0 && (
+              <CountChip
+                label={
+                  counts.quotedValue > 0
+                    ? `Quoted · $${(counts.quotedValue / 1000).toFixed(
+                        counts.quotedValue >= 100_000 ? 0 : 1,
+                      )}k`
+                    : "Quoted"
+                }
+                value={counts.quoted}
+                color="#FFBF00"
+              />
+            )}
+            {counts.requested > 0 && (
+              <CountChip label="Requests" value={counts.requested} color="#a78bfa" />
+            )}
             {counts.jobs > 0 && (
               <CountChip
                 label={`Jobber · $${(counts.jobValue / 1000).toFixed(
@@ -1025,20 +1094,30 @@ export default function MapPage() {
         {/* Top-right: filter chips */}
         <div className="pointer-events-none absolute right-3 top-3 z-[500] flex max-w-[calc(100%-1.5rem)] flex-col items-end gap-1.5">
           <div className="pointer-events-auto inline-flex rounded-full border border-white/10 bg-slate-950/70 p-1 text-xs font-medium text-slate-100 shadow-xl backdrop-blur-md">
-            {(["all", "lead", "sold"] as const).map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={cn(
-                  "rounded-full px-3 py-1.5 transition-colors",
-                  filter === f
-                    ? "bg-[#2EA3F2] text-slate-950"
-                    : "text-slate-200 hover:text-white",
-                )}
-              >
-                {f}
-              </button>
-            ))}
+            {(
+              [
+                { k: "all" as const, label: "all", show: true },
+                { k: "lead" as const, label: "leads", show: true },
+                { k: "sold" as const, label: "sold", show: true },
+                { k: "quoted" as const, label: "quoted", show: counts.quoted > 0 },
+                { k: "requested" as const, label: "requests", show: counts.requested > 0 },
+              ] as const
+            )
+              .filter((f) => f.show)
+              .map((f) => (
+                <button
+                  key={f.k}
+                  onClick={() => setFilter(f.k)}
+                  className={cn(
+                    "rounded-full px-3 py-1.5 transition-colors",
+                    filter === f.k
+                      ? "bg-[#2EA3F2] text-slate-950"
+                      : "text-slate-200 hover:text-white",
+                  )}
+                >
+                  {f.label}
+                </button>
+              ))}
           </div>
           {counts.jobs > 0 && (
             <div className="pointer-events-auto inline-flex rounded-full border border-white/10 bg-slate-950/70 p-1 text-xs font-medium text-slate-100 shadow-xl backdrop-blur-md">
@@ -1067,9 +1146,11 @@ export default function MapPage() {
         </div>
 
         {/* Bottom-left: legend */}
-        <div className="pointer-events-none absolute bottom-3 left-3 z-[500] flex items-center gap-3 rounded-full border border-white/10 bg-slate-950/70 px-3 py-1.5 text-[11px] text-slate-200 shadow-xl backdrop-blur-md">
+        <div className="pointer-events-none absolute bottom-3 left-3 z-[500] flex max-w-[calc(100%-1.5rem)] flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border border-white/10 bg-slate-950/70 px-3 py-1.5 text-[11px] text-slate-200 shadow-xl backdrop-blur-md">
           <Legend color="#2EA3F2" label="Lead" />
           <Legend color="#2C8214" label="Sold" />
+          {counts.quoted > 0 && <Legend color="#FFBF00" label="Quoted" />}
+          {counts.requested > 0 && <Legend color="#a78bfa" label="Request" />}
           <Legend color="#FFBF00" label="Stale" muted />
         </div>
 
@@ -1213,6 +1294,8 @@ export default function MapPage() {
         {filtered.map((p) => {
           const photo = photoServingUrl(p.photoUrl);
           const stale = isStale(p);
+          const statusColor =
+            STATUS_COLORS[p.status as keyof typeof STATUS_COLORS] ?? STATUS_COLORS.lead;
           return (
             <Card
               key={p.id}
@@ -1225,24 +1308,25 @@ export default function MapPage() {
                 <div
                   className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
                   style={{
-                    backgroundColor:
-                      p.status === "sold" ? "#2C821420" : "#2EA3F220",
-                    color: p.status === "sold" ? "#2C8214" : "#2EA3F2",
+                    backgroundColor: `${statusColor}20`,
+                    color: statusColor,
                   }}
                 >
                   <MapPin className="h-5 w-5" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Badge
-                      className="text-white capitalize"
-                      style={{
-                        backgroundColor:
-                          p.status === "sold" ? "#2C8214" : "#2EA3F2",
-                      }}
+                      className="text-white"
+                      style={{ backgroundColor: statusColor }}
                     >
-                      {p.status}
+                      {STATUS_LABELS[p.status] ?? p.status}
                     </Badge>
+                    {(p.source ?? "rep") === "jobber" && (
+                      <Badge variant="outline" className="text-[10px]">
+                        Jobber
+                      </Badge>
+                    )}
                     {stale && (
                       <Badge variant="outline" className="text-[10px]">
                         stale
@@ -1273,13 +1357,28 @@ export default function MapPage() {
                     </div>
                   )}
                   {p.residentPhone && (
-                    <a
-                      href={`tel:${p.residentPhone}`}
-                      className="mt-0.5 flex items-center gap-1.5 text-xs font-medium text-[#2EA3F2] hover:underline"
-                    >
-                      <Phone className="h-3 w-3" />
-                      <span>{p.residentPhone}</span>
-                    </a>
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                      <a
+                        href={`tel:${dialable(p.residentPhone)}`}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-[#2C8214]/15 px-2 py-1 text-xs font-semibold text-[#2C8214] transition-colors hover:bg-[#2C8214]/25"
+                      >
+                        <Phone className="h-3 w-3" />
+                        <span>{p.residentPhone}</span>
+                      </a>
+                      <a
+                        href={`sms:${dialable(p.residentPhone)}`}
+                        className="inline-flex items-center gap-1 rounded-lg bg-[#2EA3F2]/15 px-2 py-1 text-xs font-semibold text-[#2EA3F2] transition-colors hover:bg-[#2EA3F2]/25"
+                        title="Send a text"
+                      >
+                        <MessageSquare className="h-3 w-3" />
+                        Text
+                      </a>
+                      {(p.residentPhones?.length ?? 0) > 1 && (
+                        <span className="text-[10px] text-muted-foreground">
+                          +{p.residentPhones!.length - 1} more
+                        </span>
+                      )}
+                    </div>
                   )}
                   {p.notes && <p className="mt-1 text-sm">{p.notes}</p>}
                   {photo && (
@@ -1305,7 +1404,7 @@ export default function MapPage() {
                     >
                       Open
                     </Button>
-                    {p.status === "lead" && (
+                    {p.status !== "sold" && (
                       <Button
                         size="sm"
                         variant="outline"
@@ -1425,6 +1524,30 @@ function PinDetail({
     ? `Last knocked ${formatDistanceToNow(new Date(pin.lastKnockedAt), { addSuffix: true })}`
     : "Never knocked";
   const directionsHref = `https://www.google.com/maps/dir/?api=1&destination=${pin.latitude},${pin.longitude}`;
+  const statusColor =
+    STATUS_COLORS[pin.status as keyof typeof STATUS_COLORS] ?? STATUS_COLORS.lead;
+  const kindLabel =
+    pin.externalKind === "quote"
+      ? "quote"
+      : pin.externalKind === "request"
+        ? "request"
+        : "job";
+
+  // Prefer the full list Jobber gave us; fall back to the single stored number
+  // so rep-entered and skip-traced pins render through the same component.
+  const phones =
+    (pin.residentPhones?.length ?? 0) > 0
+      ? pin.residentPhones!
+      : pin.residentPhone
+        ? [{ number: pin.residentPhone, description: null, primary: true }]
+        : [];
+
+  const residentSourceLabel =
+    pin.residentSource === "rep"
+      ? "from rep"
+      : pin.residentSource === "jobber"
+        ? "from Jobber"
+        : "skip-trace";
 
   return (
     <div className="space-y-4">
@@ -1433,21 +1556,9 @@ function PinDetail({
       </DialogHeader>
 
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-        {pin.source === "jobber" ? (
-          <Badge
-            className="text-white capitalize"
-            style={{ backgroundColor: "#2C8214" }}
-          >
-            Jobber job
-          </Badge>
-        ) : (
-          <Badge
-            className="text-white capitalize"
-            style={{ backgroundColor: pin.status === "sold" ? "#2C8214" : "#2EA3F2" }}
-          >
-            {pin.status}
-          </Badge>
-        )}
+        <Badge className="text-white" style={{ backgroundColor: statusColor }}>
+          {pin.source === "jobber" ? `Jobber ${kindLabel}` : STATUS_LABELS[pin.status] ?? pin.status}
+        </Badge>
         <span>by {pin.repName}</span>
         {pin.source !== "jobber" && (
           <>
@@ -1457,14 +1568,30 @@ function PinDetail({
         )}
       </div>
 
-      {/* Jobber-specific block: job value and raw status */}
+      {/* Jobber-specific block: value, raw status, and a jump into Jobber */}
       {pin.source === "jobber" && (
-        <div className="space-y-1 rounded-xl border border-[#2C8214]/40 bg-[#2C8214]/10 p-3">
-          <div className="text-xs font-semibold uppercase tracking-wide text-[#7ed85c]">
-            From Jobber
+        <div
+          className="space-y-1 rounded-xl border p-3"
+          style={{
+            borderColor: `${statusColor}66`,
+            backgroundColor: `${statusColor}1a`,
+          }}
+        >
+          <div
+            className="text-xs font-semibold uppercase tracking-wide"
+            style={{ color: statusColor }}
+          >
+            {pin.externalKind === "quote"
+              ? "Open quote in Jobber"
+              : pin.externalKind === "request"
+                ? "Work request in Jobber"
+                : "From Jobber"}
           </div>
           {typeof pin.jobValue === "number" && pin.jobValue > 0 && (
-            <div className="font-stat text-2xl font-extrabold tabular-nums text-[#7ed85c]">
+            <div
+              className="font-stat text-2xl font-extrabold tabular-nums"
+              style={{ color: statusColor }}
+            >
               ${pin.jobValue.toLocaleString()}
             </div>
           )}
@@ -1474,9 +1601,24 @@ function PinDetail({
             </div>
           )}
           <p className="text-[11px] text-muted-foreground">
-            Synced from Jobber. Edits here won't roundtrip — manage the job in
-            Jobber directly.
+            {pin.externalKind === "quote"
+              ? "This homeowner was quoted and hasn't closed — worth a knock."
+              : pin.externalKind === "request"
+                ? "This homeowner asked us to come out. Confirm the appointment."
+                : "Synced from Jobber. Edits here won't roundtrip — manage the job in Jobber directly."}
           </p>
+          {pin.externalUrl && (
+            <a
+              href={pin.externalUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 pt-1 text-xs font-semibold hover:underline"
+              style={{ color: statusColor }}
+            >
+              <ExternalLink className="h-3 w-3" />
+              Open in Jobber
+            </a>
+          )}
         </div>
       )}
 
@@ -1488,7 +1630,7 @@ function PinDetail({
           </div>
           {pin.residentSource && (
             <Badge variant="outline" className="text-[10px]">
-              {pin.residentSource === "rep" ? "from rep" : "skip-trace"}
+              {residentSourceLabel}
             </Badge>
           )}
         </div>
@@ -1541,17 +1683,45 @@ function PinDetail({
                 <span>{pin.residentName}</span>
               </div>
             )}
-            {pin.residentPhone ? (
-              <a
-                href={`tel:${pin.residentPhone}`}
-                className="flex items-center gap-2 rounded-lg bg-[#2EA3F2]/10 px-2 py-1.5 text-sm font-semibold text-[#2EA3F2] transition-colors hover:bg-[#2EA3F2]/20"
-              >
-                <Phone className="h-4 w-4" />
-                <span>{pin.residentPhone}</span>
-                <span className="ml-auto text-xs text-[#2EA3F2]/80">tap to call</span>
-              </a>
+            {phones.length > 0 ? (
+              <div className="space-y-1.5">
+                {phones.map((ph, i) => (
+                  <div key={`${ph.number}-${i}`} className="flex items-center gap-1.5">
+                    <a
+                      href={`tel:${dialable(ph.number)}`}
+                      className="flex min-w-0 flex-1 items-center gap-2 rounded-lg bg-[#2C8214]/10 px-2 py-1.5 text-sm font-semibold text-[#2C8214] transition-colors hover:bg-[#2C8214]/20"
+                    >
+                      <Phone className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{ph.number}</span>
+                      {ph.description && (
+                        <span className="shrink-0 rounded bg-[#2C8214]/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide">
+                          {ph.description}
+                        </span>
+                      )}
+                      <span className="ml-auto shrink-0 text-xs text-[#2C8214]/80">call</span>
+                    </a>
+                    <a
+                      href={`sms:${dialable(ph.number)}`}
+                      className="flex shrink-0 items-center gap-1 rounded-lg bg-[#2EA3F2]/10 px-2.5 py-1.5 text-sm font-semibold text-[#2EA3F2] transition-colors hover:bg-[#2EA3F2]/20"
+                      title={`Text ${ph.number}`}
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                      Text
+                    </a>
+                  </div>
+                ))}
+              </div>
             ) : (
               <p className="text-sm text-muted-foreground">No phone on file.</p>
+            )}
+            {pin.residentEmail && (
+              <a
+                href={`mailto:${pin.residentEmail}`}
+                className="flex items-center gap-2 rounded-lg bg-muted/50 px-2 py-1.5 text-sm font-medium transition-colors hover:bg-muted"
+              >
+                <Mail className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <span className="truncate">{pin.residentEmail}</span>
+              </a>
             )}
             <div className="flex flex-wrap gap-2">
               <Button
@@ -1603,7 +1773,7 @@ function PinDetail({
             <Navigation className="mr-1 h-3.5 w-3.5" /> Directions
           </Button>
         </a>
-        {pin.status === "lead" && (
+        {pin.status !== "sold" && (
           <Button
             size="sm"
             className="rounded-xl bg-[#2C8214] hover:bg-[#246910]"

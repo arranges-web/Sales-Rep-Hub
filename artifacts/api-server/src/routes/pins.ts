@@ -20,21 +20,49 @@ function ser(
     repAccentColor,
     latitude: p.latitude,
     longitude: p.longitude,
-    status: p.status as "lead" | "sold",
+    status: p.status as "lead" | "sold" | "quoted" | "requested",
     address: p.address,
     notes: p.notes ?? null,
     photoUrl: p.photoUrl ?? null,
     dealId: p.dealId ?? null,
     residentName: p.residentName ?? null,
     residentPhone: p.residentPhone ?? null,
+    residentPhones: parsePhones(p.residentPhones),
+    residentEmail: p.residentEmail ?? null,
     residentSource: p.residentSource ?? null,
     lastKnockedAt: p.lastKnockedAt ? p.lastKnockedAt.toISOString() : null,
     source: p.source ?? "rep",
     externalId: p.externalId ?? null,
+    externalKind: p.externalKind ?? null,
+    externalClientId: p.externalClientId ?? null,
+    externalUrl: p.externalUrl ?? null,
     jobValue: p.jobValue ?? null,
     jobStatus: p.jobStatus ?? null,
     createdAt: p.createdAt.toISOString(),
   };
+}
+
+/**
+ * `resident_phones` is stored as a JSON string. Tolerate anything malformed —
+ * one bad row shouldn't blank the whole map.
+ */
+function parsePhones(
+  raw: string | null,
+): Array<{ number: string; description: string | null; primary: boolean }> {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((p) => p && typeof p.number === "string" && p.number.trim())
+      .map((p) => ({
+        number: String(p.number),
+        description: typeof p.description === "string" ? p.description : null,
+        primary: p.primary === true,
+      }));
+  } catch {
+    return [];
+  }
 }
 
 router.get("/pins", requireAuth, async (_req, res, next) => {
@@ -142,10 +170,16 @@ router.patch("/pins/:pinId", requireAuth, async (req, res, next) => {
       ...(body.dealId !== undefined ? { dealId: body.dealId } : {}),
       ...(body.residentName !== undefined ? { residentName: body.residentName } : {}),
       ...(body.residentPhone !== undefined ? { residentPhone: body.residentPhone } : {}),
+      ...(body.residentEmail !== undefined ? { residentEmail: body.residentEmail } : {}),
     };
-    if (body.residentName !== undefined || body.residentPhone !== undefined) {
-      // Manual edit always wins over a previous skip-trace tag.
-      next.residentSource = body.residentName || body.residentPhone ? "rep" : null;
+    if (
+      body.residentName !== undefined ||
+      body.residentPhone !== undefined ||
+      body.residentEmail !== undefined
+    ) {
+      // Manual edit always wins over a previous skip-trace or Jobber tag.
+      next.residentSource =
+        body.residentName || body.residentPhone || body.residentEmail ? "rep" : null;
     }
     if (body.markKnocked) {
       next.lastKnockedAt = new Date();

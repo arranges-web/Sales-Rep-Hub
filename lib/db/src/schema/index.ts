@@ -125,13 +125,26 @@ export const pinsTable = pgTable(
     dealId: integer("deal_id"),
     residentName: text("resident_name"),
     residentPhone: text("resident_phone"),
+    residentEmail: text("resident_email"),
+    /**
+     * Every phone Jobber knows for this client, as a JSON array of
+     * `{ number, description, primary }`. `residentPhone` stays the single
+     * best number so existing callers keep working.
+     */
+    residentPhones: text("resident_phones"),
     residentSource: text("resident_source"),
     lastKnockedAt: timestamp("last_knocked_at", { withTimezone: true }),
     /** "rep" (manual) or external integration like "jobber". */
     source: text("source").notNull().default("rep"),
     /** Stable id from the external system, e.g. "jobber:job:gid://...". */
     externalId: text("external_id"),
-    /** For Jobber jobs: total invoiced value. */
+    /** Which Jobber record produced this pin: "job" | "quote" | "request". */
+    externalKind: text("external_kind"),
+    /** Jobber client id, so every pin for one homeowner can be grouped. */
+    externalClientId: text("external_client_id"),
+    /** Deep link back into Jobber's web app for this record. */
+    externalUrl: text("external_url"),
+    /** For Jobber jobs: total invoiced value. Quotes store their quoted cost. */
     jobValue: doublePrecision("job_value"),
     /** Raw status string from Jobber (e.g., "active", "archived", "requires_invoicing"). */
     jobStatus: text("job_status"),
@@ -166,6 +179,15 @@ export const integrationCredentialsTable = pgTable(
     providerIdx: uniqueIndex("integration_credentials_provider_idx").on(t.provider),
   }),
 );
+
+// Simple key/value store for instance-wide switches that outlive a deploy.
+// Currently holds "demo_data_enabled", which the boot seeder reads so that
+// purging demo data on go-live day stays purged across restarts.
+export const appSettingsTable = pgTable("app_settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 // Cache geocoded address → lat/lng so we don't re-hit Nominatim. Keyed on
 // the raw address string; consumers should normalize before lookup.
@@ -352,3 +374,4 @@ export type Campaign = typeof campaignsTable.$inferSelect;
 export type CampaignStreet = typeof campaignStreetsTable.$inferSelect;
 export type IntegrationCredential = typeof integrationCredentialsTable.$inferSelect;
 export type GeocodeCacheRow = typeof geocodeCacheTable.$inferSelect;
+export type AppSetting = typeof appSettingsTable.$inferSelect;
