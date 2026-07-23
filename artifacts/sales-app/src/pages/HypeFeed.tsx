@@ -65,7 +65,7 @@ export default function HypeFeedPage() {
           <Button
             onClick={submit}
             disabled={!content.trim() || create.isPending}
-            className="rounded-lg bg-[#2EA3F2] text-slate-950 hover:bg-[#48b3f6]"
+            className="rounded-lg bg-[#3DA935] text-slate-950 hover:bg-[#4FBF45]"
           >
             <Send className="mr-2 h-4 w-4" /> Post
           </Button>
@@ -85,7 +85,7 @@ export default function HypeFeedPage() {
                 style={{
                   background: p.isBot
                     ? "#FFBF00"
-                    : p.authorAccentColor || "#2EA3F2",
+                    : p.authorAccentColor || "#3DA935",
                 }}
               >
                 <Avatar className="h-10 w-10 ring-2 ring-background">
@@ -95,7 +95,7 @@ export default function HypeFeedPage() {
                     style={
                       p.isBot
                         ? undefined
-                        : { background: p.authorAccentColor || "#2EA3F2" }
+                        : { background: p.authorAccentColor || "#3DA935" }
                     }
                   >
                     {p.isBot ? <Bot className="h-5 w-5" /> : p.authorName.slice(0, 1)}
@@ -106,7 +106,7 @@ export default function HypeFeedPage() {
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span className="font-semibold text-foreground">{p.authorName}</span>
                   {!p.isBot && p.authorLevel != null && (
-                    <span className="font-stat rounded border border-border bg-background/60 px-1 text-[9px] font-bold text-[#2EA3F2]">
+                    <span className="font-stat rounded border border-border bg-background/60 px-1 text-[9px] font-bold text-[#3DA935]">
                       L{p.authorLevel}
                     </span>
                   )}
@@ -150,7 +150,7 @@ export default function HypeFeedPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                className={cn("rounded-md gap-2 text-muted-foreground", p.hasHighFived && "text-[#2EA3F2]")}
+                className={cn("rounded-md gap-2 text-muted-foreground", p.hasHighFived && "text-[#3DA935]")}
                 onClick={async () => {
                   await hf.mutateAsync({ postId: p.id });
                   qc.invalidateQueries({ queryKey: getListFeedPostsQueryKey() });
@@ -206,13 +206,13 @@ function CommentsList({ postId }: { postId: number }) {
         <div key={c.id} className="flex items-start gap-2">
           <div
             className="rounded-full p-[1.5px] shrink-0"
-            style={{ background: c.authorAccentColor || "#2EA3F2" }}
+            style={{ background: c.authorAccentColor || "#3DA935" }}
           >
             <Avatar className="h-7 w-7 ring-1 ring-background">
               <AvatarImage src={c.authorAvatarUrl ? photoServingUrl(c.authorAvatarUrl) ?? c.authorAvatarUrl : undefined} />
               <AvatarFallback
                 className="text-white text-xs"
-                style={{ background: c.authorAccentColor || "#2EA3F2" }}
+                style={{ background: c.authorAccentColor || "#3DA935" }}
               >
                 {c.authorName.slice(0, 1)}
               </AvatarFallback>
@@ -243,7 +243,7 @@ function CommentsList({ postId }: { postId: number }) {
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Add a comment…"
-          className="flex-1 rounded-md border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2EA3F2]/30"
+          className="flex-1 rounded-md border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#3DA935]/30"
           onKeyDown={async (e) => {
             if (e.key === "Enter" && text.trim()) {
               await create.mutateAsync({ postId, data: { content: text } });
@@ -255,7 +255,7 @@ function CommentsList({ postId }: { postId: number }) {
         />
         <Button
           size="sm"
-          className="rounded-md bg-[#2EA3F2] text-slate-950 hover:bg-[#48b3f6]"
+          className="rounded-md bg-[#3DA935] text-slate-950 hover:bg-[#4FBF45]"
           disabled={!text.trim()}
           onClick={async () => {
             await create.mutateAsync({ postId, data: { content: text } });

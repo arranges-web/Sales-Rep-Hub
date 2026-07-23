@@ -29,6 +29,9 @@ import {
   useGetDemoDataStatus,
   usePurgeDemoData,
   useEnableDemoData,
+  useGetAdminSettings,
+  useSetTeamPassword,
+  getGetAdminSettingsQueryKey,
   getGetDemoDataStatusQueryKey,
   getGetJobberStatusQueryKey,
   getListPinsQueryKey,
@@ -98,6 +101,7 @@ export default function AdminPage() {
           <TabsTrigger value="training" className="rounded-lg">Training</TabsTrigger>
           <TabsTrigger value="territories" className="rounded-lg">Territories</TabsTrigger>
           <TabsTrigger value="integrations" className="rounded-lg">Integrations</TabsTrigger>
+          <TabsTrigger value="access" className="rounded-lg">Access</TabsTrigger>
           <TabsTrigger value="golive" className="rounded-lg">Go Live</TabsTrigger>
         </TabsList>
         <TabsContent value="users"><UsersTab /></TabsContent>
@@ -108,6 +112,7 @@ export default function AdminPage() {
         <TabsContent value="training"><TrainingTab /></TabsContent>
         <TabsContent value="territories"><TerritoriesTab /></TabsContent>
         <TabsContent value="integrations"><IntegrationsTab /></TabsContent>
+        <TabsContent value="access"><AccessTab /></TabsContent>
         <TabsContent value="golive"><GoLiveTab /></TabsContent>
       </Tabs>
     </div>
@@ -154,7 +159,7 @@ function SeedDemoButton() {
 }
 
 const ADMIN_PALETTE = [
-  "#2EA3F2", "#2C8214", "#FFBF00", "#E11D48", "#7C3AED",
+  "#3DA935", "#2C8214", "#FFBF00", "#E11D48", "#7C3AED",
   "#0EA5E9", "#059669", "#F97316", "#0F172A",
 ];
 
@@ -165,7 +170,7 @@ function EditRepDialog({ user }: { user: { id: number; name: string; accentColor
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     name: user.name,
-    accentColor: user.accentColor ?? "#2EA3F2",
+    accentColor: user.accentColor ?? "#3DA935",
     hometown: user.hometown ?? "",
     bio: user.bio ?? "",
     hawaiiGoal: user.hawaiiGoal ?? "",
@@ -176,7 +181,7 @@ function EditRepDialog({ user }: { user: { id: number; name: string; accentColor
       setOpen(o);
       if (o) setForm({
         name: user.name,
-        accentColor: user.accentColor ?? "#2EA3F2",
+        accentColor: user.accentColor ?? "#3DA935",
         hometown: user.hometown ?? "",
         bio: user.bio ?? "",
         hawaiiGoal: user.hawaiiGoal ?? "",
@@ -268,7 +273,7 @@ function EditRepDialog({ user }: { user: { id: number; name: string; accentColor
           <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
           <Button
             disabled={update.isPending}
-            className="rounded-xl bg-[#2EA3F2] hover:bg-[#1d8fd8]"
+            className="rounded-xl bg-[#3DA935] hover:bg-[#2C8214]"
             onClick={async () => {
               await update.mutateAsync({
                 userId: user.id,
@@ -306,7 +311,7 @@ function UsersTab() {
             <div className="flex items-center gap-2">
               <span
                 className="inline-block h-3 w-3 rounded-full"
-                style={{ background: u.accentColor ?? "#2EA3F2" }}
+                style={{ background: u.accentColor ?? "#3DA935" }}
               />
               <span className="font-semibold">{u.name}</span>
               {u.hometown && (
@@ -318,7 +323,7 @@ function UsersTab() {
               <div className="mt-0.5 text-xs text-muted-foreground">Goal: {u.hawaiiGoal}</div>
             )}
           </div>
-          <Badge className={u.role === "admin" ? "bg-[#FFBF00] text-slate-900" : "bg-[#2EA3F2] text-white"}>
+          <Badge className={u.role === "admin" ? "bg-[#FFBF00] text-slate-900" : "bg-[#3DA935] text-white"}>
             {u.role}
           </Badge>
           <Select
@@ -349,7 +354,7 @@ function TiersTab() {
   const create = useCreateIncentiveTier();
   const remove = useDeleteIncentiveTier();
   const [form, setForm] = useState({
-    name: "", pointThreshold: 0, color: "#2EA3F2",
+    name: "", pointThreshold: 0, color: "#3DA935",
     description: "", rewardDescription: "", displayOrder: 0,
   });
   return (
@@ -372,7 +377,7 @@ function TiersTab() {
             if (!form.name) return;
             await create.mutateAsync({ data: form });
             qc.invalidateQueries({ queryKey: getListIncentiveTiersQueryKey() });
-            setForm({ name: "", pointThreshold: 0, color: "#2EA3F2", description: "", rewardDescription: "", displayOrder: 0 });
+            setForm({ name: "", pointThreshold: 0, color: "#3DA935", description: "", rewardDescription: "", displayOrder: 0 });
           }}
         >
           <Plus className="mr-1 h-4 w-4" /> Add tier
@@ -663,7 +668,7 @@ function TerritoriesTab() {
     bounds: string | null;
   }>({
     name: "",
-    color: "#2EA3F2",
+    color: "#3DA935",
     assignedRepId: null,
     description: "",
     bounds: null,
@@ -751,7 +756,7 @@ function TerritoriesTab() {
             qc.invalidateQueries({ queryKey: getListTerritoriesQueryKey() });
             setForm({
               name: "",
-              color: "#2EA3F2",
+              color: "#3DA935",
               assignedRepId: null,
               description: "",
               bounds: null,
@@ -878,7 +883,7 @@ function IntegrationsTab() {
                   toast({ title: "Sync failed", description: String(e), variant: "destructive" });
                 }
               }}
-              className="rounded-lg bg-[#2EA3F2] text-slate-950 hover:bg-[#48b3f6]"
+              className="rounded-lg bg-[#3DA935] text-slate-950 hover:bg-[#4FBF45]"
             >
               {sync.isPending ? (
                 <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
@@ -910,11 +915,11 @@ function IntegrationsTab() {
         <div className="relative mt-4 grid gap-3 sm:grid-cols-4">
           <MiniStat label="Jobs" value={status?.jobPins ?? 0} color="#7ed85c" />
           <MiniStat label="Quotes" value={status?.quotePins ?? 0} color="#FFBF00" />
-          <MiniStat label="Requests" value={status?.requestPins ?? 0} color="#2EA3F2" />
+          <MiniStat label="Requests" value={status?.requestPins ?? 0} color="#3DA935" />
           <MiniStat label="With a phone #" value={status?.pinsWithPhone ?? 0} color="#a78bfa" />
         </div>
         <div className="relative mt-3 grid gap-3 sm:grid-cols-2">
-          <MiniStat label="Total Jobber pins" value={status?.pinsFromJobber ?? 0} color="#2EA3F2" />
+          <MiniStat label="Total Jobber pins" value={status?.pinsFromJobber ?? 0} color="#3DA935" />
           <MiniStat
             label="Last sync"
             value={status?.lastSyncAt ? new Date(status.lastSyncAt).toLocaleString() : "Never"}
@@ -984,10 +989,126 @@ function IntegrationsTab() {
                 toast({ title: "Could not save", description: String(e), variant: "destructive" });
               }
             }}
-            className="rounded-lg bg-[#2EA3F2] text-slate-950 hover:bg-[#48b3f6]"
+            className="rounded-lg bg-[#3DA935] text-slate-950 hover:bg-[#4FBF45]"
           >
             {update.isPending ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Check className="mr-1 h-3.5 w-3.5" />}
             Save token
+          </Button>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function AccessTab() {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const { data: settings } = useGetAdminSettings();
+  const setPassword = useSetTeamPassword();
+
+  const [password, setPassword2] = useState("");
+  const passwordSet = settings?.teamPasswordSet ?? false;
+
+  const refresh = () =>
+    qc.invalidateQueries({ queryKey: getGetAdminSettingsQueryKey() });
+
+  return (
+    <div className="space-y-4">
+      <Card className="relative overflow-hidden p-5">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-[#3DA935]/20 blur-3xl"
+        />
+        <div className="relative">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-[#3DA935]" />
+            <h2 className="text-base font-bold tracking-tight">Team access</h2>
+            {passwordSet ? (
+              <Badge className="border-0 bg-[#2C8214]/20 text-[#7ed85c]">Password on</Badge>
+            ) : (
+              <Badge className="border-0 bg-[#FFBF00]/20 text-[#FFBF00]">Open access</Badge>
+            )}
+          </div>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+            Reps sign in with just their name. Set one shared password that everyone
+            on the team enters alongside their name — it keeps strangers who find the
+            link from getting in. Change it any time; reps stay signed in.
+          </p>
+        </div>
+
+        {!passwordSet && (
+          <div className="relative mt-4 rounded-xl border border-[#FFBF00]/30 bg-[#FFBF00]/10 p-3">
+            <div className="flex items-center gap-2 text-xs font-bold text-[#FFBF00]">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              Anyone with the link can sign in
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              No password is set yet, so anyone who reaches the app can enter any name —
+              including an admin's — and get that person's access. Set a password before
+              you share the link widely.
+            </p>
+          </div>
+        )}
+      </Card>
+
+      <Card className="space-y-4 p-5">
+        <div>
+          <Label>{passwordSet ? "Change team password" : "Set a team password"}</Label>
+          <Input
+            value={password}
+            onChange={(e) => setPassword2(e.target.value)}
+            placeholder={passwordSet ? "Enter a new password" : "e.g. treecrew2026"
+            }
+            className="mt-1 rounded-lg font-mono"
+            type="text"
+            autoComplete="off"
+          />
+          <p className="mt-1 text-xs text-muted-foreground">
+            Shown in plain text so you can read it back to the team. Stored hashed on the
+            server — never recoverable, only replaceable.
+          </p>
+        </div>
+        <div className="flex flex-wrap justify-between gap-2">
+          {passwordSet && (
+            <Button
+              variant="outline"
+              disabled={setPassword.isPending}
+              onClick={async () => {
+                if (
+                  !confirm(
+                    "Remove the team password? Anyone with the link will be able to sign in.",
+                  )
+                )
+                  return;
+                await setPassword.mutateAsync({ data: { password: null } });
+                setPassword2("");
+                refresh();
+                toast({ title: "Team password removed", description: "Access is now open." });
+              }}
+              className="rounded-lg text-destructive hover:text-destructive"
+            >
+              Remove password
+            </Button>
+          )}
+          <Button
+            disabled={!password.trim() || setPassword.isPending}
+            onClick={async () => {
+              await setPassword.mutateAsync({ data: { password: password.trim() } });
+              setPassword2("");
+              refresh();
+              toast({
+                title: passwordSet ? "Team password changed" : "Team password set",
+                description: "Reps will need it the next time they sign in fresh.",
+              });
+            }}
+            className="ml-auto rounded-lg bg-[#3DA935] text-slate-950 hover:bg-[#4FBF45]"
+          >
+            {setPassword.isPending ? (
+              <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Check className="mr-1 h-3.5 w-3.5" />
+            )}
+            {passwordSet ? "Update password" : "Set password"}
           </Button>
         </div>
       </Card>
@@ -1066,7 +1187,7 @@ function GoLiveTab() {
         </div>
 
         <div className="relative mt-4 grid gap-3 sm:grid-cols-3">
-          <MiniStat label="Real reps" value={status?.realUsers ?? 0} color="#2EA3F2" />
+          <MiniStat label="Real reps" value={status?.realUsers ?? 0} color="#3DA935" />
           <MiniStat
             label="Demo rows remaining"
             value={isLoading ? "…" : totalRows}
@@ -1116,7 +1237,7 @@ function GoLiveTab() {
               type="checkbox"
               checked={includeStarter}
               onChange={(e) => setIncludeStarter(e.target.checked)}
-              className="mt-0.5 h-4 w-4 accent-[#2EA3F2]"
+              className="mt-0.5 h-4 w-4 accent-[#3DA935]"
             />
             <span className="text-xs">
               <span className="font-semibold">

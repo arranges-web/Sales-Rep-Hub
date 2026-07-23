@@ -68,7 +68,9 @@ L.Icon.Default.mergeOptions({
 const SWFL_CENTER: L.LatLngTuple = [26.6406, -81.8723];
 
 const STATUS_COLORS = {
-  lead: "#2EA3F2",
+  // Teal for un-worked leads — distinct from the leaf-green brand chrome and
+  // the deep forest green we use for closed/sold.
+  lead: "#14B8A6",
   sold: "#2C8214",
   follow_up: "#FFBF00",
   // Jobber-sourced opportunities that haven't closed yet.
@@ -418,11 +420,11 @@ export default function MapPage() {
           className: "jt-cluster",
           html: `<div style="
             width:42px;height:42px;border-radius:50%;
-            background:linear-gradient(135deg,#2EA3F2,#1d8fd8);
+            background:linear-gradient(135deg,#3DA935,#2C8214);
             color:white;font-weight:700;font-size:13px;
             display:flex;align-items:center;justify-content:center;
             border:3px solid rgba(255,255,255,.9);
-            box-shadow:0 4px 14px rgba(46,163,242,.5);">${n}</div>`,
+            box-shadow:0 4px 14px rgba(61,169,53,.5);">${n}</div>`,
           iconSize: [42, 42],
         });
       },
@@ -494,8 +496,8 @@ export default function MapPage() {
       maxZoom: 17,
       minOpacity: 0.35,
       gradient: {
-        0.2: "#2EA3F2",
-        0.45: "#48b3f6",
+        0.2: "#3DA935",
+        0.45: "#4FBF45",
         0.7: "#FFBF00",
         0.9: "#ff7a2d",
         1.0: "#ef4444",
@@ -773,7 +775,7 @@ export default function MapPage() {
         icon={<MapPin className="h-6 w-6" strokeWidth={1.5} />}
         actions={
           <div className="flex flex-wrap items-center gap-1.5">
-            <CountChip label="Leads" value={counts.leads} color="#2EA3F2" />
+            <CountChip label="Leads" value={counts.leads} color="#14B8A6" />
             <CountChip label="Sold" value={counts.sold} color="#2C8214" />
             {counts.quoted > 0 && (
               <CountChip
@@ -808,7 +810,7 @@ export default function MapPage() {
       />
 
       {/* Address search bar */}
-      <Card className="p-3 transition-colors duration-200 hover:border-[#2EA3F2]/40">
+      <Card className="p-3 transition-colors duration-200 hover:border-[#3DA935]/40">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -943,7 +945,7 @@ export default function MapPage() {
               />
             </div>
             <Button
-              className="w-full rounded-xl bg-[#2EA3F2] hover:bg-[#1d8fd8]"
+              className="w-full rounded-xl bg-[#3DA935] hover:bg-[#2C8214]"
               onClick={async () => {
                 if (!form.address) return;
                 await create.mutateAsync({
@@ -1039,7 +1041,7 @@ export default function MapPage() {
                 className={cn(
                   "rounded-full px-3 py-1.5 transition-colors",
                   tileMode === m.k
-                    ? "bg-[#2EA3F2] text-slate-950"
+                    ? "bg-[#3DA935] text-slate-950"
                     : "text-slate-200 hover:text-white",
                 )}
               >
@@ -1054,7 +1056,7 @@ export default function MapPage() {
               className={cn(
                 "pointer-events-auto inline-flex w-fit items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium shadow-xl backdrop-blur-md transition-colors",
                 showHouseNumbers
-                  ? "bg-[#2EA3F2] text-slate-950"
+                  ? "bg-[#3DA935] text-slate-950"
                   : "bg-slate-950/70 text-slate-100 hover:bg-slate-900/80",
               )}
               title="Overlay OpenStreetMap address numbers on satellite imagery"
@@ -1111,7 +1113,7 @@ export default function MapPage() {
                   className={cn(
                     "rounded-full px-3 py-1.5 transition-colors",
                     filter === f.k
-                      ? "bg-[#2EA3F2] text-slate-950"
+                      ? "bg-[#3DA935] text-slate-950"
                       : "text-slate-200 hover:text-white",
                   )}
                 >
@@ -1147,7 +1149,7 @@ export default function MapPage() {
 
         {/* Bottom-left: legend */}
         <div className="pointer-events-none absolute bottom-3 left-3 z-[500] flex max-w-[calc(100%-1.5rem)] flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border border-white/10 bg-slate-950/70 px-3 py-1.5 text-[11px] text-slate-200 shadow-xl backdrop-blur-md">
-          <Legend color="#2EA3F2" label="Lead" />
+          <Legend color="#14B8A6" label="Lead" />
           <Legend color="#2C8214" label="Sold" />
           {counts.quoted > 0 && <Legend color="#FFBF00" label="Quoted" />}
           {counts.requested > 0 && <Legend color="#a78bfa" label="Request" />}
@@ -1180,7 +1182,7 @@ export default function MapPage() {
           </Button>
           <Button
             size="icon"
-            className="pointer-events-auto h-12 w-12 rounded-full bg-[#2EA3F2] text-slate-950 shadow-2xl shadow-[#2EA3F2]/40 hover:bg-[#48b3f6]"
+            className="pointer-events-auto h-12 w-12 rounded-full bg-[#3DA935] text-slate-950 shadow-2xl shadow-[#3DA935]/40 hover:bg-[#4FBF45]"
             onClick={() => {
               const c = mapRef.current?.getCenter() ?? {
                 lat: SWFL_CENTER[0],
@@ -1300,7 +1302,7 @@ export default function MapPage() {
             <Card
               key={p.id}
               className={cn(
-                "p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#2EA3F2]/40 hover:shadow-lg",
+                "p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#3DA935]/40 hover:shadow-lg",
                 stale && "opacity-80",
               )}
             >
@@ -1367,7 +1369,7 @@ export default function MapPage() {
                       </a>
                       <a
                         href={`sms:${dialable(p.residentPhone)}`}
-                        className="inline-flex items-center gap-1 rounded-lg bg-[#2EA3F2]/15 px-2 py-1 text-xs font-semibold text-[#2EA3F2] transition-colors hover:bg-[#2EA3F2]/25"
+                        className="inline-flex items-center gap-1 rounded-lg bg-[#14B8A6]/15 px-2 py-1 text-xs font-semibold text-[#14B8A6] transition-colors hover:bg-[#14B8A6]/25"
                         title="Send a text"
                       >
                         <MessageSquare className="h-3 w-3" />
@@ -1702,7 +1704,7 @@ function PinDetail({
                     </a>
                     <a
                       href={`sms:${dialable(ph.number)}`}
-                      className="flex shrink-0 items-center gap-1 rounded-lg bg-[#2EA3F2]/10 px-2.5 py-1.5 text-sm font-semibold text-[#2EA3F2] transition-colors hover:bg-[#2EA3F2]/20"
+                      className="flex shrink-0 items-center gap-1 rounded-lg bg-[#14B8A6]/10 px-2.5 py-1.5 text-sm font-semibold text-[#14B8A6] transition-colors hover:bg-[#14B8A6]/20"
                       title={`Text ${ph.number}`}
                     >
                       <MessageSquare className="h-4 w-4" />

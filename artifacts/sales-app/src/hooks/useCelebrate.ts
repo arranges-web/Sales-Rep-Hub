@@ -7,7 +7,7 @@ import {
   playLevelUpSfx,
 } from "@/lib/sound";
 
-const JT_COLORS = ["#2EA3F2", "#2C8214", "#FFBF00", "#ffffff"];
+const JT_COLORS = ["#3DA935", "#2C8214", "#FFBF00", "#ffffff"];
 
 interface DealCelebration {
   pointsAwarded: number;
@@ -54,7 +54,7 @@ export function useCelebrate() {
         spread: 50,
         startVelocity: 30,
         origin: { y: 0.5 },
-        colors: ["#FFBF00", "#2EA3F2", "#ffffff"],
+        colors: ["#FFBF00", "#3DA935", "#ffffff"],
         scalar: 0.8,
       });
       toast({

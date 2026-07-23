@@ -82,12 +82,51 @@ export interface UpdateProfileBody {
   favoriteService?: string | null;
 }
 
-export interface CreateUserBody {
-  clerkId: string;
+export interface AuthConfig {
+  teamPasswordRequired: boolean;
+}
+
+export interface LoginBody {
+  /** The rep's display name. First person to use a name owns that identity. */
   name: string;
-  email: string;
+  /**
+   * The shared team password. Omit when access is still open.
+   * @nullable
+   */
+  password?: string | null;
+}
+
+export type SessionUserRole =
+  (typeof SessionUserRole)[keyof typeof SessionUserRole];
+
+export const SessionUserRole = {
+  admin: "admin",
+  rep: "rep",
+} as const;
+
+export interface SessionUser {
+  id: number;
+  name: string;
+  role: SessionUserRole;
   /** @nullable */
   avatarUrl?: string | null;
+}
+
+export interface LoginResult {
+  token: string;
+  user: SessionUser;
+}
+
+export interface AdminSettings {
+  teamPasswordSet: boolean;
+}
+
+export interface SetTeamPasswordBody {
+  /**
+   * New shared password. Empty or null clears it (open access).
+   * @nullable
+   */
+  password?: string | null;
 }
 
 export type UpdateUserBodyRole =

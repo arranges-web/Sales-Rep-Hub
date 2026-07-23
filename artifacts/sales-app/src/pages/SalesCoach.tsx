@@ -219,7 +219,7 @@ export default function SalesCoachPage() {
                 }}
                 className={cn(
                   "rounded-lg",
-                  speakReplies && "bg-[#2EA3F2] text-slate-950 hover:bg-[#48b3f6]",
+                  speakReplies && "bg-[#3DA935] text-slate-950 hover:bg-[#4FBF45]",
                 )}
                 title={speakReplies ? "Mute customer voice" : "Hear customer voice"}
               >
@@ -280,7 +280,7 @@ export default function SalesCoachPage() {
               className={cn(
                 "rounded-xl",
                 s.key === scenario &&
-                  "bg-[#2EA3F2] text-slate-950 hover:bg-[#48b3f6]",
+                  "bg-[#3DA935] text-slate-950 hover:bg-[#4FBF45]",
               )}
             >
               {s.label}
@@ -294,7 +294,7 @@ export default function SalesCoachPage() {
         <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-4">
           {messages.length === 0 && !chat.isPending && (
             <div className="flex h-full flex-col items-center justify-center text-center text-sm text-muted-foreground">
-              <Bot className="mb-2 h-8 w-8 text-[#2EA3F2]" />
+              <Bot className="mb-2 h-8 w-8 text-[#3DA935]" />
               <p className="max-w-sm">
                 Open with your real door pitch. The customer will react in
                 character — handle the objections, then close.
@@ -361,7 +361,7 @@ export default function SalesCoachPage() {
             <Button
               type="submit"
               size="icon"
-              className="h-11 w-11 shrink-0 rounded-xl bg-[#2EA3F2] hover:bg-[#1d8fd8]"
+              className="h-11 w-11 shrink-0 rounded-xl bg-[#3DA935] hover:bg-[#2C8214]"
               disabled={!draft.trim() || chat.isPending}
             >
               <Send className="h-4 w-4" />
@@ -394,7 +394,7 @@ function ChatBubble({
   return (
     <div className={cn("flex gap-2", isUser ? "justify-end" : "justify-start")}>
       {!isUser && (
-        <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#2EA3F2]/15 text-[#2EA3F2]">
+        <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#3DA935]/15 text-[#3DA935]">
           <Bot className="h-4 w-4" />
         </div>
       )}
@@ -402,7 +402,7 @@ function ChatBubble({
         className={cn(
           "max-w-[78%] rounded-2xl px-3 py-2 text-sm leading-relaxed shadow-sm",
           isUser
-            ? "bg-[#2EA3F2] text-slate-950"
+            ? "bg-[#3DA935] text-slate-950"
             : "bg-card border border-border text-foreground",
           pending && "italic text-muted-foreground",
         )}

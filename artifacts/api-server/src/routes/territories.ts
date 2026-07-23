@@ -39,7 +39,7 @@ router.post("/territories", requireAuth, requireAdmin, async (req, res, next) =>
         name,
         description: description ?? null,
         assignedRepId: assignedRepId ?? null,
-        color: color ?? "#2EA3F2",
+        color: color ?? "#3DA935",
         bounds: bounds ?? null,
       })
       .returning();

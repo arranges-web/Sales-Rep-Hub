@@ -171,7 +171,7 @@ export default function OpportunitiesPage() {
               <a href={routeHref} target="_blank" rel="noreferrer">
                 <Button
                   size="sm"
-                  className="rounded-lg bg-[#2EA3F2] text-slate-950 hover:bg-[#48b3f6]"
+                  className="rounded-lg bg-[#3DA935] text-slate-950 hover:bg-[#4FBF45]"
                 >
                   <Navigation className="mr-1 h-3.5 w-3.5" /> Drive route
                 </Button>
@@ -191,7 +191,7 @@ export default function OpportunitiesPage() {
             in the same neighborhood, the opportunity engine kicks in.
           </p>
           <Link href="/map">
-            <Button className="mt-4 rounded-xl bg-[#2EA3F2] text-slate-950 hover:bg-[#48b3f6]">
+            <Button className="mt-4 rounded-xl bg-[#3DA935] text-slate-950 hover:bg-[#4FBF45]">
               Open canvas map
             </Button>
           </Link>
@@ -276,7 +276,7 @@ function HotspotRow({
           <p className="mt-0.5 text-sm text-muted-foreground">{h.reason}</p>
 
           <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
-            <Stat label="Leads" value={h.leadCount} color="#2EA3F2" />
+            <Stat label="Leads" value={h.leadCount} color="#14B8A6" />
             <Stat label="Sold" value={h.soldCount} color="#2C8214" />
             {h.staleLeadCount > 0 && (
               <Stat label="Stale" value={h.staleLeadCount} color="#a78bfa" />
@@ -303,7 +303,7 @@ function HotspotRow({
                   <span
                     className="inline-block h-1.5 w-1.5 rounded-full"
                     style={{
-                      background: p.status === "sold" ? "#2C8214" : "#2EA3F2",
+                      background: p.status === "sold" ? "#2C8214" : "#14B8A6",
                     }}
                     aria-hidden
                   />
@@ -352,7 +352,7 @@ function HotspotRow({
               "w-full rounded-xl sm:w-auto",
               planned
                 ? "bg-[#FFBF00] text-slate-950 hover:bg-[#ffcd33]"
-                : "bg-[#2EA3F2] text-slate-950 hover:bg-[#48b3f6]",
+                : "bg-[#3DA935] text-slate-950 hover:bg-[#4FBF45]",
             )}
           >
             {planned ? (

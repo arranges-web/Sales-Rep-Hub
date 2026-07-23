@@ -48,7 +48,7 @@ const CURRENT_REWARD_NAMES = new Set([
   "Hawaii Trip for Two",
 ]);
 
-const ACCENTS = ["#2EA3F2", "#2C8214", "#FFBF00", "#9333ea", "#ec4899", "#f97316", "#0ea5e9", "#14b8a6"];
+const ACCENTS = ["#3DA935", "#2C8214", "#FFBF00", "#9333ea", "#ec4899", "#f97316", "#0ea5e9", "#14b8a6"];
 const HOMETOWNS = ["Cape Coral, FL", "Fort Myers, FL", "Naples, FL", "Bonita Springs, FL", "Estero, FL", "Sanibel, FL", "Punta Gorda, FL"];
 
 const MOCK_REPS = [
@@ -435,7 +435,7 @@ function geoPolygon(rect: [[number, number], [number, number]]): string {
 const TERRITORY_SEED = [
   {
     name: "Cape Coral",
-    color: "#2EA3F2",
+    color: "#3DA935",
     description: "Cape Coral & surrounding canals",
     bounds: geoPolygon([[26.5500, -82.0500], [26.7100, -81.9700]]),
   },
@@ -1112,7 +1112,7 @@ export const DEMO_CAMPAIGNS: Array<{
     name: "Cape Coral Wednesday push",
     description: "Yellow Streets neighborhood — high-density palms, tons of follow-ups owed.",
     type: "door",
-    color: "#2EA3F2",
+    color: "#3DA935",
     status: "active",
     streets: [
       { name: "SW 12th Pl",      city: "Cape Coral, FL", status: "done",        doorsKnocked: 38, notes: "Two solid leads, follow up Thu evening." },

@@ -37,7 +37,7 @@ import { formatDistanceToNow } from "date-fns";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const CATEGORY_ACCENT: Record<string, string> = {
-  gear: "#2EA3F2",
+  gear: "#3DA935",
   tools: "#f97316",
   sports: "#ef4444",
   electronics: "#a855f7",
@@ -75,7 +75,7 @@ const TIERS: Tier[] = [
   { key: "silver", label: "Silver",   min: 2500,  next: 7500,  color: "#C0C7D1", icon: Zap },
   { key: "gold",   label: "Gold",     min: 7500,  next: 15000, color: "#FFBF00", icon: Trophy },
   { key: "plat",   label: "Platinum", min: 15000, next: 25000, color: "#A78BFA", icon: Crown },
-  { key: "elite",  label: "Elite",    min: 25000, next: null,  color: "#2EA3F2", icon: Flame },
+  { key: "elite",  label: "Elite",    min: 25000, next: null,  color: "#3DA935", icon: Flame },
 ];
 
 function tierFor(points: number): { tier: Tier; nextTier: Tier | null; progress: number } {
@@ -233,7 +233,7 @@ export default function RewardsPage() {
         {/* Background layers */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#FFBF00]/15 via-transparent to-[#2EA3F2]/15"
+          className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#FFBF00]/15 via-transparent to-[#3DA935]/15"
         />
         <div
           aria-hidden
@@ -241,7 +241,7 @@ export default function RewardsPage() {
         />
         <div
           aria-hidden
-          className="jt-orbit pointer-events-none absolute -left-24 -bottom-32 h-72 w-72 rounded-full bg-[#2EA3F2]/30 opacity-40 blur-3xl"
+          className="jt-orbit pointer-events-none absolute -left-24 -bottom-32 h-72 w-72 rounded-full bg-[#3DA935]/30 opacity-40 blur-3xl"
           style={{ animationDelay: "2s" }}
         />
         <div aria-hidden className="jt-sparkles" />
@@ -313,7 +313,7 @@ export default function RewardsPage() {
               />
               {nextUnlock && (
                 <Stat
-                  color="#2EA3F2"
+                  color="#3DA935"
                   label={`Next unlock — ${nextUnlock.name}`}
                   value={`${(nextUnlock.pointCost - myPoints).toLocaleString()} pts`}
                   icon={<Lock className="h-3 w-3" strokeWidth={2.5} />}
@@ -405,7 +405,7 @@ export default function RewardsPage() {
           </span>
         </Pill>
         {Array.from(categoryCounts.entries()).map(([cat, count]) => {
-          const accent = CATEGORY_ACCENT[cat] ?? "#2EA3F2";
+          const accent = CATEGORY_ACCENT[cat] ?? "#3DA935";
           return (
             <Pill
               key={cat}
@@ -549,7 +549,7 @@ function Stat({
 function Pill({
   active,
   onClick,
-  accent = "#2EA3F2",
+  accent = "#3DA935",
   children,
 }: {
   active: boolean;
@@ -588,7 +588,7 @@ function RewardCard({
   onToggleWish: () => void;
   onRedeem: () => void;
 }) {
-  const accent = CATEGORY_ACCENT[r.category] ?? "#2EA3F2";
+  const accent = CATEGORY_ACCENT[r.category] ?? "#3DA935";
   const canAfford = r.available && myPoints >= r.pointCost;
   const shortBy = r.pointCost - myPoints;
   const closeToGoal = !canAfford && shortBy > 0 && shortBy <= 500;
@@ -601,10 +601,10 @@ function RewardCard({
       id={`reward-${r.id}`}
       className={cn(
         "group relative isolate flex flex-col overflow-hidden border-border bg-card transition-all duration-300",
-        "hover:-translate-y-1 hover:border-[#2EA3F2]/40",
+        "hover:-translate-y-1 hover:border-[#3DA935]/40",
         canAfford && "hover:shadow-[0_24px_50px_-20px_rgba(44,130,20,0.6)]",
         !canAfford &&
-          "hover:shadow-[0_18px_40px_-20px_rgba(46,163,242,0.45)]",
+          "hover:shadow-[0_18px_40px_-20px_rgba(61,169,53,0.45)]",
       )}
     >
       {/* Hover shine sweep */}
@@ -717,7 +717,7 @@ function RewardCard({
                   width: `${Math.round(progress * 100)}%`,
                   background: closeToGoal
                     ? "linear-gradient(90deg, #FFBF00, #ff7a2d)"
-                    : `linear-gradient(90deg, ${accent}, #2EA3F2)`,
+                    : `linear-gradient(90deg, ${accent}, #3DA935)`,
                   boxShadow: closeToGoal ? "0 0 10px #FFBF0080" : undefined,
                 }}
               />

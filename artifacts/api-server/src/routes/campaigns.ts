@@ -126,7 +126,7 @@ router.post("/campaigns", requireAuth, async (req, res, next) => {
       return;
     }
     const type = body.type === "flyer" ? "flyer" : "door";
-    const color = typeof body.color === "string" && body.color ? body.color : "#2EA3F2";
+    const color = typeof body.color === "string" && body.color ? body.color : "#3DA935";
     const [created] = await db
       .insert(campaignsTable)
       .values({

@@ -23,8 +23,8 @@ export function Logo({
     >
       <defs>
         <linearGradient id="jt-mark-grad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#48b3f6" />
-          <stop offset="100%" stopColor="#2EA3F2" />
+          <stop offset="0%" stopColor="#4FBF45" />
+          <stop offset="100%" stopColor="#3DA935" />
         </linearGradient>
         <linearGradient id="jt-mark-shadow" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="rgba(0,0,0,0.0)" />

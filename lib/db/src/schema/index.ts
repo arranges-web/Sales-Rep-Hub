@@ -16,7 +16,7 @@ export const territoriesTable = pgTable("territories", {
   name: text("name").notNull(),
   description: text("description"),
   assignedRepId: integer("assigned_rep_id"),
-  color: text("color").notNull().default("#2EA3F2"),
+  color: text("color").notNull().default("#3DA935"),
   bounds: text("bounds"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -30,7 +30,7 @@ export const usersTable = pgTable(
     email: text("email").notNull(),
     role: text("role").notNull().default("rep"),
     avatarUrl: text("avatar_url"),
-    accentColor: text("accent_color").notNull().default("#2EA3F2"),
+    accentColor: text("accent_color").notNull().default("#3DA935"),
     hometown: text("hometown"),
     bio: text("bio"),
     hawaiiGoal: text("hawaii_goal"),
@@ -308,7 +308,7 @@ export const campaignsTable = pgTable(
     description: text("description"),
     /** "door" | "flyer" */
     type: text("type").notNull().default("door"),
-    color: text("color").notNull().default("#2EA3F2"),
+    color: text("color").notNull().default("#3DA935"),
     /** "active" | "paused" | "complete" */
     status: text("status").notNull().default("active"),
     createdBy: integer("created_by").notNull(),

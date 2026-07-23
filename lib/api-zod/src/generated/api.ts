@@ -51,6 +51,48 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
+ * @summary Whether a shared team password is required to sign in
+ */
+export const GetAuthConfigResponse = zod.object({
+  teamPasswordRequired: zod.boolean(),
+});
+
+/**
+ * @summary Sign in (or auto-register) with a name and the team password
+ */
+export const LoginBody = zod.object({
+  name: zod
+    .string()
+    .describe(
+      "The rep's display name. First person to use a name owns that identity.",
+    ),
+  password: zod
+    .string()
+    .nullish()
+    .describe("The shared team password. Omit when access is still open."),
+});
+
+export const LoginResponse = zod.object({
+  token: zod.string(),
+  user: zod.object({
+    id: zod.number(),
+    name: zod.string(),
+    role: zod.enum(["admin", "rep"]),
+    avatarUrl: zod.string().nullish(),
+  }),
+});
+
+/**
+ * @summary Validate the current token and return the signed-in profile
+ */
+export const GetSessionResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  role: zod.enum(["admin", "rep"]),
+  avatarUrl: zod.string().nullish(),
+});
+
+/**
  * @summary Get current user profile
  */
 export const GetMeResponse = zod.object({
@@ -184,41 +226,6 @@ export const ListUsersResponseItem = zod.object({
   streakAtRisk: zod.boolean(),
 });
 export const ListUsersResponse = zod.array(ListUsersResponseItem);
-
-/**
- * @summary Upsert user from Clerk (called after sign-in)
- */
-export const CreateUserBody = zod.object({
-  clerkId: zod.string(),
-  name: zod.string(),
-  email: zod.string(),
-  avatarUrl: zod.string().nullish(),
-});
-
-export const CreateUserResponse = zod.object({
-  id: zod.number(),
-  clerkId: zod.string(),
-  name: zod.string(),
-  email: zod.string(),
-  role: zod.enum(["admin", "rep"]),
-  avatarUrl: zod.string().nullish(),
-  accentColor: zod.string(),
-  hometown: zod.string().nullish(),
-  bio: zod.string().nullish(),
-  hawaiiGoal: zod.string().nullish(),
-  favoriteService: zod.string().nullish(),
-  totalPoints: zod.number(),
-  territoryId: zod.number().nullish(),
-  territoryName: zod.string().nullish(),
-  createdAt: zod.coerce.date(),
-  level: zod.number(),
-  nextLevelAt: zod.number(),
-  pointsThisLevel: zod.number(),
-  pointsPerLevel: zod.number(),
-  currentStreak: zod.number(),
-  bestStreak: zod.number(),
-  streakAtRisk: zod.boolean(),
-});
 
 /**
  * @summary Get a specific user
@@ -1340,6 +1347,27 @@ export const SyncJobberResponse = zod.object({
 export const SeedDemoDataResponse = zod.object({
   ok: zod.boolean(),
   elapsedMs: zod.number(),
+});
+
+/**
+ * @summary Read access settings (admin only)
+ */
+export const GetAdminSettingsResponse = zod.object({
+  teamPasswordSet: zod.boolean(),
+});
+
+/**
+ * @summary Set or clear the shared team password (admin only)
+ */
+export const SetTeamPasswordBody = zod.object({
+  password: zod
+    .string()
+    .nullish()
+    .describe("New shared password. Empty or null clears it (open access)."),
+});
+
+export const SetTeamPasswordResponse = zod.object({
+  teamPasswordSet: zod.boolean(),
 });
 
 /**

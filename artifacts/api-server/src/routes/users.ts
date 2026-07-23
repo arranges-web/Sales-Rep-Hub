@@ -11,10 +11,7 @@ import {
 } from "@workspace/db";
 import { and, eq, gte, sql } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../middlewares/auth";
-import { getAuth } from "@clerk/express";
-import { seedDataForNewRep } from "../lib/seed";
 import { computeStreaks, computeStreaksForAll, levelInfo } from "../lib/streaks";
-import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
@@ -44,7 +41,7 @@ function serializeUser(
     email: u.email,
     role: u.role as "admin" | "rep",
     avatarUrl: u.avatarUrl ?? null,
-    accentColor: u.accentColor ?? "#2EA3F2",
+    accentColor: u.accentColor ?? "#3DA935",
     hometown: u.hometown ?? null,
     bio: u.bio ?? null,
     hawaiiGoal: u.hawaiiGoal ?? null,
@@ -63,93 +60,8 @@ function serializeUser(
   };
 }
 
-router.post("/users", async (req, res, next) => {
-  try {
-    const { userId } = getAuth(req);
-    if (!userId) {
-      res.status(401).json({ error: "Unauthorized" });
-      return;
-    }
-    const { clerkId, name, email, avatarUrl } = req.body ?? {};
-    if (clerkId !== userId) {
-      res.status(400).json({ error: "clerkId mismatch" });
-      return;
-    }
-    const [existing] = await db
-      .select()
-      .from(usersTable)
-      .where(eq(usersTable.clerkId, clerkId))
-      .limit(1);
-    if (existing) {
-      const [updated] = await db
-        .update(usersTable)
-        .set({ name, email, avatarUrl: avatarUrl ?? null })
-        .where(eq(usersTable.id, existing.id))
-        .returning();
-      res.json(serializeUser(updated!));
-      return;
-    }
-
-    // No row found by clerkId — check by email. This handles users who
-    // previously signed in with one Clerk provider (e.g. email/password)
-    // and now sign in with a different one (e.g. Google OAuth) that issues
-    // a new Clerk user ID for the same email address. Without this fallback,
-    // the INSERT below would crash with a unique-constraint violation on
-    // users_email_idx, locking the user out of the entire app.
-    if (email) {
-      const [byEmail] = await db
-        .select()
-        .from(usersTable)
-        .where(eq(usersTable.email, email))
-        .limit(1);
-      if (byEmail) {
-        logger.warn(
-          {
-            event: "clerkId_migrated",
-            userId: byEmail.id,
-            oldClerkId: byEmail.clerkId,
-            newClerkId: clerkId,
-            email,
-          },
-          "User re-linked to a new Clerk account via email match",
-        );
-        const [updated] = await db
-          .update(usersTable)
-          .set({ clerkId, name, avatarUrl: avatarUrl ?? null })
-          .where(eq(usersTable.id, byEmail.id))
-          .returning();
-        res.json(serializeUser(updated!));
-        return;
-      }
-    }
-
-    // First user becomes admin
-    const all = await db.select({ id: usersTable.id }).from(usersTable).limit(1);
-    const role = all.length === 0 ? "admin" : "rep";
-    const [created] = await db
-      .insert(usersTable)
-      .values({ clerkId, name, email, avatarUrl: avatarUrl ?? null, role })
-      .returning();
-    // Seed a baseline of mock activity for new reps so the dashboard isn't
-    // empty on first load. Awaited so /users/me sees the data immediately.
-    if (created && role === "rep") {
-      await seedDataForNewRep({
-        userId: created.id,
-        userName: created.name,
-        userAvatarUrl: created.avatarUrl ?? null,
-      });
-    }
-    // Re-fetch so totalPoints reflects seeded deals.
-    const [final] = await db
-      .select()
-      .from(usersTable)
-      .where(eq(usersTable.id, created!.id))
-      .limit(1);
-    res.status(201).json(serializeUser(final ?? created!));
-  } catch (e) {
-    next(e);
-  }
-});
+// Registration + profile creation now lives in POST /api/auth/login. This
+// module only serves reads and profile edits for already-authenticated users.
 
 router.get("/users/me", requireAuth, async (req, res, next) => {
   try {
@@ -390,7 +302,7 @@ router.patch("/users/:userId", requireAuth, requireAdmin, async (req, res, next)
         ...(role !== undefined ? { role } : {}),
         ...(avatarUrl !== undefined ? { avatarUrl } : {}),
         ...(territoryId !== undefined ? { territoryId } : {}),
-        ...(accent !== undefined ? { accentColor: accent ?? "#2EA3F2" } : {}),
+        ...(accent !== undefined ? { accentColor: accent ?? "#3DA935" } : {}),
         ...(hometown !== undefined ? { hometown: trim(hometown, 120) } : {}),
         ...(bio !== undefined ? { bio: trim(bio, 500) } : {}),
         ...(hawaiiGoal !== undefined ? { hawaiiGoal: trim(hawaiiGoal, 200) } : {}),

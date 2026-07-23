@@ -182,7 +182,7 @@ export default function MessagesPage() {
           <Button
             size="sm"
             onClick={() => setNewDialog(true)}
-            className="rounded-lg bg-[#2EA3F2] text-slate-950 hover:bg-[#48b3f6]"
+            className="rounded-lg bg-[#3DA935] text-slate-950 hover:bg-[#4FBF45]"
           >
             <Plus className="mr-1 h-3.5 w-3.5" /> New chat
           </Button>
@@ -223,13 +223,13 @@ export default function MessagesPage() {
                     className={cn(
                       "flex w-full items-center gap-3 border-b border-border/60 p-3 text-left transition-colors",
                       active
-                        ? "bg-[#2EA3F2]/10"
+                        ? "bg-[#3DA935]/10"
                         : "hover:bg-muted/40",
                     )}
                   >
                     <div className="relative">
                       {c.type === "group" ? (
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#2EA3F2]/30 to-[#2C8214]/30 text-[#2EA3F2]">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#3DA935]/30 to-[#2C8214]/30 text-[#3DA935]">
                           <Users className="h-4 w-4" />
                         </div>
                       ) : (
@@ -241,7 +241,7 @@ export default function MessagesPage() {
                         />
                       )}
                       {c.unreadCount > 0 && !active && (
-                        <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#2EA3F2] px-1 text-[10px] font-bold text-slate-950">
+                        <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#3DA935] px-1 text-[10px] font-bold text-slate-950">
                           {c.unreadCount > 9 ? "9+" : c.unreadCount}
                         </span>
                       )}
@@ -287,7 +287,7 @@ export default function MessagesPage() {
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
                   {selectedConvo.type === "group" ? (
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#2EA3F2]/30 to-[#2C8214]/30 text-[#2EA3F2]">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#3DA935]/30 to-[#2C8214]/30 text-[#3DA935]">
                       <Users className="h-4 w-4" />
                     </div>
                   ) : (
@@ -335,7 +335,7 @@ export default function MessagesPage() {
                           className={cn(
                             "max-w-[78%] rounded-2xl px-3 py-2 text-sm leading-relaxed shadow-sm",
                             mine
-                              ? "rounded-br-md bg-[#2EA3F2] text-slate-950"
+                              ? "rounded-br-md bg-[#3DA935] text-slate-950"
                               : "rounded-bl-md bg-card border border-border text-foreground",
                           )}
                         >
@@ -385,7 +385,7 @@ export default function MessagesPage() {
                     <Button
                       type="submit"
                       size="icon"
-                      className="h-11 w-11 shrink-0 rounded-xl bg-[#2EA3F2] hover:bg-[#1d8fd8]"
+                      className="h-11 w-11 shrink-0 rounded-xl bg-[#3DA935] hover:bg-[#2C8214]"
                       disabled={!draft.trim() || send.isPending}
                     >
                       <Send className="h-4 w-4" />
@@ -396,7 +396,7 @@ export default function MessagesPage() {
             ) : (
               <div className="flex h-full items-center justify-center p-6 text-center text-sm text-muted-foreground">
                 <div>
-                  <MessageSquare className="mx-auto mb-2 h-8 w-8 text-[#2EA3F2]" />
+                  <MessageSquare className="mx-auto mb-2 h-8 w-8 text-[#3DA935]" />
                   <p>Pick a conversation, or start a new one.</p>
                 </div>
               </div>
@@ -454,7 +454,7 @@ export default function MessagesPage() {
                     return (
                       <Badge
                         key={id}
-                        className="cursor-pointer rounded-full bg-[#2EA3F2]/15 px-2 py-0.5 text-[#2EA3F2] hover:bg-[#2EA3F2]/25"
+                        className="cursor-pointer rounded-full bg-[#3DA935]/15 px-2 py-0.5 text-[#3DA935] hover:bg-[#3DA935]/25"
                         onClick={() =>
                           setPickedIds((s) => s.filter((x) => x !== id))
                         }
@@ -478,7 +478,7 @@ export default function MessagesPage() {
                       }
                       className={cn(
                         "flex w-full items-center gap-2 border-b border-border/60 p-2 text-left text-sm last:border-b-0 hover:bg-muted/40",
-                        picked && "bg-[#2EA3F2]/10",
+                        picked && "bg-[#3DA935]/10",
                       )}
                     >
                       <AvatarRing
@@ -502,7 +502,7 @@ export default function MessagesPage() {
               </div>
             </div>
             <Button
-              className="w-full rounded-xl bg-[#2EA3F2] hover:bg-[#1d8fd8]"
+              className="w-full rounded-xl bg-[#3DA935] hover:bg-[#2C8214]"
               disabled={pickedIds.length === 0 || createConvo.isPending}
               onClick={() => handleStartConversation(newConvoType)}
             >

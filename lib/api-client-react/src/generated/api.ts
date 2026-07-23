@@ -18,6 +18,8 @@ import type {
 
 import type {
   AddCampaignStreetsBody,
+  AdminSettings,
+  AuthConfig,
   Badge,
   Campaign,
   CampaignDetail,
@@ -39,7 +41,6 @@ import type {
   CreateRewardBody,
   CreateTerritoryBody,
   CreateTrainingResourceBody,
-  CreateUserBody,
   Deal,
   DemoDataStatus,
   ErrorEnvelope,
@@ -56,6 +57,8 @@ import type {
   ListDealsParams,
   ListPinsParams,
   ListRedemptionsParams,
+  LoginBody,
+  LoginResult,
   MapPin,
   MyStats,
   PointConfig,
@@ -65,6 +68,8 @@ import type {
   Reward,
   SeedDemoResult,
   SendMessageBody,
+  SessionUser,
+  SetTeamPasswordBody,
   SkipTraceResult,
   Territory,
   TrainingResource,
@@ -434,6 +439,242 @@ export function useHealthCheck<
 }
 
 /**
+ * @summary Whether a shared team password is required to sign in
+ */
+export const getGetAuthConfigUrl = () => {
+  return `/api/auth/config`;
+};
+
+export const getAuthConfig = async (
+  options?: RequestInit,
+): Promise<AuthConfig> => {
+  return customFetch<AuthConfig>(getGetAuthConfigUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAuthConfigQueryKey = () => {
+  return [`/api/auth/config`] as const;
+};
+
+export const getGetAuthConfigQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAuthConfig>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAuthConfig>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetAuthConfigQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAuthConfig>>> = ({
+    signal,
+  }) => getAuthConfig({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAuthConfig>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAuthConfigQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAuthConfig>>
+>;
+export type GetAuthConfigQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Whether a shared team password is required to sign in
+ */
+
+export function useGetAuthConfig<
+  TData = Awaited<ReturnType<typeof getAuthConfig>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAuthConfig>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAuthConfigQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Sign in (or auto-register) with a name and the team password
+ */
+export const getLoginUrl = () => {
+  return `/api/auth/login`;
+};
+
+export const login = async (
+  loginBody: LoginBody,
+  options?: RequestInit,
+): Promise<LoginResult> => {
+  return customFetch<LoginResult>(getLoginUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(loginBody),
+  });
+};
+
+export const getLoginMutationOptions = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof login>>,
+    TError,
+    { data: BodyType<LoginBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof login>>,
+  TError,
+  { data: BodyType<LoginBody> },
+  TContext
+> => {
+  const mutationKey = ["login"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof login>>,
+    { data: BodyType<LoginBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return login(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type LoginMutationResult = NonNullable<
+  Awaited<ReturnType<typeof login>>
+>;
+export type LoginMutationBody = BodyType<LoginBody>;
+export type LoginMutationError = ErrorType<ErrorEnvelope>;
+
+/**
+ * @summary Sign in (or auto-register) with a name and the team password
+ */
+export const useLogin = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof login>>,
+    TError,
+    { data: BodyType<LoginBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof login>>,
+  TError,
+  { data: BodyType<LoginBody> },
+  TContext
+> => {
+  return useMutation(getLoginMutationOptions(options));
+};
+
+/**
+ * @summary Validate the current token and return the signed-in profile
+ */
+export const getGetSessionUrl = () => {
+  return `/api/auth/session`;
+};
+
+export const getSession = async (
+  options?: RequestInit,
+): Promise<SessionUser> => {
+  return customFetch<SessionUser>(getGetSessionUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetSessionQueryKey = () => {
+  return [`/api/auth/session`] as const;
+};
+
+export const getGetSessionQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSession>>,
+  TError = ErrorType<ErrorEnvelope>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getSession>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetSessionQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getSession>>> = ({
+    signal,
+  }) => getSession({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getSession>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetSessionQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getSession>>
+>;
+export type GetSessionQueryError = ErrorType<ErrorEnvelope>;
+
+/**
+ * @summary Validate the current token and return the signed-in profile
+ */
+
+export function useGetSession<
+  TData = Awaited<ReturnType<typeof getSession>>,
+  TError = ErrorType<ErrorEnvelope>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getSession>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetSessionQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
  * @summary Get current user profile
  */
 export const getGetMeUrl = () => {
@@ -732,92 +973,6 @@ export function useListUsers<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
-
-/**
- * @summary Upsert user from Clerk (called after sign-in)
- */
-export const getCreateUserUrl = () => {
-  return `/api/users`;
-};
-
-export const createUser = async (
-  createUserBody: CreateUserBody,
-  options?: RequestInit,
-): Promise<User> => {
-  return customFetch<User>(getCreateUserUrl(), {
-    ...options,
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...options?.headers },
-    body: JSON.stringify(createUserBody),
-  });
-};
-
-export const getCreateUserMutationOptions = <
-  TError = ErrorType<unknown>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof createUser>>,
-    TError,
-    { data: BodyType<CreateUserBody> },
-    TContext
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof createUser>>,
-  TError,
-  { data: BodyType<CreateUserBody> },
-  TContext
-> => {
-  const mutationKey = ["createUser"];
-  const { mutation: mutationOptions, request: requestOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof createUser>>,
-    { data: BodyType<CreateUserBody> }
-  > = (props) => {
-    const { data } = props ?? {};
-
-    return createUser(data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type CreateUserMutationResult = NonNullable<
-  Awaited<ReturnType<typeof createUser>>
->;
-export type CreateUserMutationBody = BodyType<CreateUserBody>;
-export type CreateUserMutationError = ErrorType<unknown>;
-
-/**
- * @summary Upsert user from Clerk (called after sign-in)
- */
-export const useCreateUser = <
-  TError = ErrorType<unknown>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof createUser>>,
-    TError,
-    { data: BodyType<CreateUserBody> },
-    TContext
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseMutationResult<
-  Awaited<ReturnType<typeof createUser>>,
-  TError,
-  { data: BodyType<CreateUserBody> },
-  TContext
-> => {
-  return useMutation(getCreateUserMutationOptions(options));
-};
 
 /**
  * @summary Get a specific user
@@ -3960,6 +4115,167 @@ export const useSeedDemoData = <
   TContext
 > => {
   return useMutation(getSeedDemoDataMutationOptions(options));
+};
+
+/**
+ * @summary Read access settings (admin only)
+ */
+export const getGetAdminSettingsUrl = () => {
+  return `/api/admin/settings`;
+};
+
+export const getAdminSettings = async (
+  options?: RequestInit,
+): Promise<AdminSettings> => {
+  return customFetch<AdminSettings>(getGetAdminSettingsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAdminSettingsQueryKey = () => {
+  return [`/api/admin/settings`] as const;
+};
+
+export const getGetAdminSettingsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAdminSettings>>,
+  TError = ErrorType<ErrorEnvelope>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminSettings>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetAdminSettingsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAdminSettings>>
+  > = ({ signal }) => getAdminSettings({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminSettings>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAdminSettingsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAdminSettings>>
+>;
+export type GetAdminSettingsQueryError = ErrorType<ErrorEnvelope>;
+
+/**
+ * @summary Read access settings (admin only)
+ */
+
+export function useGetAdminSettings<
+  TData = Awaited<ReturnType<typeof getAdminSettings>>,
+  TError = ErrorType<ErrorEnvelope>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminSettings>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAdminSettingsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Set or clear the shared team password (admin only)
+ */
+export const getSetTeamPasswordUrl = () => {
+  return `/api/admin/settings/team-password`;
+};
+
+export const setTeamPassword = async (
+  setTeamPasswordBody: SetTeamPasswordBody,
+  options?: RequestInit,
+): Promise<AdminSettings> => {
+  return customFetch<AdminSettings>(getSetTeamPasswordUrl(), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(setTeamPasswordBody),
+  });
+};
+
+export const getSetTeamPasswordMutationOptions = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setTeamPassword>>,
+    TError,
+    { data: BodyType<SetTeamPasswordBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof setTeamPassword>>,
+  TError,
+  { data: BodyType<SetTeamPasswordBody> },
+  TContext
+> => {
+  const mutationKey = ["setTeamPassword"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof setTeamPassword>>,
+    { data: BodyType<SetTeamPasswordBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return setTeamPassword(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SetTeamPasswordMutationResult = NonNullable<
+  Awaited<ReturnType<typeof setTeamPassword>>
+>;
+export type SetTeamPasswordMutationBody = BodyType<SetTeamPasswordBody>;
+export type SetTeamPasswordMutationError = ErrorType<ErrorEnvelope>;
+
+/**
+ * @summary Set or clear the shared team password (admin only)
+ */
+export const useSetTeamPassword = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setTeamPassword>>,
+    TError,
+    { data: BodyType<SetTeamPasswordBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof setTeamPassword>>,
+  TError,
+  { data: BodyType<SetTeamPasswordBody> },
+  TContext
+> => {
+  return useMutation(getSetTeamPasswordMutationOptions(options));
 };
 
 /**

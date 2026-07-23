@@ -54,7 +54,7 @@ const TYPE_META: Record<
   "door" | "flyer",
   { label: string; icon: React.ComponentType<{ className?: string; strokeWidth?: number }>; color: string }
 > = {
-  door:  { label: "Door knocks", icon: DoorOpen, color: "#2EA3F2" },
+  door:  { label: "Door knocks", icon: DoorOpen, color: "#3DA935" },
   flyer: { label: "Flyer drop",  icon: FileText, color: "#FFBF00" },
 };
 
@@ -84,7 +84,7 @@ export default function CampaignsPage() {
     name: "",
     description: "",
     type: "door" as "door" | "flyer",
-    color: "#2EA3F2",
+    color: "#3DA935",
     streets: "",
   });
 
@@ -104,11 +104,11 @@ export default function CampaignsPage() {
       <BrandHeader
         title="Campaigns"
         subtitle="Door routes & flyer drops. Build a list of streets, then crush it block by block."
-        icon={<Megaphone className="h-6 w-6 text-[#2EA3F2]" strokeWidth={1.5} />}
+        icon={<Megaphone className="h-6 w-6 text-[#3DA935]" strokeWidth={1.5} />}
         actions={
           <Button
             onClick={() => setOpenCreate(true)}
-            className="rounded-xl bg-[#2EA3F2] text-slate-950 hover:bg-[#48b3f6]"
+            className="rounded-xl bg-[#3DA935] text-slate-950 hover:bg-[#4FBF45]"
           >
             <Plus className="mr-1 h-4 w-4" strokeWidth={2.5} />
             New campaign
@@ -120,7 +120,7 @@ export default function CampaignsPage() {
       <div className="grid gap-3 sm:grid-cols-4">
         <StatTile label="Active" value={totals.active} color="#2C8214" />
         <StatTile label="Paused" value={totals.paused} color="#FFBF00" />
-        <StatTile label="Streets in flight" value={totals.streets} color="#2EA3F2" />
+        <StatTile label="Streets in flight" value={totals.streets} color="#3DA935" />
         <StatTile
           label="Streets done"
           value={totals.done}
@@ -152,7 +152,7 @@ export default function CampaignsPage() {
                       className={cn(
                         "flex items-center gap-3 rounded-xl border p-3 text-left transition-all",
                         form.type === t
-                          ? "border-[#2EA3F2] bg-[#2EA3F2]/10"
+                          ? "border-[#3DA935] bg-[#3DA935]/10"
                           : "border-border bg-card hover:bg-muted",
                       )}
                     >
@@ -210,7 +210,7 @@ export default function CampaignsPage() {
             </div>
             <Button
               disabled={!form.name.trim() || create.isPending}
-              className="w-full rounded-xl bg-[#2EA3F2] text-slate-950 hover:bg-[#48b3f6]"
+              className="w-full rounded-xl bg-[#3DA935] text-slate-950 hover:bg-[#4FBF45]"
               onClick={async () => {
                 try {
                   const streets = form.streets
@@ -232,7 +232,7 @@ export default function CampaignsPage() {
                     name: "",
                     description: "",
                     type: "door",
-                    color: "#2EA3F2",
+                    color: "#3DA935",
                     streets: "",
                   });
                   setOpenCreate(false);
@@ -348,7 +348,7 @@ function CampaignCard({
   return (
     <button
       onClick={onOpen}
-      className="group relative overflow-hidden rounded-2xl border border-border bg-card p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-[#2EA3F2]/40 hover:shadow-[0_18px_40px_-20px_rgba(46,163,242,0.4)]"
+      className="group relative overflow-hidden rounded-2xl border border-border bg-card p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-[#3DA935]/40 hover:shadow-[0_18px_40px_-20px_rgba(61,169,53,0.4)]"
     >
       <div
         aria-hidden
@@ -651,7 +651,7 @@ function CampaignDetailView({
               setNewStreets("");
               refresh();
             }}
-            className="rounded-xl bg-[#2EA3F2] text-slate-950 hover:bg-[#48b3f6]"
+            className="rounded-xl bg-[#3DA935] text-slate-950 hover:bg-[#4FBF45]"
           >
             <Plus className="mr-1 h-4 w-4" strokeWidth={2.5} />
             Add
@@ -668,7 +668,7 @@ function CampaignDetailView({
             className={cn(
               "rounded-full border px-2.5 py-1 text-[11px] font-semibold capitalize transition-colors",
               filter === s
-                ? "border-transparent bg-[#2EA3F2] text-slate-950"
+                ? "border-transparent bg-[#3DA935] text-slate-950"
                 : "border-border bg-card text-foreground/70 hover:text-foreground",
             )}
           >
@@ -871,7 +871,7 @@ function StreetRow({
         <div className="w-12 text-center text-xs">
           <div
             className="font-stat font-bold tabular-nums"
-            style={{ color: campaignType === "flyer" ? "#FFBF00" : "#2EA3F2" }}
+            style={{ color: campaignType === "flyer" ? "#FFBF00" : "#3DA935" }}
           >
             {counterValue}
           </div>

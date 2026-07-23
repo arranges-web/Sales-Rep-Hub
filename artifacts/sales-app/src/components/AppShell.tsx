@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { useUser, useClerk, useAuth } from "@clerk/react";
+import { useAuth } from "@/lib/auth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   LayoutDashboard,
@@ -124,13 +124,11 @@ const PREFETCHERS: Record<string, Prefetcher> = {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
-  const { user } = useUser();
-  const { signOut } = useClerk();
-  const { isLoaded, isSignedIn } = useAuth();
-  const authReady = isLoaded && !!isSignedIn;
+  const { user, signOut, isLoaded, isSignedIn } = useAuth();
+  const authReady = isLoaded && isSignedIn;
   const qc = useQueryClient();
   // Gate on auth-ready so AppShell doesn't fire unauthenticated requests that
-  // immediately 401 and force a re-fetch once Clerk resolves.
+  // immediately 401 before the session is restored from localStorage.
   const { data: me } = useQuery({ ...getGetMeQueryOptions(), enabled: authReady });
   // Poll conversations for the nav unread badge. The Messages page polls more
   // aggressively when open; this is the always-on heartbeat for the side rail.
@@ -185,7 +183,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     label,
     Icon,
     active,
-    accentColor = "#2EA3F2",
+    accentColor = "#3DA935",
     badge,
   }: {
     href: string;
@@ -221,7 +219,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       />
       <span className="truncate">{label}</span>
       {badge != null && badge > 0 && (
-        <span className="ml-auto inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#2EA3F2] px-1.5 text-[10px] font-bold text-slate-950">
+        <span className="ml-auto inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#3DA935] px-1.5 text-[10px] font-bold text-slate-950">
           {badge > 9 ? "9+" : badge}
         </span>
       )}
@@ -233,13 +231,13 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* Subtle accent glow behind the lockup */}
       <div
         aria-hidden
-        className="pointer-events-none absolute left-0 top-0 h-24 w-full bg-[radial-gradient(120%_60%_at_0%_0%,rgba(46,163,242,0.18),transparent_60%)]"
+        className="pointer-events-none absolute left-0 top-0 h-24 w-full bg-[radial-gradient(120%_60%_at_0%_0%,rgba(61,169,53,0.18),transparent_60%)]"
       />
       <div className="relative flex items-center gap-2 border-b border-sidebar-border px-4 py-4">
         <Logo className="h-8" />
         <div className="ml-auto flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
           <span
-            className="inline-block h-1.5 w-1.5 rounded-full bg-[#2EA3F2] shadow-[0_0_8px_rgba(46,163,242,.7)]"
+            className="inline-block h-1.5 w-1.5 rounded-full bg-[#3DA935] shadow-[0_0_8px_rgba(61,169,53,.7)]"
             aria-hidden
           />
           SWFL
@@ -295,31 +293,31 @@ export function AppShell({ children }: { children: ReactNode }) {
         >
           <div
             className="rounded-full p-[1.5px]"
-            style={{ background: me?.accentColor || "#2EA3F2" }}
+            style={{ background: me?.accentColor || "#3DA935" }}
           >
             <Avatar className="h-8 w-8 ring-1 ring-background">
               <AvatarImage
                 src={
                   me?.avatarUrl
                     ? photoServingUrl(me.avatarUrl) ?? me.avatarUrl
-                    : user?.imageUrl
+                    : user?.avatarUrl ?? undefined
                 }
               />
               <AvatarFallback
                 className="text-white text-xs font-bold"
-                style={{ background: me?.accentColor || "#2EA3F2" }}
+                style={{ background: me?.accentColor || "#3DA935" }}
               >
-                {(me?.name || user?.firstName || "R").slice(0, 1).toUpperCase()}
+                {(me?.name || user?.name || "R").slice(0, 1).toUpperCase()}
               </AvatarFallback>
             </Avatar>
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
               <span className="truncate text-[13px] font-semibold text-foreground">
-                {me?.name || user?.fullName || "Sales Rep"}
+                {me?.name || user?.name || "Sales Rep"}
               </span>
               {me?.level != null && (
-                <span className="font-stat rounded border border-border bg-background/60 px-1 text-[9px] font-bold text-[#2EA3F2]">
+                <span className="font-stat rounded border border-border bg-background/60 px-1 text-[9px] font-bold text-[#3DA935]">
                   L{me.level}
                 </span>
               )}
@@ -349,7 +347,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             variant="outline"
             size="sm"
             className="h-8 flex-1 justify-start gap-2 rounded-lg text-xs"
-            onClick={() => signOut({ redirectUrl: import.meta.env.BASE_URL })}
+            onClick={() => signOut()}
           >
             <LogOut className="h-3.5 w-3.5" />
             Sign out

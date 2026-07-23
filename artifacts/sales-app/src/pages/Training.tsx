@@ -39,7 +39,7 @@ const CATEGORY_META: Record<
     color: string;
   }
 > = {
-  sales_script: { label: "Scripts", icon: MessageSquare, color: "#2EA3F2" },
+  sales_script: { label: "Scripts", icon: MessageSquare, color: "#3DA935" },
   tree_identification: { label: "Tree ID", icon: Trees, color: "#2C8214" },
   product_knowledge: { label: "Product", icon: Lightbulb, color: "#FFBF00" },
   objection_handling: { label: "Objections", icon: FileText, color: "#a78bfa" },
@@ -214,7 +214,7 @@ export default function TrainingPage() {
               </span>
               <div className="relative h-2 w-24 overflow-hidden rounded-full bg-muted">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-[#2EA3F2] to-[#2C8214] transition-[width] duration-500"
+                  className="h-full rounded-full bg-gradient-to-r from-[#3DA935] to-[#2C8214] transition-[width] duration-500"
                   style={{ width: `${progress}%` }}
                 />
               </div>
@@ -227,7 +227,7 @@ export default function TrainingPage() {
       <Card className="relative overflow-hidden border-border/80">
         <div
           aria-hidden
-          className="pointer-events-none absolute -top-12 -right-10 h-48 w-48 rounded-full bg-[#2EA3F2]/15 blur-3xl"
+          className="pointer-events-none absolute -top-12 -right-10 h-48 w-48 rounded-full bg-[#3DA935]/15 blur-3xl"
         />
         <div
           aria-hidden
@@ -321,8 +321,8 @@ export default function TrainingPage() {
               key={r.id}
               className={cn(
                 "group relative flex cursor-pointer flex-col overflow-hidden border-border bg-card transition-all duration-200",
-                "hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-20px_rgba(46,163,242,0.45)]",
-                "hover:border-[#2EA3F2]/40",
+                "hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-20px_rgba(61,169,53,0.45)]",
+                "hover:border-[#3DA935]/40",
               )}
               onClick={() => openResourceById(r.id)}
             >
@@ -404,7 +404,7 @@ export default function TrainingPage() {
                 <div className="mt-3 flex items-center gap-2">
                   <Button
                     size="sm"
-                    className="rounded-lg bg-[#2EA3F2] text-slate-950 hover:bg-[#48b3f6]"
+                    className="rounded-lg bg-[#3DA935] text-slate-950 hover:bg-[#4FBF45]"
                     onClick={(e) => {
                       e.stopPropagation();
                       openResourceById(r.id);
@@ -543,14 +543,14 @@ function ContinueCard({
   return (
     <button
       onClick={onOpen}
-      className="group relative flex flex-col gap-2 overflow-hidden rounded-2xl border border-border bg-card p-4 text-left transition-all hover:-translate-y-0.5 hover:border-[#2EA3F2]/50"
+      className="group relative flex flex-col gap-2 overflow-hidden rounded-2xl border border-border bg-card p-4 text-left transition-all hover:-translate-y-0.5 hover:border-[#3DA935]/50"
     >
       <div
         aria-hidden
         className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full opacity-25 blur-2xl"
         style={{ background: meta.color }}
       />
-      <div className="relative flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#2EA3F2]">
+      <div className="relative flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#3DA935]">
         <BookOpen className="h-3.5 w-3.5" /> Continue reading
       </div>
       <div className="relative font-extrabold leading-tight">{r.title}</div>
@@ -590,7 +590,7 @@ function SavedCard({ count, onJump }: { count: number; onJump: () => void }) {
 function Pill({
   active,
   onClick,
-  accent = "#2EA3F2",
+  accent = "#3DA935",
   children,
 }: {
   active: boolean;
@@ -724,7 +724,7 @@ function ResourceDetail({
         {r.contentUrl && (
           <Button
             asChild
-            className="rounded-xl bg-[#2EA3F2] text-slate-950 hover:bg-[#48b3f6]"
+            className="rounded-xl bg-[#3DA935] text-slate-950 hover:bg-[#4FBF45]"
           >
             <a href={r.contentUrl} target="_blank" rel="noopener noreferrer">
               Open resource <ExternalLink className="ml-1 h-3.5 w-3.5" />
@@ -766,7 +766,7 @@ function ResourceDetail({
                 <button
                   key={rel.id}
                   onClick={() => onOpenRelated(rel.id)}
-                  className="group rounded-xl border border-border bg-background/50 p-3 text-left transition-all hover:-translate-y-0.5 hover:border-[#2EA3F2]/40 hover:bg-background/80"
+                  className="group rounded-xl border border-border bg-background/50 p-3 text-left transition-all hover:-translate-y-0.5 hover:border-[#3DA935]/40 hover:bg-background/80"
                 >
                   <div className="line-clamp-1 text-sm font-semibold">
                     {rel.title}

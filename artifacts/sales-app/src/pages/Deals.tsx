@@ -120,7 +120,7 @@ export default function DealsPage() {
           icon={<Briefcase className="h-6 w-6" strokeWidth={1.5} />}
           actions={
             <DialogTrigger asChild>
-              <Button className="rounded-lg bg-[#2EA3F2] text-slate-950 hover:bg-[#48b3f6]">
+              <Button className="rounded-lg bg-[#3DA935] text-slate-950 hover:bg-[#4FBF45]">
                 <Plus className="mr-1 h-4 w-4" /> New Deal
               </Button>
             </DialogTrigger>
@@ -184,7 +184,7 @@ export default function DealsPage() {
                 </div>
               </div>
               <Button
-                className="w-full rounded-lg bg-[#2EA3F2] text-slate-950 hover:bg-[#48b3f6]"
+                className="w-full rounded-lg bg-[#3DA935] text-slate-950 hover:bg-[#4FBF45]"
                 onClick={async () => {
                   if (!form.customerName || !form.serviceType || form.amount <= 0) {
                     toast({ title: "Missing info", description: "Customer, service, and amount are required.", variant: "destructive" });
@@ -221,7 +221,7 @@ export default function DealsPage() {
           Array.from({ length: 4 }).map((_, i) => <JTSkeletonRow key={i} />)}
         {(deals ?? []).map((d) => {
           const isClosed: boolean = d.status === ("closed" as DealStatus) || d.status === ("paid" as DealStatus);
-          const accentColor = isClosed ? "#2C8214" : "#2EA3F2";
+          const accentColor = isClosed ? "#2C8214" : "#3DA935";
           return (
             <Card key={d.id} className="jt-card-hover border-border bg-card p-4 jt-fade-in">
               <div className="flex items-start gap-4">
@@ -254,7 +254,7 @@ export default function DealsPage() {
                   <div className="mt-1 text-sm">
                     <span className="font-stat font-semibold text-foreground">${d.amount.toLocaleString()}</span>
                     {" · "}
-                    <span className="font-stat font-semibold text-[#2EA3F2]">{d.pointsAwarded} pts</span>
+                    <span className="font-stat font-semibold text-[#3DA935]">{d.pointsAwarded} pts</span>
                   </div>
                 </div>
                 <div className="flex flex-col gap-1 sm:flex-row">

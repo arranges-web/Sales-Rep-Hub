@@ -176,7 +176,7 @@ export const HOTSPOT_TYPE_META: Record<
   },
   pipeline: {
     label: "Pipeline",
-    color: "#2EA3F2",
+    color: "#14B8A6",
     description: "Lots of leads, not yet converted — go work them.",
   },
   cold: {

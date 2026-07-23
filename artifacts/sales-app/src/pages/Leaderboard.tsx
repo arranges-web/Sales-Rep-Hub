@@ -134,7 +134,7 @@ export default function LeaderboardPage() {
                       className="rounded-full p-[2px]"
                       style={{
                         background: `conic-gradient(from 0deg, ${ring}, ${
-                          r.accentColor ?? "#2EA3F2"
+                          r.accentColor ?? "#3DA935"
                         }, ${ring})`,
                       }}
                     >
@@ -228,7 +228,7 @@ export default function LeaderboardPage() {
                 <div
                   className={cn(
                     "jt-row-transition jt-fade-in flex items-center gap-4 px-4 py-3 sm:px-5",
-                    r.isCurrentUser && "bg-[#2EA3F2]/8",
+                    r.isCurrentUser && "bg-[#3DA935]/8",
                   )}
                 >
                   <div className="font-stat flex h-9 w-9 shrink-0 items-center justify-center rounded-md font-bold text-muted-foreground">
@@ -249,7 +249,7 @@ export default function LeaderboardPage() {
                       >
                         {r.name}
                       </span>
-                      <span className="font-stat rounded border border-border bg-background/60 px-1 text-[9px] font-bold text-[#2EA3F2]">
+                      <span className="font-stat rounded border border-border bg-background/60 px-1 text-[9px] font-bold text-[#3DA935]">
                         L{r.level}
                       </span>
                       {r.currentStreak > 0 && (
@@ -271,7 +271,7 @@ export default function LeaderboardPage() {
                         </span>
                       )}
                       {r.isCurrentUser && (
-                        <Badge className="border border-[#2EA3F2]/40 bg-[#2EA3F2]/20 text-[10px] text-[#2EA3F2]">
+                        <Badge className="border border-[#3DA935]/40 bg-[#3DA935]/20 text-[10px] text-[#3DA935]">
                           YOU
                         </Badge>
                       )}

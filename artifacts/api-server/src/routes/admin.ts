@@ -5,6 +5,7 @@ import { requireAuth, requireAdmin } from "../middlewares/auth";
 import { seedBaselineData } from "../lib/seed";
 import { previewDemoData, purgeDemoData } from "../lib/demoData";
 import { setDemoDataEnabled } from "../lib/settings";
+import { isTeamPasswordSet, setTeamPassword } from "../lib/authToken";
 
 const router: IRouter = Router();
 
@@ -213,6 +214,28 @@ router.post("/admin/demo-data/enable", requireAuth, requireAdmin, async (_req, r
     await setDemoDataEnabled(true);
     await seedBaselineData();
     res.json(await previewDemoData());
+  } catch (e) {
+    next(e);
+  }
+});
+
+// ── Access settings: the shared team password ───────────────────────────────
+router.get("/admin/settings", requireAuth, requireAdmin, async (_req, res, next) => {
+  try {
+    res.json({ teamPasswordSet: await isTeamPasswordSet() });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Set or clear the shared team password. An empty/absent password reopens
+// access to anyone with the link — surfaced with a warning in the UI.
+router.put("/admin/settings/team-password", requireAuth, requireAdmin, async (req, res, next) => {
+  try {
+    const body = req.body ?? {};
+    const password = typeof body.password === "string" ? body.password : null;
+    await setTeamPassword(password);
+    res.json({ teamPasswordSet: await isTeamPasswordSet() });
   } catch (e) {
     next(e);
   }

@@ -5,7 +5,7 @@ import {
   type Badge,
 } from "@workspace/api-client-react";
 import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@clerk/react";
+import { useAuth } from "@/lib/auth";
 import { BADGES_ME_QUERY_KEY, fetchBadgesMe } from "@/lib/badgesMe";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -73,7 +73,7 @@ export default function DashboardPage() {
           <div className="flex flex-wrap gap-2">
             {me?.level != null && (
               <span className="font-stat inline-flex items-center gap-1 rounded-md border border-border bg-background/60 px-2.5 py-1 text-xs font-bold text-foreground">
-                <TrendingUp className="h-3 w-3 text-[#2EA3F2]" /> L{me.level}
+                <TrendingUp className="h-3 w-3 text-[#3DA935]" /> L{me.level}
               </span>
             )}
             {me?.currentStreak ? (
@@ -100,7 +100,7 @@ export default function DashboardPage() {
       {/* Points headline */}
       <Card className="relative overflow-hidden border-border bg-card p-6">
         <div className="pointer-events-none absolute inset-0 jt-grid-bg opacity-30" />
-        <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-[#2EA3F2]/15 blur-3xl" />
+        <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-[#3DA935]/15 blur-3xl" />
         <div className="relative flex items-center justify-between">
           <div className="relative">
             <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
@@ -137,7 +137,7 @@ export default function DashboardPage() {
                 : "TOP TIER"}
             </span>
           </div>
-          <Progress value={progress} className="h-1.5 bg-muted [&>div]:bg-[#2EA3F2]" />
+          <Progress value={progress} className="h-1.5 bg-muted [&>div]:bg-[#3DA935]" />
         </div>
       </Card>
 
@@ -150,7 +150,7 @@ export default function DashboardPage() {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 jt-fade-in-stagger">
           <StatCard icon={DollarSign} label="Revenue MTD" value={`$${(summary.revenueThisMonth ?? 0).toLocaleString()}`} color="#2C8214" />
-          <StatCard icon={Zap} label="Deals MTD" value={summary.dealsThisMonth ?? 0} color="#2EA3F2" />
+          <StatCard icon={Zap} label="Deals MTD" value={summary.dealsThisMonth ?? 0} color="#3DA935" />
           <StatCard icon={Trophy} label="Top Rep" value={summary.topRepName ?? "—"} color="#FFBF00" small />
           <StatCard icon={Award} label="My Badges" value={badges?.length ?? 0} color="#2C8214" />
         </div>

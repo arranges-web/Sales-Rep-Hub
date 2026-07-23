@@ -24,7 +24,7 @@ export function EmptyState({
         className,
       )}
     >
-      <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-background text-[#2EA3F2]">
+      <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-background text-[#3DA935]">
         {icon ?? <Inbox className="h-6 w-6" strokeWidth={1.5} />}
       </div>
       <div className="text-base font-semibold text-foreground">{title}</div>

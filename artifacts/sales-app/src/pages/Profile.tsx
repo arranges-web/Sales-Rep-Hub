@@ -45,7 +45,7 @@ import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 
 const PALETTE = [
-  "#2EA3F2", "#2C8214", "#FFBF00",
+  "#3DA935", "#2C8214", "#FFBF00",
   "#E11D48", "#7C3AED", "#0EA5E9",
   "#059669", "#F97316", "#475569",
 ];
@@ -72,7 +72,7 @@ const TIERS: Tier[] = [
   { key: "silver", label: "Silver",   min: 2500,  next: 7500,  color: "#C0C7D1", icon: Zap },
   { key: "gold",   label: "Gold",     min: 7500,  next: 15000, color: "#FFBF00", icon: Trophy },
   { key: "plat",   label: "Platinum", min: 15000, next: 25000, color: "#A78BFA", icon: Crown },
-  { key: "elite",  label: "Elite",    min: 25000, next: null,  color: "#2EA3F2", icon: Flame },
+  { key: "elite",  label: "Elite",    min: 25000, next: null,  color: "#3DA935", icon: Flame },
 ];
 
 function tierFor(points: number): { tier: Tier; nextTier: Tier | null; progress: number } {
@@ -96,7 +96,7 @@ export default function ProfilePage() {
   const [form, setForm] = useState({
     name: "",
     avatarUrl: null as string | null,
-    accentColor: "#2EA3F2",
+    accentColor: "#3DA935",
     hometown: "",
     bio: "",
     hawaiiGoal: "",
@@ -109,7 +109,7 @@ export default function ProfilePage() {
     setForm({
       name: me.name ?? "",
       avatarUrl: me.avatarUrl ?? null,
-      accentColor: me.accentColor ?? "#2EA3F2",
+      accentColor: me.accentColor ?? "#3DA935",
       hometown: me.hometown ?? "",
       bio: me.bio ?? "",
       hawaiiGoal: me.hawaiiGoal ?? "",
@@ -214,7 +214,7 @@ export default function ProfilePage() {
                 >
                   <TierIcon className="h-3 w-3" strokeWidth={2.5} /> {tier.label}
                 </span>
-                <span className="rounded border border-border bg-background/60 px-1.5 text-[10px] font-bold text-[#2EA3F2]">
+                <span className="rounded border border-border bg-background/60 px-1.5 text-[10px] font-bold text-[#3DA935]">
                   L{lvl.level}
                 </span>
                 {stats && stats.currentStreak > 0 && (
@@ -298,7 +298,7 @@ export default function ProfilePage() {
               </div>
               <div className="h-1 overflow-hidden rounded-full bg-foreground/10">
                 <div
-                  className="h-full rounded-full bg-[#2EA3F2]"
+                  className="h-full rounded-full bg-[#3DA935]"
                   style={{ width: `${Math.round(levelProgress * 100)}%` }}
                 />
               </div>
@@ -324,7 +324,7 @@ export default function ProfilePage() {
         />
         <StatTile
           icon={<TrendingUp />}
-          color="#2EA3F2"
+          color="#3DA935"
           label="Revenue"
           value={`$${(stats?.totalRevenue ?? 0).toLocaleString()}`}
           sub={
@@ -490,7 +490,7 @@ export default function ProfilePage() {
                   onChange={(e) =>
                     setForm({ ...form, favoriteService: e.target.value })
                   }
-                  className="mt-1 h-10 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#2EA3F2]/30"
+                  className="mt-1 h-10 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#3DA935]/30"
                 >
                   <option value="">—</option>
                   {SERVICE_OPTIONS.map((s) => (
@@ -531,7 +531,7 @@ export default function ProfilePage() {
               <Button
                 onClick={save}
                 disabled={update.isPending}
-                className="rounded-lg bg-[#2EA3F2] text-slate-950 hover:bg-[#48b3f6]"
+                className="rounded-lg bg-[#3DA935] text-slate-950 hover:bg-[#4FBF45]"
               >
                 <Save className="mr-2 h-4 w-4" />
                 {update.isPending ? "Saving…" : "Save profile"}

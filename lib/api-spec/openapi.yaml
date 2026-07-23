@@ -132,6 +132,68 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
 
+  # ─── Auth: username + shared team password ───────────────────────
+  /auth/config:
+    get:
+      operationId: getAuthConfig
+      tags: [auth]
+      summary: Whether a shared team password is required to sign in
+      responses:
+        "200":
+          description: Auth config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthConfig"
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Sign in (or auto-register) with a name and the team password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Session token + basic profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResult"
+        "400":
+          description: Missing name
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: Wrong team password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /auth/session:
+    get:
+      operationId: getSession
+      tags: [auth]
+      summary: Validate the current token and return the signed-in profile
+      responses:
+        "200":
+          description: Signed-in profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionUser"
+        "401":
+          description: No/invalid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
   # ─── Users / Reps ────────────────────────────────────────────────
   /users/me:
     get:
@@ -196,23 +258,6 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/User"
-    post:
-      operationId: createUser
-      tags: [users]
-      summary: Upsert user from Clerk (called after sign-in)
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateUserBody"
-      responses:
-        "200":
-          description: Created or existing user
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/User"
 
   /users/{userId}:
     get:
@@ -909,6 +954,50 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SeedDemoResult"
+        "403":
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  # ─── Access settings (admin) ────────────────────────────────────
+  /admin/settings:
+    get:
+      operationId: getAdminSettings
+      tags: [admin]
+      summary: Read access settings (admin only)
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSettings"
+        "403":
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /admin/settings/team-password:
+    put:
+      operationId: setTeamPassword
+      tags: [admin]
+      summary: Set or clear the shared team password (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetTeamPasswordBody"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSettings"
         "403":
           description: Admin only
           content:
@@ -1676,21 +1765,68 @@ components:
         favoriteService:
           type: ["string", "null"]
 
-    CreateUserBody:
+    AuthConfig:
       type: object
       properties:
-        clerkId:
-          type: string
+        teamPasswordRequired:
+          type: boolean
+      required:
+        - teamPasswordRequired
+
+    LoginBody:
+      type: object
+      properties:
         name:
           type: string
-        email:
+          description: The rep's display name. First person to use a name owns that identity.
+        password:
+          type: ["string", "null"]
+          description: The shared team password. Omit when access is still open.
+      required:
+        - name
+
+    SessionUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
           type: string
+        role:
+          type: string
+          enum: [admin, rep]
         avatarUrl:
           type: ["string", "null"]
       required:
-        - clerkId
+        - id
         - name
-        - email
+        - role
+
+    LoginResult:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/SessionUser"
+      required:
+        - token
+        - user
+
+    AdminSettings:
+      type: object
+      properties:
+        teamPasswordSet:
+          type: boolean
+      required:
+        - teamPasswordSet
+
+    SetTeamPasswordBody:
+      type: object
+      properties:
+        password:
+          type: ["string", "null"]
+          description: New shared password. Empty or null clears it (open access).
 
     UpdateUserBody:
       type: object

@@ -131,7 +131,7 @@ router.get("/leaderboard", requireAuth, async (req, res, next) => {
         userId: u.id,
         name: u.name,
         avatarUrl: u.avatarUrl ?? null,
-        accentColor: u.accentColor ?? "#2EA3F2",
+        accentColor: u.accentColor ?? "#3DA935",
         hometown: u.hometown ?? null,
         bio: u.bio ?? null,
         hawaiiGoal: u.hawaiiGoal ?? null,

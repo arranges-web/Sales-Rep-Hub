@@ -17,7 +17,7 @@ export function BrandHeader({
   icon,
   actions,
   className,
-  accent = "#2EA3F2",
+  accent = "#3DA935",
 }: BrandHeaderProps) {
   return (
     <div
